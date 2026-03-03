@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 10 — HTTP 與 HTTPS | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a1a1a; --paper: #f5f0e8; --accent: #c0392b;
+      --mid: #7a6a5a; --line: rgba(26,26,26,0.12); --code-bg: rgba(26,26,26,0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background-color: var(--paper); color: var(--ink); font-family: 'Noto Sans TC', sans-serif; font-weight: 300; line-height: 1.9; min-height: 100vh; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+
+    .topnav { position: relative; z-index: 10; padding: 20px 8vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
+    .topnav a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--mid); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+    .topnav a:hover { color: var(--accent); }
+    .topnav .breadcrumb { display: flex; align-items: center; gap: 8px; }
+    .topnav .sep { color: var(--line); font-size: 14px; }
+    .topnav .nav-group { display: flex; gap: 24px; }
+
+    .hero { position: relative; z-index: 1; padding: 64px 8vw 56px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: end; }
+    .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.22em; color: var(--accent); text-transform: uppercase; margin-bottom: 18px; }
+    .hero h1 { font-family: 'Noto Serif TC', serif; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
+    .hero-desc { margin-top: 20px; font-size: 1rem; color: var(--mid); max-width: 560px; }
+    .hero-meta .day-num { font-family: 'IBM Plex Mono', monospace; font-size: 6rem; font-weight: 500; line-height: 1; color: var(--ink); opacity: 0.08; display: block; }
+
+    .toc-bar { position: relative; z-index: 1; padding: 24px 8vw; border-bottom: 1px solid var(--line); background: rgba(26,26,26,0.03); }
+    .toc-bar h2 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 14px; }
+    .toc-list { display: flex; flex-wrap: wrap; gap: 8px 24px; list-style: none; }
+    .toc-list li a { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--mid); text-decoration: none; transition: color 0.2s; }
+    .toc-list li a:hover { color: var(--accent); }
+    .toc-list li::before { content: attr(data-n) ". "; color: var(--accent); font-size: 10px; }
+
+    .main-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 260px; align-items: start; }
+    article { padding: 64px 6vw 80px 8vw; border-right: 1px solid var(--line); }
+
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+    .section-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 10px; }
+    .lesson-section h2 { font-family: 'Noto Serif TC', serif; font-size: 1.75rem; font-weight: 600; line-height: 1.3; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .lesson-section h3 { font-family: 'Noto Serif TC', serif; font-size: 1.15rem; font-weight: 600; margin: 36px 0 12px; }
+    .lesson-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--mid); margin: 24px 0 10px; letter-spacing: 0.05em; }
+    .lesson-section p { margin-bottom: 16px; font-size: 0.97rem; }
+    .lesson-section p:last-child { margin-bottom: 0; }
+    strong { font-weight: 500; color: var(--ink); }
+    code { font-family: 'IBM Plex Mono', monospace; font-size: 0.85em; background: var(--code-bg); padding: 2px 6px; color: var(--ink); }
+
+    .highlight-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--accent); background: rgba(192,57,43,0.05); }
+    .highlight-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+    .info-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--mid); background: var(--code-bg); }
+    .info-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 8px; }
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    .def-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.9rem; }
+    .def-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); text-align: left; padding: 10px 16px; background: var(--code-bg); border-bottom: 1px solid var(--line); }
+    .def-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+    .def-table tr:last-child td { border-bottom: none; }
+    .def-table td:first-child { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+    .diagram { margin: 28px 0; background: var(--code-bg); border: 1px solid var(--line); padding: 28px 24px; }
+    .diagram-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px; }
+    .diagram pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* HTTP message visual */
+    .http-msg { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .http-msg-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .http-block { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+    .http-block:last-child { border-bottom: none; }
+    .http-block-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); margin-bottom: 8px; }
+    .http-block pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.7; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* Method cards */
+    .method-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 0; border: 1px solid var(--line); margin: 24px 0; }
+    .method-card { padding: 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background 0.15s; }
+    .method-card:hover { background: rgba(26,26,26,0.03); }
+    .method-verb { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 500; color: var(--accent); margin-bottom: 4px; }
+    .method-safe { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--mid); margin-bottom: 6px; letter-spacing: 0.05em; }
+    .method-desc { font-size: 0.82rem; color: var(--ink); line-height: 1.55; }
+
+    /* Status code groups */
+    .status-group { margin: 20px 0; }
+    .status-group-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--ink); padding: 8px 14px; background: var(--code-bg); border: 1px solid var(--line); border-bottom: none; }
+    .status-row { display: grid; grid-template-columns: 64px 1fr; border: 1px solid var(--line); border-top: none; }
+    .status-row + .status-row { border-top: none; }
+    .status-code { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent); padding: 9px 14px; border-right: 1px solid var(--line); display: flex; align-items: flex-start; }
+    .status-desc { padding: 9px 14px; font-size: 0.85rem; line-height: 1.6; }
+
+    /* Version timeline */
+    .version-timeline { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .vt-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .vt-row { display: grid; grid-template-columns: 100px 1fr; border-bottom: 1px solid var(--line); }
+    .vt-row:last-child { border-bottom: none; }
+    .vt-row:not(:first-child):hover { background: rgba(26,26,26,0.03); }
+    .vt-ver { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent); padding: 14px 16px; border-right: 1px solid var(--line); display: flex; align-items: flex-start; }
+    .vt-content { padding: 14px 16px; }
+    .vt-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+    .vt-desc { font-size: 0.84rem; color: var(--mid); line-height: 1.6; }
+
+    /* TLS handshake */
+    .tls-steps { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .tls-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .tls-step { display: grid; grid-template-columns: 28px 1fr; border-bottom: 1px solid var(--line); }
+    .tls-step:last-child { border-bottom: none; }
+    .tls-step:hover { background: rgba(26,26,26,0.03); }
+    .tls-n { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 500; color: var(--paper); background: var(--accent); display: flex; align-items: center; justify-content: center; }
+    .tls-body { padding: 11px 16px; }
+    .tls-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+    .tls-desc { font-size: 0.82rem; color: var(--mid); line-height: 1.55; }
+
+    .divider { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
+    .summary-box { margin-top: 48px; padding: 28px 32px; background: var(--ink); color: var(--paper); }
+    .summary-box .summary-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.25em; color: rgba(245,240,232,0.5); text-transform: uppercase; margin-bottom: 16px; }
+    .summary-box h3 { font-family: 'Noto Serif TC', serif; font-size: 1.1rem; font-weight: 600; color: var(--paper); margin-bottom: 16px; }
+    .summary-box ul { list-style: none; padding: 0; }
+    .summary-box ul li { font-size: 0.9rem; color: rgba(245,240,232,0.8); padding: 6px 0 6px 16px; border-bottom: 1px solid rgba(245,240,232,0.08); position: relative; }
+    .summary-box ul li::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-size: 0.8rem; }
+
+    aside { padding: 48px 28px; position: sticky; top: 0; }
+    .aside-section { margin-bottom: 40px; }
+    .aside-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .keyword-list { list-style: none; padding: 0; }
+    .keyword-list li { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid); padding: 5px 0; border-bottom: 1px solid var(--line); transition: color 0.2s; }
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+    .progress-bar { height: 3px; background: var(--line); margin: 12px 0 20px; position: relative; }
+    .progress-bar::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 62.5%; background: var(--accent); }
+    .progress-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mid); letter-spacing: 0.1em; }
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+    .nav-links a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); transition: border-color 0.2s, color 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+    footer { position: relative; z-index: 1; padding: 32px 8vw; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    footer p { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); letter-spacing: 0.1em; }
+
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+      aside { position: static; border-top: 1px solid var(--line); padding: 40px 8vw; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+      .method-grid { grid-template-columns: 1fr 1fr; }
+      .vt-row { grid-template-columns: 80px 1fr; }
+    }
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .method-grid { grid-template-columns: 1fr; }
+      .status-row { grid-template-columns: 52px 1fr; }
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar { animation-delay: 0.10s; } article { animation-delay: 0.15s; } aside { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 10</a>
+    </div>
+    <div class="nav-group">
+      <a href="day9.html">&larr; Day 9</a>
+      <a href="day11.html">Day 11 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 03 &mdash; 應用層協定 &mdash; Day 10 / 16</p>
+      <h1>HTTP 與 HTTPS<br>網頁世界的語言與信封</h1>
+      <p class="hero-desc">
+        HTTP 是現代網際網路的核心應用層協定，從 1991 年的單行指令到今日的 HTTP/3，
+        每次演進都在解決上一版本的根本瓶頸。HTTPS 在 HTTP 之上加上 TLS 的信封，
+        讓竊聽與篡改成為徒勞。本課從請求/回應格式到 TLS 握手，
+        帶你完整理解每一次網頁載入背後的精密協作。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">10</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">HTTP 的演進歷程</a></li>
+      <li data-n="2"><a href="#s2">HTTP 請求與回應格式</a></li>
+      <li data-n="3"><a href="#s3">HTTP 方法（Verbs）</a></li>
+      <li data-n="4"><a href="#s4">HTTP 狀態碼</a></li>
+      <li data-n="5"><a href="#s5">重要 HTTP 標頭</a></li>
+      <li data-n="6"><a href="#s6">HTTP/1.1 的連線管理</a></li>
+      <li data-n="7"><a href="#s7">HTTP/2 的多路復用</a></li>
+      <li data-n="8"><a href="#s8">HTTP/3 與 QUIC</a></li>
+      <li data-n="9"><a href="#s9">HTTPS 與 TLS 握手</a></li>
+      <li data-n="10"><a href="#s10">憑證體系與 PKI</a></li>
+      <li data-n="11"><a href="#s11">HTTP 安全標頭與常見漏洞</a></li>
+      <li data-n="12"><a href="#s12">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <!-- S1 -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>HTTP 的演進歷程</h2>
+        <p>
+          <strong>HTTP（HyperText Transfer Protocol）</strong>由 Tim Berners-Lee 在 CERN 提出，
+          與 HTML 和 URL 共同構成了全球資訊網（WWW）的三大基石。
+          從 1991 年只有一行指令的 HTTP/0.9，到今日整合在 QUIC 上的 HTTP/3，
+          每一次版本演進都是對效能瓶頸的直接回應。
+        </p>
+
+        <div class="version-timeline">
+          <div class="vt-header">HTTP 版本演進</div>
+          <div class="vt-row">
+            <div class="vt-ver">HTTP/0.9</div>
+            <div class="vt-content">
+              <div class="vt-title">1991 — 單行協定</div>
+              <div class="vt-desc">只有 GET 方法，無 Header，無狀態碼。請求一行：<code>GET /index.html</code>，回應直接是 HTML 內容。每次請求後立即關閉連線。</div>
+            </div>
+          </div>
+          <div class="vt-row">
+            <div class="vt-ver">HTTP/1.0</div>
+            <div class="vt-content">
+              <div class="vt-title">1996（RFC 1945）— 加入 Header 與狀態碼</div>
+              <div class="vt-desc">引入 Header、狀態碼、POST/HEAD 方法、Content-Type。但每個請求仍需一個獨立 TCP 連線，開銷極大（1 RTT 握手 + 傳輸 + 關閉）。</div>
+            </div>
+          </div>
+          <div class="vt-row">
+            <div class="vt-ver">HTTP/1.1</div>
+            <div class="vt-content">
+              <div class="vt-title">1997（RFC 2616）→ 2014（RFC 7230–7235）— 持久連線</div>
+              <div class="vt-desc">引入 Keep-Alive 持久連線、Host 標頭（虛擬主機）、Chunked Transfer Encoding、管線化（Pipelining，效果有限）。至今仍廣泛使用。核心問題：隊頭阻塞（HOL Blocking）。</div>
+            </div>
+          </div>
+          <div class="vt-row">
+            <div class="vt-ver">HTTP/2</div>
+            <div class="vt-content">
+              <div class="vt-title">2015（RFC 7540）— 多路復用</div>
+              <div class="vt-desc">二進位框架層、多路復用（Multiplexing）、標頭壓縮（HPACK）、伺服器推送（Server Push）、流優先級。解決了應用層 HOL Blocking，但 TCP 層的 HOL Blocking 依然存在。</div>
+            </div>
+          </div>
+          <div class="vt-row">
+            <div class="vt-ver">HTTP/3</div>
+            <div class="vt-content">
+              <div class="vt-title">2022（RFC 9114）— 基於 QUIC</div>
+              <div class="vt-desc">捨棄 TCP，改用 QUIC（UDP）作為傳輸層。徹底解決 HOL Blocking、0-RTT 快速重連、連線遷移（Connection Migration）。2024 年已有約 30% 的網站流量使用 HTTP/3。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S2 -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>HTTP 請求與回應格式</h2>
+        <p>
+          HTTP/1.1 使用純文字格式（Human-readable），
+          由起始行、Header 欄位、空行（CRLF）和可選的 Body 組成。
+          理解此格式是掌握所有 Web 技術的基礎。
+        </p>
+
+        <div class="http-msg">
+          <div class="http-msg-title">HTTP/1.1 請求（Request）範例</div>
+          <div class="http-block">
+            <div class="http-block-label">起始行（Request Line）</div>
+            <pre>POST /api/login HTTP/1.1</pre>
+          </div>
+          <div class="http-block">
+            <div class="http-block-label">請求標頭（Request Headers）</div>
+            <pre>Host: api.example.com
+Content-Type: application/json
+Content-Length: 42
+Accept: application/json
+Authorization: Bearer eyJhbGciOiJSUzI1NiJ9...
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X)
+Connection: keep-alive</pre>
+          </div>
+          <div class="http-block">
+            <div class="http-block-label">空行（CRLF，分隔 Header 與 Body）</div>
+            <pre>（空行）</pre>
+          </div>
+          <div class="http-block">
+            <div class="http-block-label">請求本體（Request Body，僅部分方法有）</div>
+            <pre>{"username": "alice", "password": "s3cr3t"}</pre>
+          </div>
+        </div>
+
+        <div class="http-msg">
+          <div class="http-msg-title">HTTP/1.1 回應（Response）範例</div>
+          <div class="http-block">
+            <div class="http-block-label">狀態行（Status Line）</div>
+            <pre>HTTP/1.1 200 OK</pre>
+          </div>
+          <div class="http-block">
+            <div class="http-block-label">回應標頭（Response Headers）</div>
+            <pre>Content-Type: application/json; charset=utf-8
+Content-Length: 128
+Cache-Control: no-store
+Set-Cookie: session=abc123; HttpOnly; Secure; SameSite=Strict
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Date: Mon, 02 Mar 2026 12:00:00 GMT</pre>
+          </div>
+          <div class="http-block">
+            <div class="http-block-label">空行</div>
+            <pre>（空行）</pre>
+          </div>
+          <div class="http-block">
+            <div class="http-block-label">回應本體（Response Body）</div>
+            <pre>{"status": "ok", "token": "eyJhbGciOiJSUzI1NiJ9...", "expires_in": 3600}</pre>
+          </div>
+        </div>
+
+        <h3>URL 結構解析</h3>
+        <div class="diagram">
+          <div class="diagram-title">URL 各組成部分</div>
+          <pre>
+  https://user:pass@api.example.com:8443/v1/users?page=2&limit=10#results
+  ──┬──   ────┬────  ───────┬──────  ──┬─ ───┬─── ───────┬───────  ──┬──
+    │         │              │          │     │            │           │
+  scheme  userinfo        host        port  path         query      fragment
+  (協定)  (憑證，少用)   (主機名稱)  (連接埠) (路徑)      (查詢字串)  (片段，不傳給伺服器)
+
+  scheme：https（協定）
+  host：  api.example.com（域名，解析後得到 IP）
+  port：  8443（省略時 http 預設 80，https 預設 443）
+  path：  /v1/users（資源路徑，以 / 分隔）
+  query： page=2&limit=10（鍵值對，以 & 分隔）
+  fragment：results（瀏覽器用，錨點定位，不會送給伺服器）</pre>
+        </div>
+      </section>
+
+      <!-- S3 -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>HTTP 方法（Verbs）</h2>
+        <p>
+          HTTP 方法定義了對資源執行的操作語意。
+          設計良好的 REST API 應遵循方法的<strong>安全性</strong>（Safe，不修改資源）
+          與<strong>冪等性</strong>（Idempotent，多次執行結果相同）原則。
+        </p>
+
+        <div class="method-grid">
+          <div class="method-card">
+            <div class="method-verb">GET</div>
+            <div class="method-safe">安全 ✓ &nbsp;冪等 ✓</div>
+            <div class="method-desc">取得資源。請求不應有 Body。回應可被快取。最常用的方法，不應有副作用。</div>
+          </div>
+          <div class="method-card">
+            <div class="method-verb">POST</div>
+            <div class="method-safe">安全 ✗ &nbsp;冪等 ✗</div>
+            <div class="method-desc">建立資源或觸發操作。每次呼叫可能產生不同結果（如建立新訂單）。回應不快取。</div>
+          </div>
+          <div class="method-card">
+            <div class="method-verb">PUT</div>
+            <div class="method-safe">安全 ✗ &nbsp;冪等 ✓</div>
+            <div class="method-desc">完整取代資源。多次執行結果相同（第 2 次 PUT 與第 1 次效果一致）。需提供完整資源表示。</div>
+          </div>
+          <div class="method-card">
+            <div class="method-verb">PATCH</div>
+            <div class="method-safe">安全 ✗ &nbsp;冪等 △</div>
+            <div class="method-desc">部分更新資源，只傳修改的欄位。冪等性取決於實作（差量更新通常非冪等）。</div>
+          </div>
+          <div class="method-card">
+            <div class="method-verb">DELETE</div>
+            <div class="method-safe">安全 ✗ &nbsp;冪等 ✓</div>
+            <div class="method-desc">刪除資源。第一次執行刪除，後續再刪除已不存在的資源仍應回傳 204/404，結果一致。</div>
+          </div>
+          <div class="method-card">
+            <div class="method-verb">HEAD</div>
+            <div class="method-safe">安全 ✓ &nbsp;冪等 ✓</div>
+            <div class="method-desc">與 GET 相同，但伺服器只回傳 Header，不回傳 Body。用於檢查資源是否存在或取得 Metadata。</div>
+          </div>
+          <div class="method-card">
+            <div class="method-verb">OPTIONS</div>
+            <div class="method-safe">安全 ✓ &nbsp;冪等 ✓</div>
+            <div class="method-desc">查詢伺服器對某 URL 支援哪些方法。CORS 預檢請求（Preflight）使用此方法。</div>
+          </div>
+          <div class="method-card">
+            <div class="method-verb">CONNECT</div>
+            <div class="method-safe">安全 ✗ &nbsp;冪等 ✗</div>
+            <div class="method-desc">建立 HTTP 隧道（Tunnel）。HTTPS Proxy 用此方法讓客戶端與目標伺服器建立 TLS 連線。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S4 -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>HTTP 狀態碼</h2>
+        <p>
+          HTTP 狀態碼是三位數的數字，第一位代表類別。
+          熟悉常用狀態碼是 Web 開發與故障排除的必備能力。
+        </p>
+
+        <div class="status-group">
+          <div class="status-group-title">1xx — 資訊性（Informational）：請求已收到，繼續處理</div>
+          <div class="status-row"><div class="status-code">100</div><div class="status-desc">Continue — 客戶端可繼續發送請求 Body（大型 POST 前的確認）</div></div>
+          <div class="status-row"><div class="status-code">101</div><div class="status-desc">Switching Protocols — 協定升級，如從 HTTP/1.1 升級到 WebSocket</div></div>
+        </div>
+
+        <div class="status-group">
+          <div class="status-group-title">2xx — 成功（Success）：請求已成功接收、理解並處理</div>
+          <div class="status-row"><div class="status-code">200</div><div class="status-desc">OK — 最常見的成功回應，GET/PUT 回傳資源，POST 回傳結果</div></div>
+          <div class="status-row"><div class="status-code">201</div><div class="status-desc">Created — POST 成功建立新資源，Location 標頭指向新資源 URL</div></div>
+          <div class="status-row"><div class="status-code">204</div><div class="status-desc">No Content — 成功但無回應 Body，常用於 DELETE 或 PATCH 後</div></div>
+          <div class="status-row"><div class="status-code">206</div><div class="status-desc">Partial Content — 回傳部分資源（Range 請求，用於斷點續傳、影片串流）</div></div>
+        </div>
+
+        <div class="status-group">
+          <div class="status-group-title">3xx — 重新導向（Redirection）：需要進一步操作完成請求</div>
+          <div class="status-row"><div class="status-code">301</div><div class="status-desc">Moved Permanently — 永久重導，瀏覽器快取並自動改用新 URL。SEO 傳遞</div></div>
+          <div class="status-row"><div class="status-code">302</div><div class="status-desc">Found（舊稱 Moved Temporarily）— 臨時重導，不快取。常被誤用，應考慮 307/308</div></div>
+          <div class="status-row"><div class="status-code">304</div><div class="status-desc">Not Modified — 資源未變更，瀏覽器使用快取版本（配合 If-Modified-Since / ETag）</div></div>
+          <div class="status-row"><div class="status-code">307</div><div class="status-desc">Temporary Redirect — 臨時重導，保留原始 HTTP 方法（302 可能將 POST 改為 GET）</div></div>
+          <div class="status-row"><div class="status-code">308</div><div class="status-desc">Permanent Redirect — 永久重導，保留 HTTP 方法（301 的嚴格版）</div></div>
+        </div>
+
+        <div class="status-group">
+          <div class="status-group-title">4xx — 客戶端錯誤（Client Error）：請求有問題</div>
+          <div class="status-row"><div class="status-code">400</div><div class="status-desc">Bad Request — 請求語法錯誤，伺服器無法解析（如 JSON 格式錯誤）</div></div>
+          <div class="status-row"><div class="status-code">401</div><div class="status-desc">Unauthorized — 未認證（需要提供身份憑證），名字有點誤導，實為「未認證」</div></div>
+          <div class="status-row"><div class="status-code">403</div><div class="status-desc">Forbidden — 已認證但無授權，伺服器拒絕執行（與 401 的差異：你是誰 vs 你能幹嘛）</div></div>
+          <div class="status-row"><div class="status-code">404</div><div class="status-desc">Not Found — 資源不存在。也可用於隱藏「資源存在但無授權」（避免資訊洩漏）</div></div>
+          <div class="status-row"><div class="status-code">405</div><div class="status-desc">Method Not Allowed — 該 URL 不支援此 HTTP 方法，回應應包含 Allow 標頭</div></div>
+          <div class="status-row"><div class="status-code">409</div><div class="status-desc">Conflict — 請求與目前資源狀態衝突（如建立重複的使用者名稱）</div></div>
+          <div class="status-row"><div class="status-code">422</div><div class="status-desc">Unprocessable Entity — 語法正確但語意錯誤（如 email 格式不合法），REST API 常用</div></div>
+          <div class="status-row"><div class="status-code">429</div><div class="status-desc">Too Many Requests — 超過速率限制（Rate Limiting），回應通常含 Retry-After 標頭</div></div>
+        </div>
+
+        <div class="status-group">
+          <div class="status-group-title">5xx — 伺服器錯誤（Server Error）：伺服器在處理時出錯</div>
+          <div class="status-row"><div class="status-code">500</div><div class="status-desc">Internal Server Error — 伺服器未預期的錯誤，通常是 Bug 或例外未處理</div></div>
+          <div class="status-row"><div class="status-code">502</div><div class="status-desc">Bad Gateway — 代理伺服器從上游收到無效回應（如 Nginx 背後的 App Server 崩潰）</div></div>
+          <div class="status-row"><div class="status-code">503</div><div class="status-desc">Service Unavailable — 伺服器暫時無法處理（過載或維護），通常含 Retry-After</div></div>
+          <div class="status-row"><div class="status-code">504</div><div class="status-desc">Gateway Timeout — 代理伺服器等待上游逾時（上游回應太慢）</div></div>
+        </div>
+      </section>
+
+      <!-- S5 -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>重要 HTTP 標頭</h2>
+
+        <h3>快取控制標頭</h3>
+        <table class="def-table">
+          <thead><tr><th>標頭</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>Cache-Control</td><td><code>max-age=3600</code>（快取 1 小時）、<code>no-cache</code>（每次需重新驗證）、<code>no-store</code>（完全不快取）、<code>public</code>/<code>private</code>、<code>immutable</code>（永久快取）</td></tr>
+            <tr><td>ETag</td><td>資源的版本標識（通常是內容的 Hash）。客戶端下次請求帶 <code>If-None-Match: "etag值"</code>，若未變則回 304</td></tr>
+            <tr><td>Last-Modified</td><td>資源最後修改時間。客戶端帶 <code>If-Modified-Since</code>，若未變則回 304，比 ETag 精度低</td></tr>
+            <tr><td>Expires</td><td>絕對過期時間（HTTP/1.0 遺留）；有 Cache-Control 時此標頭被忽略</td></tr>
+            <tr><td>Vary</td><td>告訴快取伺服器依哪些請求標頭區分快取，如 <code>Vary: Accept-Encoding</code> 讓 gzip 與原始版本分開快取</td></tr>
+          </tbody>
+        </table>
+
+        <h3>內容協商標頭</h3>
+        <table class="def-table">
+          <thead><tr><th>標頭</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>Accept</td><td>客戶端可接受的 Content-Type，如 <code>application/json, text/html;q=0.9, */*;q=0.8</code>（q 值代表優先權）</td></tr>
+            <tr><td>Accept-Encoding</td><td>客戶端支援的壓縮演算法，如 <code>gzip, deflate, br</code>（br = Brotli，比 gzip 壓縮率高 20%）</td></tr>
+            <tr><td>Accept-Language</td><td>客戶端偏好語言，如 <code>zh-TW, zh;q=0.9, en-US;q=0.8</code></td></tr>
+            <tr><td>Content-Type</td><td>Body 的媒體類型，如 <code>application/json</code>、<code>multipart/form-data</code>、<code>text/html; charset=utf-8</code></td></tr>
+            <tr><td>Content-Encoding</td><td>Body 使用的壓縮格式，如 <code>gzip</code>，客戶端需解壓後讀取</td></tr>
+          </tbody>
+        </table>
+
+        <h3>認證與授權標頭</h3>
+        <table class="def-table">
+          <thead><tr><th>標頭</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>Authorization</td><td>攜帶身份憑證。格式：<code>Bearer &lt;JWT token&gt;</code>、<code>Basic &lt;base64(user:pass)&gt;</code>、<code>Digest ...</code></td></tr>
+            <tr><td>WWW-Authenticate</td><td>回應 401 時告知客戶端所需的認證方式，如 <code>WWW-Authenticate: Bearer realm="api"</code></td></tr>
+            <tr><td>Cookie</td><td>客戶端發送儲存的 Cookie。<code>Cookie: session=abc123; user_id=42</code></td></tr>
+            <tr><td>Set-Cookie</td><td>伺服器設定 Cookie。重要屬性：<code>HttpOnly</code>（JS 無法存取）、<code>Secure</code>（僅 HTTPS）、<code>SameSite</code>（CSRF 防護）、<code>Max-Age</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S6 -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>HTTP/1.1 的連線管理</h2>
+        <p>
+          HTTP/1.0 每個請求都需要建立一個新的 TCP 連線，
+          三向握手的開銷對頁面載入時間影響極大。
+          HTTP/1.1 引入的<strong>持久連線（Persistent Connection / Keep-Alive）</strong>
+          允許在同一 TCP 連線上串行發送多個請求，大幅減少握手次數。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">HTTP/1.0 vs HTTP/1.1 vs HTTP/2 連線模型</div>
+          <pre>
+HTTP/1.0（每次請求建立新連線）：
+  TCP SYN → SYN-ACK → ACK → Request → Response → FIN
+  TCP SYN → SYN-ACK → ACK → Request → Response → FIN  ← 每次都握手！
+  TCP SYN → SYN-ACK → ACK → Request → Response → FIN
+
+HTTP/1.1（持久連線 + 管線化）：
+  TCP SYN → SYN-ACK → ACK
+  ├── Request 1 → Response 1
+  ├── Request 2 → Response 2  ← 串行，必須等上一個完成
+  └── Request 3 → Response 3
+  FIN（可重用，減少握手）
+
+  問題：HOL（Head-of-Line）Blocking
+  Request 1 卡住 → Request 2、3 全部等待
+
+HTTP/2（多路復用，同一連線）：
+  TCP SYN → SYN-ACK → ACK
+  ├── Stream 1：Request 1 → Response 1 ─┐
+  ├── Stream 3：Request 2 → Response 2 ─┤ 並行傳輸，互不阻塞
+  └── Stream 5：Request 3 → Response 3 ─┘
+  FIN</pre>
+        </div>
+
+        <p>
+          HTTP/1.1 引入了<strong>管線化（Pipelining）</strong>，
+          允許客戶端在收到前一個回應之前就發出下一個請求，
+          但<strong>回應必須按請求順序返回</strong>，
+          第一個慢請求仍會阻塞後面所有請求——這就是
+          <strong>隊頭阻塞（Head-of-Line Blocking，HOL Blocking）</strong>問題。
+          實際上大多數瀏覽器預設不啟用 Pipelining，
+          而是以「一個域名開最多 6 個並行 TCP 連線」的方式繞過 HOL Blocking。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">域名分片（Domain Sharding）的反模式</p>
+          <p>
+            在 HTTP/1.1 時代，工程師常把靜態資源分散在多個子域名
+            （如 <code>static1.example.com</code>、<code>static2.example.com</code>），
+            以突破每個域名最多 6 個連線的限制，這種技巧稱為「域名分片」。
+            但在 HTTP/2 時代，域名分片是<strong>反模式</strong>——
+            它讓多路復用的好處消失，反而增加 DNS 查詢與 TLS 握手的開銷。
+            現代最佳實踐是合併到同一個域名並啟用 HTTP/2。
+          </p>
+        </div>
+      </section>
+
+      <!-- S7 -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>HTTP/2 的多路復用</h2>
+        <p>
+          HTTP/2 最核心的改進是引入了<strong>二進位框架層（Binary Framing Layer）</strong>，
+          將 HTTP 訊息分解為更小的<strong>幀（Frame）</strong>，
+          每個幀屬於某個<strong>串流（Stream）</strong>，
+          多個串流可以在同一 TCP 連線上交錯傳輸。
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>HTTP/2 核心概念</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Frame（幀）</td>
+              <td>HTTP/2 的最小傳輸單位。類型包含 HEADERS、DATA、PRIORITY、RST_STREAM、SETTINGS、PUSH_PROMISE、PING、GOAWAY、WINDOW_UPDATE</td>
+            </tr>
+            <tr>
+              <td>Stream（串流）</td>
+              <td>一個請求/回應對的邏輯通道，有唯一的 Stream ID（客戶端用奇數，伺服器用偶數）。多個 Stream 同時進行即為多路復用</td>
+            </tr>
+            <tr>
+              <td>HPACK 標頭壓縮</td>
+              <td>使用靜態表（61 個常用標頭）、動態表（之前傳過的標頭）和 Huffman 編碼，將重複標頭的體積減少 85–88%。解決 HTTP/1.1 每個請求都重複傳送相同標頭的浪費</td>
+            </tr>
+            <tr>
+              <td>Server Push</td>
+              <td>伺服器在客戶端請求 HTML 之前，主動推送 CSS/JS，減少客戶端等待時間。但實際部署效果有限，HTTP/3 中已不再強調</td>
+            </tr>
+            <tr>
+              <td>Stream Priority</td>
+              <td>客戶端可為串流設定優先級（如 CSS > JS > 圖片），讓伺服器依優先順序配置頻寬</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">HTTP/2 的殘留問題</p>
+          <p>
+            HTTP/2 在應用層解決了 HOL Blocking，但底層 TCP 的 HOL Blocking 依然存在：
+            若一個 TCP 封包遺失，整個 TCP 連線的所有串流都必須等待該封包重傳，
+            即使其他串流的資料早已到達緩衝區。這在高丟包環境（如行動網路）中
+            甚至讓 HTTP/2 比多個 HTTP/1.1 連線更慢。HTTP/3 透過換掉 TCP 為 QUIC 解決了這個問題。
+          </p>
+        </div>
+      </section>
+
+      <!-- S8 -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>HTTP/3 與 QUIC</h2>
+        <p>
+          HTTP/3 將傳輸層從 TCP 換成 <strong>QUIC（UDP 基礎）</strong>，
+          徹底解決了 TCP HOL Blocking，同時整合 TLS 1.3，
+          大幅降低連線建立延遲。
+          （QUIC 的詳細機制已在 Day 8 介紹，此處聚焦 HTTP/3 層面的改進。）
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>面向</th><th>HTTP/2 + TLS (TCP)</th><th>HTTP/3 (QUIC)</th></tr></thead>
+          <tbody>
+            <tr><td>傳輸層</td><td>TCP（作業系統核心控制）</td><td>QUIC（UDP，使用者空間實作）</td></tr>
+            <tr><td>連線建立</td><td>1 RTT TCP + 1 RTT TLS = 2 RTT</td><td>1 RTT（初次）或 0-RTT（再次）</td></tr>
+            <tr><td>HOL Blocking</td><td>TCP 層仍有</td><td>徹底消除（QUIC Stream 各自獨立）</td></tr>
+            <tr><td>連線遷移</td><td>換網路需重建連線</td><td>Connection ID 維持連線</td></tr>
+            <tr><td>標頭壓縮</td><td>HPACK</td><td>QPACK（HPACK 的 QUIC 適配版，避免 HPACK 的阻塞問題）</td></tr>
+            <tr><td>辨識方式</td><td>TCP Port 80/443</td><td>UDP Port 443（Alt-Svc 標頭告知客戶端可升級）</td></tr>
+          </tbody>
+        </table>
+
+        <div class="diagram">
+          <div class="diagram-title">HTTP/3 協商流程（Alt-Svc 升級）</div>
+          <pre>
+  客戶端                              伺服器
+    │                                  │
+    │── HTTPS (HTTP/1.1 或 HTTP/2) ───>│  首次連線，TCP + TLS
+    │                                  │
+    │<── Response ──────────────────────│
+    │    Headers 含：                  │
+    │    alt-svc: h3=":443"; ma=86400  │  「我支援 HTTP/3！」
+    │                                  │
+    │  （下次連線）                    │
+    │── QUIC/HTTP/3 到 UDP:443 ─────→│  直接用 HTTP/3，無需 TCP</pre>
+        </div>
+      </section>
+
+      <!-- S9 -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>HTTPS 與 TLS 握手</h2>
+        <p>
+          <strong>HTTPS = HTTP + TLS（Transport Layer Security）</strong>。
+          TLS 在 TCP（或 QUIC）之上、HTTP 之下，
+          提供三項核心保障：
+          <strong>加密（Confidentiality）</strong>——中間人無法讀取內容；
+          <strong>完整性（Integrity）</strong>——篡改會被偵測；
+          <strong>認證（Authentication）</strong>——確認伺服器身份是真實的。
+        </p>
+        <p>
+          TLS 的當前版本是 <strong>TLS 1.3（RFC 8446，2018）</strong>，
+          相比 TLS 1.2 大幅簡化了握手（從 2 RTT 降至 1 RTT），
+          移除了所有不安全的密碼套件，並支援 0-RTT Session Resumption。
+          TLS 1.0 和 1.1 已被 IETF 正式棄用（RFC 8996）。
+        </p>
+
+        <div class="tls-steps">
+          <div class="tls-header">TLS 1.3 握手流程（1 RTT）</div>
+          <div class="tls-step">
+            <div class="tls-n">1</div>
+            <div class="tls-body">
+              <div class="tls-title">Client Hello</div>
+              <div class="tls-desc">客戶端發送：支援的 TLS 版本、支援的密碼套件清單（Cipher Suites）、隨機數（Client Random）、Key Share（用於 ECDHE 金鑰交換的公鑰，TLS 1.3 預先傳送以節省一個 RTT）</div>
+            </div>
+          </div>
+          <div class="tls-step">
+            <div class="tls-n">2</div>
+            <div class="tls-body">
+              <div class="tls-title">Server Hello + Certificate + Finished</div>
+              <div class="tls-desc">伺服器回應：選定的密碼套件、隨機數（Server Random）、Key Share（伺服器的 ECDHE 公鑰）、<strong>數位憑證</strong>（含公鑰與 CA 簽名）、Finished（已用協商好的金鑰加密，證明伺服器擁有私鑰）。此時雙方已可計算出對稱金鑰。</div>
+            </div>
+          </div>
+          <div class="tls-step">
+            <div class="tls-n">3</div>
+            <div class="tls-body">
+              <div class="tls-title">客戶端驗證憑證</div>
+              <div class="tls-desc">客戶端驗證：憑證鏈（Chain of Trust）是否由受信任的 CA 簽發、憑證未過期、CN/SAN 欄位與域名相符、憑證未被吊銷（OCSP 查詢）。若驗證失敗，顯示「您的連線不是私人連線」警告。</div>
+            </div>
+          </div>
+          <div class="tls-step">
+            <div class="tls-n">4</div>
+            <div class="tls-body">
+              <div class="tls-title">Client Finished</div>
+              <div class="tls-desc">客戶端發送 Finished 訊息，確認握手完成。之後所有 HTTP 通訊都用協商好的對稱金鑰（AES-GCM 或 ChaCha20-Poly1305）加密傳輸。</div>
+            </div>
+          </div>
+          <div class="tls-step">
+            <div class="tls-n">5</div>
+            <div class="tls-body">
+              <div class="tls-title">加密 HTTP 通訊開始</div>
+              <div class="tls-desc">整個 HTTP 交換（包含 URL、Header、Body）都被加密。中間人只能看到「與 IP X.X.X.X 的 TLS 連線」，無法得知請求的具體內容（SNI 標頭除外，但 ECH 可加密它）。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">TLS 1.2 vs TLS 1.3 握手延遲比較</div>
+          <pre>
+TLS 1.2（2 RTT 握手）：
+  Client Hello ──────────────────────→
+  ←──────── Server Hello + Cert + Server Hello Done
+  Client Key Exchange + Change Cipher + Finished ─→
+  ←──────── Change Cipher Spec + Finished
+  ←──────── HTTP Response（第 3 RTT 才收到！）
+
+TLS 1.3（1 RTT 握手）：
+  Client Hello + Key Share ──────────→
+  ←──────── Server Hello + Key Share + Cert + Finished
+  Client Finished + HTTP Request ────→
+  ←──────── HTTP Response（第 2 RTT 收到！）
+
+TLS 1.3 0-RTT（Session Resumption）：
+  Client Hello + Early Data (HTTP Request) ──→  ← 直接帶請求！
+  ←──────────────────── HTTP Response（第 1 RTT 收到）</pre>
+        </div>
+      </section>
+
+      <!-- S10 -->
+      <section class="lesson-section" id="s10">
+        <span class="section-num">Section 10</span>
+        <h2>憑證體系與 PKI</h2>
+        <p>
+          TLS 的認證機制依賴<strong>公鑰基礎建設（PKI，Public Key Infrastructure）</strong>。
+          每個 HTTPS 網站都有一張由<strong>憑證授權中心（CA，Certificate Authority）</strong>
+          簽發的<strong>數位憑證（X.509 Certificate）</strong>，
+          瀏覽器信任的根 CA 清單（Root Store）預先內建在作業系統或瀏覽器中。
+        </p>
+
+        <h3>憑證鏈（Certificate Chain）</h3>
+        <div class="diagram">
+          <div class="diagram-title">三層憑證鏈結構</div>
+          <pre>
+  根 CA（Root CA）
+  自簽名，離線保存，極少使用
+  例：DigiCert Global Root G2
+      │
+      │ 簽發
+      ↓
+  中間 CA（Intermediate CA）
+  由根 CA 簽名，線上運作
+  例：DigiCert TLS RSA SHA256 2020 CA1
+      │
+      │ 簽發
+      ↓
+  終端憑證（End-Entity / Leaf Certificate）
+  你的網站憑證，含域名、公鑰、有效期
+  例：www.example.com（有效期至 2025-12-31）
+
+  瀏覽器驗證：
+    www.example.com 憑證 → 由 DigiCert 中間 CA 簽名 → 由受信任根 CA 簽名 ✓</pre>
+        </div>
+
+        <h3>憑證類型</h3>
+        <table class="def-table">
+          <thead><tr><th>類型</th><th>驗證程度</th><th>取得方式</th><th>適用場景</th></tr></thead>
+          <tbody>
+            <tr><td>DV（Domain Validation）</td><td>只驗證域名所有權（DNS 或 HTTP 驗證）</td><td>自動化，數分鐘內完成（Let's Encrypt）</td><td>個人網站、API、博客</td></tr>
+            <tr><td>OV（Organization Validation）</td><td>驗證域名 + 組織合法性（人工審查）</td><td>數天，需提供公司文件</td><td>企業網站、B2B 服務</td></tr>
+            <tr><td>EV（Extended Validation）</td><td>最嚴格，驗證組織、地址、法律地位</td><td>數週，費用高</td><td>銀行、政府、金融機構</td></tr>
+            <tr><td>萬用字元（Wildcard）</td><td>覆蓋 <code>*.example.com</code> 所有子域</td><td>通常為 OV/DV 等級</td><td>多子域名的服務</td></tr>
+            <tr><td>多域名（SAN/Multi-Domain）</td><td>一張憑證涵蓋多個不同域名（SAN 欄位）</td><td>依主憑證等級</td><td>管理多個域名的組織</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Let's Encrypt 與憑證自動化</h3>
+        <p>
+          <strong>Let's Encrypt</strong> 是非營利的免費 CA，
+          透過 <strong>ACME 協定（RFC 8555）</strong>自動化 DV 憑證的申請與續期，
+          大幅推動了全球 HTTPS 採用率（2014 年前後全球 HTTPS 比例約 30%，
+          2024 年已超過 85%）。
+          配合 Certbot 或 Caddy，憑證申請與每 90 天自動續期全程無人工介入。
+        </p>
+
+        <h3>HSTS：強制 HTTPS</h3>
+        <p>
+          <strong>HSTS（HTTP Strict Transport Security）</strong>
+          透過回應標頭 <code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code>
+          告訴瀏覽器：在 max-age 期間，此域名及所有子域名只能用 HTTPS 連線，
+          任何 HTTP 嘗試都自動升級為 HTTPS，防止 SSL Stripping 攻擊。
+          加入 <strong>HSTS Preload 清單</strong>（chromium.org/hsts）
+          讓瀏覽器從第一次訪問就強制 HTTPS，無需先收到標頭。
+        </p>
+      </section>
+
+      <!-- S11 -->
+      <section class="lesson-section" id="s11">
+        <span class="section-num">Section 11</span>
+        <h2>HTTP 安全標頭與常見漏洞</h2>
+
+        <h3>重要安全回應標頭</h3>
+        <table class="def-table">
+          <thead><tr><th>標頭</th><th>作用</th><th>建議值</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Content-Security-Policy</td>
+              <td>指定哪些來源的腳本/樣式/圖片可以載入，防止 XSS 和資源注入攻擊</td>
+              <td><code>default-src 'self'; script-src 'self' cdn.example.com</code></td>
+            </tr>
+            <tr>
+              <td>X-Content-Type-Options</td>
+              <td>防止瀏覽器 MIME 嗅探（把 image/jpeg 執行為 script）</td>
+              <td><code>nosniff</code></td>
+            </tr>
+            <tr>
+              <td>X-Frame-Options</td>
+              <td>防止頁面被嵌入 iframe（Clickjacking 防護），CSP 的 frame-ancestors 是更現代的替代</td>
+              <td><code>DENY</code> 或 <code>SAMEORIGIN</code></td>
+            </tr>
+            <tr>
+              <td>Referrer-Policy</td>
+              <td>控制 HTTP Referer 標頭發送的資訊量，防止敏感 URL 洩漏給第三方</td>
+              <td><code>strict-origin-when-cross-origin</code></td>
+            </tr>
+            <tr>
+              <td>Permissions-Policy</td>
+              <td>限制頁面可使用的瀏覽器 API（Camera、Microphone、Geolocation 等）</td>
+              <td><code>camera=(), microphone=(), geolocation=(self)</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>CORS：跨來源資源共用</h3>
+        <p>
+          <strong>CORS（Cross-Origin Resource Sharing）</strong>是瀏覽器的同源政策（Same-Origin Policy）的延伸機制，
+          允許伺服器明確宣告哪些來源可以跨域存取其資源。
+          關鍵回應標頭：
+        </p>
+        <div class="diagram">
+          <div class="diagram-title">CORS 預檢（Preflight）流程</div>
+          <pre>
+瀏覽器（在 app.example.com）              API（api.other.com）
+    │                                         │
+    │── OPTIONS /data ───────────────────────>│  預檢請求
+    │   Origin: https://app.example.com       │
+    │   Access-Control-Request-Method: POST   │
+    │   Access-Control-Request-Headers: Authorization
+    │                                         │
+    │<── 204 No Content ──────────────────────│  伺服器授權
+    │    Access-Control-Allow-Origin: https://app.example.com
+    │    Access-Control-Allow-Methods: GET, POST, PUT
+    │    Access-Control-Allow-Headers: Authorization
+    │    Access-Control-Max-Age: 86400        │  快取預檢 24 小時
+    │                                         │
+    │── POST /data (實際請求) ───────────────>│
+    │<── 200 OK ──────────────────────────────│</pre>
+        </div>
+
+        <h3>常見 HTTP 層安全漏洞</h3>
+        <table class="def-table">
+          <thead><tr><th>漏洞</th><th>說明與防護</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>XSS（跨站腳本）</td>
+              <td>攻擊者注入惡意 JavaScript 到頁面。防護：輸出編碼（HTML Escaping）+ CSP 標頭 + HttpOnly Cookie</td>
+            </tr>
+            <tr>
+              <td>CSRF（跨站請求偽造）</td>
+              <td>誘使已登入用戶點擊惡意連結，觸發非預期操作。防護：SameSite Cookie + CSRF Token + Double Submit Cookie</td>
+            </tr>
+            <tr>
+              <td>SQL Injection</td>
+              <td>惡意 SQL 語句注入 HTTP 參數，操控資料庫。防護：參數化查詢（Prepared Statement）+ 最小化 DB 權限</td>
+            </tr>
+            <tr>
+              <td>HTTP Header Injection</td>
+              <td>在 Set-Cookie / Location 等標頭中注入換行（CRLF），偽造額外標頭或分割回應。防護：嚴格驗證並過濾換行字元</td>
+            </tr>
+            <tr>
+              <td>SSL Stripping</td>
+              <td>中間人將 HTTPS 降級為 HTTP。防護：HSTS + HSTS Preload 清單</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Summary -->
+      <section class="lesson-section" id="s12">
+        <div class="summary-box">
+          <div class="summary-label">Day 10 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>HTTP 從 0.9 的單行指令演進到 HTTP/3，每版解決上一版的連線效率瓶頸</li>
+            <li>HTTP 訊息由起始行、Header、空行、Body 組成；URL 含 scheme/host/port/path/query/fragment</li>
+            <li>GET/HEAD/OPTIONS 是安全冪等方法；PUT/DELETE 是冪等但非安全；POST 既非安全也非冪等</li>
+            <li>2xx=成功、3xx=重導（301 永久/307 臨時保留方法）、4xx=客戶端錯誤、5xx=伺服器錯誤</li>
+            <li>HTTP/1.1 持久連線改善握手開銷，但 Pipelining 的 HOL Blocking 問題依然存在</li>
+            <li>HTTP/2 引入二進位幀、多路復用（Stream）、HPACK 壓縮，解決應用層 HOL Blocking</li>
+            <li>HTTP/3 換用 QUIC（UDP），徹底消除 HOL Blocking，0-RTT 重連，Connection ID 遷移</li>
+            <li>HTTPS = HTTP + TLS；TLS 1.3 只需 1 RTT 握手（TLS 1.2 需 2 RTT）</li>
+            <li>憑證鏈：根 CA → 中間 CA → 終端憑證；Let's Encrypt ACME 協定實現免費自動化 DV 憑證</li>
+            <li>HSTS 防 SSL Stripping；CSP 防 XSS；SameSite Cookie 防 CSRF；CORS 管控跨域存取</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">10 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>HTTP/1.0 / 1.1 / 2 / 3</li>
+          <li><span>#</span>Request / Response 格式</li>
+          <li><span>#</span>GET / POST / PUT / DELETE</li>
+          <li><span>#</span>冪等性 / 安全性</li>
+          <li><span>#</span>狀態碼 2xx/3xx/4xx/5xx</li>
+          <li><span>#</span>Keep-Alive 持久連線</li>
+          <li><span>#</span>HOL Blocking</li>
+          <li><span>#</span>多路復用（Multiplexing）</li>
+          <li><span>#</span>HPACK / QPACK</li>
+          <li><span>#</span>TLS 1.3 握手</li>
+          <li><span>#</span>PKI / CA / X.509</li>
+          <li><span>#</span>憑證鏈（Chain of Trust）</li>
+          <li><span>#</span>Let's Encrypt / ACME</li>
+          <li><span>#</span>HSTS / Preload</li>
+          <li><span>#</span>CSP / CORS / SameSite</li>
+          <li><span>#</span>ETag / Cache-Control</li>
+          <li><span>#</span>XSS / CSRF / SSL Stripping</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day9.html"><span>&larr; Day 9: DNS 網域名稱系統</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day11.html"><span>Day 11: 網路安全基礎</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 10 / 16</p>
+    <p>下一課：<a href="day11.html" style="color:var(--accent);text-decoration:none;">網路安全基礎 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

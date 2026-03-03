@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 1 — 網路是什麼？ | 網路通訊課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:    #1a1a1a;
+      --paper:  #f5f0e8;
+      --accent: #c0392b;
+      --mid:    #7a6a5a;
+      --line:   rgba(26,26,26,0.12);
+      --code-bg: rgba(26,26,26,0.06);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.9;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: relative;
+      z-index: 10;
+      padding: 20px 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .topnav a:hover { color: var(--accent); }
+
+    .topnav .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topnav .sep {
+      color: var(--line);
+      font-size: 14px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: end;
+    }
+
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: var(--mid);
+      max-width: 560px;
+    }
+
+    .hero-meta {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 6rem;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+      opacity: 0.08;
+      display: block;
+    }
+
+    /* ── TOC ── */
+    .toc-bar {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw;
+      border-bottom: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 14px;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      list-style: none;
+    }
+
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc-list li a:hover { color: var(--accent); }
+
+    .toc-list li::before {
+      content: attr(data-n) ". ";
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      align-items: start;
+    }
+
+    /* ── Article ── */
+    article {
+      padding: 64px 6vw 80px 8vw;
+      border-right: 1px solid var(--line);
+    }
+
+    /* ── Section ── */
+    .lesson-section {
+      margin-bottom: 72px;
+    }
+
+    .lesson-section:last-child { margin-bottom: 0; }
+
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 36px 0 12px;
+      color: var(--ink);
+    }
+
+    .lesson-section p {
+      margin-bottom: 16px;
+      font-size: 0.97rem;
+    }
+
+    .lesson-section p:last-child { margin-bottom: 0; }
+
+    strong {
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    /* ── Highlight box ── */
+    .highlight-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--accent);
+      background: rgba(192,57,43,0.05);
+    }
+
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .highlight-box p {
+      margin: 0;
+      font-size: 0.92rem;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--mid);
+      background: var(--code-bg);
+    }
+
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-box p {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--mid);
+    }
+
+    /* ── Definition table ── */
+    .def-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .def-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    .def-table tr:last-child td { border-bottom: none; }
+
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── Topology cards ── */
+    .topo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .topo-card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      background: rgba(26,26,26,0.02);
+    }
+
+    .topo-card .topo-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .topo-card .topo-art {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      line-height: 1.5;
+      color: var(--mid);
+      margin-bottom: 10px;
+      white-space: pre;
+    }
+
+    .topo-card p {
+      font-size: 0.8rem;
+      color: var(--mid);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ── Timeline ── */
+    .timeline {
+      margin: 28px 0;
+      position: relative;
+      padding-left: 28px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      background: var(--line);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 28px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -32px;
+      top: 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .timeline-year {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .timeline-title {
+      font-weight: 500;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .timeline-desc {
+      font-size: 0.87rem;
+      color: var(--mid);
+      margin: 0;
+    }
+
+    /* ── Key terms inline ── */
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      color: var(--ink);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 48px 0;
+    }
+
+    /* ── Summary box ── */
+    .summary-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .summary-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .summary-box ul li {
+      font-size: 0.9rem;
+      color: rgba(245,240,232,0.8);
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(245,240,232,0.08);
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .summary-box ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      padding: 48px 28px;
+      position: sticky;
+      top: 0;
+    }
+
+    .aside-section {
+      margin-bottom: 40px;
+    }
+
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .keyword-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+      transition: color 0.2s;
+    }
+
+    .keyword-list li:hover { color: var(--accent); }
+
+    .keyword-list li span {
+      color: var(--accent);
+      margin-right: 6px;
+    }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--line);
+      margin: 12px 0 20px;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 6.25%;
+      background: var(--accent);
+    }
+
+    .progress-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-links a:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: static;
+        border-top: 1px solid var(--line);
+        padding: 40px 8vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      article {
+        padding: 48px 8vw 64px;
+        border-right: none;
+      }
+
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-meta { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .toc-bar, article, aside {
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .toc-bar { animation-delay: 0.1s; }
+    article  { animation-delay: 0.15s; }
+    aside    { animation-delay: 0.2s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ── -->
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 1</a>
+    </div>
+    <a href="day2.html">Day 2 &rarr;</a>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 01 &mdash; 網路基礎概念 &mdash; Day 01 / 16</p>
+      <h1>網路是什麼？<br>從零理解通訊世界</h1>
+      <p class="hero-desc">
+        在深入任何協定之前，我們必須先建立對「網路」本質的完整認識：
+        它從何而來、如何分類、由哪些元件組成，以及通訊的最基本原則是什麼。
+      </p>
+    </div>
+    <div class="hero-meta">
+      <span class="day-num">01</span>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">網路的定義與本質</a></li>
+      <li data-n="2"><a href="#s2">歷史演進</a></li>
+      <li data-n="3"><a href="#s3">網路分類</a></li>
+      <li data-n="4"><a href="#s4">拓樸結構</a></li>
+      <li data-n="5"><a href="#s5">基本硬體元件</a></li>
+      <li data-n="6"><a href="#s6">資料傳輸基礎</a></li>
+      <li data-n="7"><a href="#s7">通訊模式</a></li>
+      <li data-n="8"><a href="#s8">標準化組織</a></li>
+      <li data-n="9"><a href="#s9">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main-wrap">
+
+    <article>
+
+      <!-- ══ Section 1 ══ -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>網路的定義與本質</h2>
+
+        <p>
+          <strong>電腦網路（Computer Network）</strong>是指兩台或兩台以上的電腦設備，
+          透過某種傳輸媒介（有線或無線）相互連結，並依照共同認可的
+          <strong>通訊協定（Protocol）</strong>進行資料交換的系統。
+        </p>
+
+        <p>
+          這個定義包含三個核心要素：「設備（端點）」、「媒介（通道）」與「協定（規則）」。
+          缺少任何一個，通訊都無法發生。就像人類的語言：說話者是設備，
+          空氣是媒介，語法規則就是協定。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">核心概念</p>
+          <p>
+            網路的本質是<strong>資源共享</strong>與<strong>訊息傳遞</strong>。
+            資源共享讓多台設備共用印表機、檔案或運算能力；訊息傳遞則讓人與人、
+            機器與機器之間能夠即時溝通。現代網際網路是這兩者的極致體現。
+          </p>
+        </div>
+
+        <h3>為什麼需要網路？</h3>
+
+        <p>
+          在網路出現之前，資料必須靠實體媒體（磁碟、磁帶）人工傳遞，
+          稱為「<strong>鞋底網路（Sneakernet）</strong>」。這種方式速度慢、成本高且難以擴展。
+          電腦網路解決了以下問題：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>需求</th>
+              <th>說明</th>
+              <th>現代應用範例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>資源共享</td>
+              <td>多人共用同一台印表機、儲存空間或應用程式</td>
+              <td>NAS 儲存、雲端硬碟</td>
+            </tr>
+            <tr>
+              <td>通訊</td>
+              <td>在不同地理位置的使用者之間傳遞訊息</td>
+              <td>電子郵件、即時通訊</td>
+            </tr>
+            <tr>
+              <td>分散運算</td>
+              <td>將運算任務拆分給多台機器平行處理</td>
+              <td>Hadoop、分散式資料庫</td>
+            </tr>
+            <tr>
+              <td>冗餘備援</td>
+              <td>某節點故障時，訊息可繞路繼續傳遞</td>
+              <td>CDN、多路徑路由</td>
+            </tr>
+            <tr>
+              <td>集中管理</td>
+              <td>透過網路統一設定與監控多台設備</td>
+              <td>DevOps、IoT 管理平台</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 2 ══ -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>歷史演進</h2>
+
+        <p>
+          了解網路的歷史，能幫助我們理解為何今日的技術選擇如此設計。
+          許多協定的「怪異之處」，往往源自幾十年前的工程決策。
+        </p>
+
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-year">1957</div>
+            <div class="timeline-title">冷戰催生網路研究</div>
+            <p class="timeline-desc">
+              蘇聯發射史普尼克衛星，美國國防部成立 ARPA（高等研究計劃局），
+              開始研究具備核戰生存能力的去中心化通訊網路。
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1969</div>
+            <div class="timeline-title">ARPANET 誕生</div>
+            <p class="timeline-desc">
+              世界上第一個封包交換網路上線，連接加州大學洛杉磯分校、
+              史丹佛研究院、加大聖塔芭芭拉分校與猶他大學等四個節點。
+              第一條訊息是「lo」——傳輸「login」時系統即崩潰。
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1974</div>
+            <div class="timeline-title">TCP/IP 概念提出</div>
+            <p class="timeline-desc">
+              Vint Cerf 與 Bob Kahn 發表論文，提出傳輸控制協定概念，
+              奠定現代網際網路的通訊基礎。兩人後來被稱為「網際網路之父」。
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1983</div>
+            <div class="timeline-title">DNS 與 TCP/IP 標準化</div>
+            <p class="timeline-desc">
+              ARPANET 正式切換至 TCP/IP 協定族，同年 DNS 系統提出，
+              取代人工維護的 HOSTS.TXT 主機名稱對應檔。
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1991</div>
+            <div class="timeline-title">全球資訊網（WWW）誕生</div>
+            <p class="timeline-desc">
+              Tim Berners-Lee 在歐洲核子研究組織（CERN）發明 HTTP 與 HTML，
+              讓網路從學術工具蛻變為大眾媒介。這是網際網路史上最重要的轉折點之一。
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1998</div>
+            <div class="timeline-title">IPv6 規格發布</div>
+            <p class="timeline-desc">
+              面對 IPv4 位址即將耗盡的危機，IETF 發布 IPv6 標準，
+              將位址空間從 32 位元擴展至 128 位元，理論上可提供 3.4×10³⁸ 個位址。
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">2010s</div>
+            <div class="timeline-title">行動網路與物聯網時代</div>
+            <p class="timeline-desc">
+              4G LTE 普及、智慧手機成為主要上網工具；IoT 設備數量超越人口數量，
+              推動邊緣運算與 5G 技術的快速發展。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Section 3 ══ -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>網路分類</h2>
+
+        <p>
+          網路可以從多個維度分類：依地理範圍、依擁有權、依傳輸技術。
+          最常見的分類方式是依<strong>地理覆蓋範圍</strong>：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>類型</th>
+              <th>全名</th>
+              <th>覆蓋範圍</th>
+              <th>典型速度</th>
+              <th>範例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PAN</td>
+              <td>個人區域網路</td>
+              <td>1–10 公尺</td>
+              <td>1–480 Mbps</td>
+              <td>藍牙耳機、USB 連線</td>
+            </tr>
+            <tr>
+              <td>LAN</td>
+              <td>區域網路</td>
+              <td>建築物內</td>
+              <td>100 Mbps–10 Gbps</td>
+              <td>辦公室乙太網路</td>
+            </tr>
+            <tr>
+              <td>MAN</td>
+              <td>都會區域網路</td>
+              <td>城市範圍</td>
+              <td>10 Mbps–1 Gbps</td>
+              <td>有線電視網路、城市 Wi-Fi</td>
+            </tr>
+            <tr>
+              <td>WAN</td>
+              <td>廣域網路</td>
+              <td>國家/全球</td>
+              <td>不定</td>
+              <td>網際網路、企業 VPN</td>
+            </tr>
+            <tr>
+              <td>WLAN</td>
+              <td>無線區域網路</td>
+              <td>建築物內</td>
+              <td>54 Mbps–9.6 Gbps</td>
+              <td>家用 Wi-Fi（IEEE 802.11）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>依擁有權分類</h3>
+
+        <p>
+          <strong>公用網路（Public Network）</strong>由電信業者或政府維運，
+          任何人只要付費即可使用，網際網路是最典型的例子。
+          <strong>私有網路（Private Network）</strong>則由特定組織擁有與管理，
+          通常僅供內部員工使用，例如企業內網或政府機關的隔離網路。
+          <strong>虛擬私有網路（VPN）</strong>則是在公用網路上建立加密通道，
+          模擬私有網路的安全性，後續 Day 15 會深入討論。
+        </p>
+
+        <h3>電路交換 vs. 封包交換</h3>
+
+        <p>
+          這是網路設計中最根本的二元選擇。<strong>電路交換（Circuit Switching）</strong>在
+          通訊開始前先建立一條專用線路，通話期間獨佔頻寬，傳統電話系統即採用此模式。
+          優點是延遲穩定、品質有保障；缺點是資源利用率低，線路閒置時頻寬白白浪費。
+        </p>
+
+        <p>
+          <strong>封包交換（Packet Switching）</strong>則將資料切成小塊（封包），
+          每個封包獨立選擇路徑傳輸，到達目的地後再重組。網際網路即採用此架構。
+          優點是頻寬共享效率高；缺點是延遲可能不穩定（抖動）。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">電路交換 vs. 封包交換示意</div>
+          <pre>
+電路交換（Circuit Switching）
+  A ─────────────────────────────── B
+    ← 專屬線路，通話中其他人無法使用 →
+
+封包交換（Packet Switching）
+  A → [P1][P2][P3] → 路由器 → [P2][P1][P3] → B
+           ↑ 每個封包可走不同路徑，到達後重組 ↑
+          </pre>
+        </div>
+      </section>
+
+      <!-- ══ Section 4 ══ -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>網路拓樸結構</h2>
+
+        <p>
+          <strong>拓樸（Topology）</strong>描述網路中節點的連接方式，
+          分為<strong>實體拓樸</strong>（電纜如何鋪設）與
+          <strong>邏輯拓樸</strong>（資料如何流通）。
+          兩者可以不同：例如實體星狀拓樸在邏輯上可能運作為匯流排拓樸。
+        </p>
+
+        <div class="topo-grid">
+          <div class="topo-card">
+            <div class="topo-name">Bus（匯流排）</div>
+            <div class="topo-art">A—B—C—D—E
+|___________|</div>
+            <p>
+              所有節點共用一條主幹線。安裝簡單成本低，但主幹線斷掉整個網路失效，
+              碰撞問題嚴重，現代已少用。
+            </p>
+          </div>
+          <div class="topo-card">
+            <div class="topo-name">Ring（環狀）</div>
+            <div class="topo-art">  A
+ / \
+E   B
+|   |
+D   C
+ \ /</div>
+            <p>
+              資料單向繞環傳遞，使用令牌（Token）控制發送權。
+              IEEE 802.5 Token Ring，延遲可預測，但單點故障影響全環。
+            </p>
+          </div>
+          <div class="topo-card">
+            <div class="topo-name">Star（星狀）</div>
+            <div class="topo-art">  A B C
+   \|/
+    H
+   /|\
+  D E F</div>
+            <p>
+              所有節點連到中央 Hub/Switch。管理容易、單點故障隔離，
+              是現代乙太網路（LAN）最常見的實體拓樸。
+            </p>
+          </div>
+          <div class="topo-card">
+            <div class="topo-name">Mesh（網狀）</div>
+            <div class="topo-art">A—B—C
+|\ |\ |
+| \| \|
+D—E—F</div>
+            <p>
+              每個節點都與其他多個節點直接相連。
+              容錯性極高，常用於骨幹網路與軍事通訊，但佈線成本昂貴。
+            </p>
+          </div>
+          <div class="topo-card">
+            <div class="topo-name">Tree（樹狀）</div>
+            <div class="topo-art">    Root
+   /    \
+  A      B
+ / \    / \
+C   D  E   F</div>
+            <p>
+              星狀拓樸的延伸，透過層級結構擴展規模。
+              企業園區網路常見，易於擴充，但根節點故障影響全樹。
+            </p>
+          </div>
+          <div class="topo-card">
+            <div class="topo-name">Hybrid（混合）</div>
+            <div class="topo-art">Star + Mesh
+[核心]Mesh
+  / | \
+ S  S  S  ← 各分支為 Star</div>
+            <p>
+              結合多種拓樸優點。現代大型企業與雲端資料中心幾乎都採用混合拓樸設計。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Section 5 ══ -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>基本硬體元件</h2>
+
+        <p>
+          了解網路設備的功能是理解訊號如何流動的基礎。
+          不同設備運作在 OSI 模型的不同層（下一課深入討論），功能截然不同。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>設備</th>
+              <th>OSI 層</th>
+              <th>功能</th>
+              <th>智慧程度</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>網路卡（NIC）</td>
+              <td>Layer 1–2</td>
+              <td>讓設備與網路物理連接，負責訊號轉換與 MAC 位址識別</td>
+              <td>固定</td>
+            </tr>
+            <tr>
+              <td>集線器（Hub）</td>
+              <td>Layer 1</td>
+              <td>將訊號廣播至所有連接埠，不區分目的地，效率低</td>
+              <td>無</td>
+            </tr>
+            <tr>
+              <td>交換器（Switch）</td>
+              <td>Layer 2</td>
+              <td>學習 MAC 位址，將訊框只送往正確連接埠，避免廣播浪費</td>
+              <td>中等</td>
+            </tr>
+            <tr>
+              <td>路由器（Router）</td>
+              <td>Layer 3</td>
+              <td>根據 IP 位址在不同網路之間轉送封包，是網際網路的核心設備</td>
+              <td>高</td>
+            </tr>
+            <tr>
+              <td>閘道器（Gateway）</td>
+              <td>Layer 4–7</td>
+              <td>在使用不同協定的網路之間進行轉換，例如 VoIP 閘道器</td>
+              <td>最高</td>
+            </tr>
+            <tr>
+              <td>中繼器（Repeater）</td>
+              <td>Layer 1</td>
+              <td>放大訊號，解決長距離傳輸的訊號衰減問題</td>
+              <td>無</td>
+            </tr>
+            <tr>
+              <td>橋接器（Bridge）</td>
+              <td>Layer 2</td>
+              <td>連接兩個相同類型的區段，過濾並轉送訊框，為早期交換器前身</td>
+              <td>低</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">常見混淆</p>
+          <p>
+            家用「無線路由器」其實是 Router + Switch + Access Point 三合一設備。
+            它既扮演連接 ISP 的路由角色，也扮演連接家中多台設備的交換器角色，
+            同時提供 Wi-Fi 無線接入點功能。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 6 ══ -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>資料傳輸基礎</h2>
+
+        <h3>頻寬、吞吐量與延遲</h3>
+
+        <p>
+          這三個指標是衡量網路效能最重要的維度，日常上常被混用但意義截然不同：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>指標</th>
+              <th>定義</th>
+              <th>單位</th>
+              <th>類比</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>頻寬（Bandwidth）</td>
+              <td>通道理論上可傳輸的最大資料速率</td>
+              <td>bps / Mbps / Gbps</td>
+              <td>水管的管徑大小</td>
+            </tr>
+            <tr>
+              <td>吞吐量（Throughput）</td>
+              <td>實際上單位時間傳輸的有效資料量</td>
+              <td>bps</td>
+              <td>實際流過水管的水量</td>
+            </tr>
+            <tr>
+              <td>延遲（Latency）</td>
+              <td>封包從來源到目的地所需的時間</td>
+              <td>ms</td>
+              <td>水從一端流到另一端的時間</td>
+            </tr>
+            <tr>
+              <td>抖動（Jitter）</td>
+              <td>延遲的變化量，對即時應用影響大</td>
+              <td>ms</td>
+              <td>水流速度的不規則波動</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">重要觀念</p>
+          <p>
+            高頻寬不等於低延遲。下載大文件需要高頻寬；線上遊戲或視訊通話更在意低延遲。
+            頻寬好比高速公路的車道數，延遲好比城市之間的距離，兩者是獨立的維度。
+          </p>
+        </div>
+
+        <h3>傳輸模式</h3>
+
+        <p>
+          資料傳輸有三種基本方向性模式：
+          <strong>單工（Simplex）</strong>只能單向傳輸，例如廣播電視；
+          <strong>半雙工（Half-Duplex）</strong>可雙向但不同時，例如對講機；
+          <strong>全雙工（Full-Duplex）</strong>可同時雙向傳輸，例如電話和現代乙太網路。
+        </p>
+
+        <h3>數位訊號與類比訊號</h3>
+
+        <p>
+          <strong>類比訊號</strong>是連續波形，振幅、頻率隨時間連續變化，傳統電話線使用類比訊號。
+          <strong>數位訊號</strong>只有離散狀態（0 與 1），現代網路幾乎全面使用數位訊號。
+          <strong>調變（Modulation）</strong>是將數位訊號轉換為適合傳輸媒介的波形的技術，
+          例如 ADSL 使用 DMT 調變技術讓數位資料在傳統電話線上傳輸。
+        </p>
+
+        <h3>位元與位元組</h3>
+
+        <p>
+          網路速度通常以<strong>位元（bit）</strong>為單位（小寫 b），
+          而檔案大小通常以<strong>位元組（Byte）</strong>為單位（大寫 B），
+          1 Byte = 8 bits。因此 100 Mbps 的網路速度，
+          理論上最大下載速度是 100 ÷ 8 = 12.5 MB/s。
+          許多人誤以為 100 Mbps 可以每秒下載 100 MB，這是最常見的單位混淆。
+        </p>
+      </section>
+
+      <!-- ══ Section 7 ══ -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>通訊模式：Client-Server vs. P2P</h2>
+
+        <p>
+          現代網路應用建立在兩種基本架構之上，理解它們的差異是後續學習 HTTP、
+          DNS、檔案傳輸等應用層協定的前提。
+        </p>
+
+        <h3>主從式架構（Client-Server）</h3>
+
+        <p>
+          網路中有明確的<strong>服務提供者（Server）</strong>與
+          <strong>服務使用者（Client）</strong>之分。
+          伺服器持續運行，等待用戶端的連線請求；用戶端主動發起連線，
+          提出請求並等待回應。Web 瀏覽（HTTP）、電子郵件（SMTP/IMAP）、
+          DNS 查詢都採用此模式。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">Client-Server 通訊流程</div>
+          <pre>
+Client                          Server
+  │                                │
+  │──── TCP SYN ──────────────────>│
+  │<─── TCP SYN-ACK ───────────────│
+  │──── TCP ACK ──────────────────>│  (連線建立)
+  │                                │
+  │──── HTTP GET /index.html ─────>│  (請求)
+  │<─── HTTP 200 OK + HTML ────────│  (回應)
+  │                                │
+  │──── TCP FIN ──────────────────>│  (關閉連線)
+          </pre>
+        </div>
+
+        <h3>對等式網路（Peer-to-Peer, P2P）</h3>
+
+        <p>
+          每個節點（Peer）既是客戶端也是伺服器，資源分散在所有參與節點上。
+          BitTorrent 是最知名的 P2P 應用：下載者同時也在上傳，
+          節點越多下載速度反而越快。P2P 的優勢是去中心化、高可用性，
+          缺點是版權問題難以管控，且難以保證服務品質。
+        </p>
+
+        <p>
+          現代應用常見<strong>混合架構</strong>：BitTorrent 使用中央 Tracker 伺服器來協調節點，
+          但實際資料傳輸是 P2P 進行；區塊鏈也是 P2P 概念的延伸。
+        </p>
+      </section>
+
+      <!-- ══ Section 8 ══ -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>標準化組織</h2>
+
+        <p>
+          網路世界能互通運作，靠的是各組織制定並推行的統一標準。
+          理解這些組織能幫助你找到最權威的技術文件來源。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>組織</th>
+              <th>全名</th>
+              <th>負責範疇</th>
+              <th>代表成果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>IETF</td>
+              <td>網際網路工程任務組</td>
+              <td>網際網路協定標準（RFC 文件）</td>
+              <td>TCP、UDP、HTTP、DNS</td>
+            </tr>
+            <tr>
+              <td>IEEE</td>
+              <td>電機電子工程師學會</td>
+              <td>有線與無線區域網路實體與資料鏈結層標準</td>
+              <td>802.3 乙太網路、802.11 Wi-Fi</td>
+            </tr>
+            <tr>
+              <td>ISO</td>
+              <td>國際標準化組織</td>
+              <td>廣泛的技術標準，包含 OSI 模型定義</td>
+              <td>OSI 參考模型（ISO 7498）</td>
+            </tr>
+            <tr>
+              <td>ICANN</td>
+              <td>網際網路名稱與數位位址分配機構</td>
+              <td>管理全球網域名稱與 IP 位址分配</td>
+              <td>DNS 根伺服器管理、TLD 授權</td>
+            </tr>
+            <tr>
+              <td>ITU</td>
+              <td>國際電信聯盟（聯合國機構）</td>
+              <td>電信與廣播標準，頻譜分配</td>
+              <td>G.711 語音編碼、H.264 視訊</td>
+            </tr>
+            <tr>
+              <td>W3C</td>
+              <td>全球資訊網協會</td>
+              <td>Web 相關技術標準</td>
+              <td>HTML、CSS、WebSocket</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">RFC 文件</p>
+          <p>
+            RFC（Request for Comments）是 IETF 發布的技術標準文件。
+            幾乎所有網際網路核心協定都有對應的 RFC，例如 TCP 是 RFC 793、
+            HTTP/1.1 是 RFC 7230–7235。這些文件可在 <code>rfc-editor.org</code> 免費查閱，
+            是最權威的協定參考資料。
+          </p>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- ══ Summary ══ -->
+      <section class="lesson-section" id="s9">
+        <div class="summary-box">
+          <div class="summary-label">Day 1 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>網路的三要素：端點設備、傳輸媒介、通訊協定，缺一不可</li>
+            <li>網路依範圍分為 PAN、LAN、MAN、WAN；依技術分為電路交換與封包交換</li>
+            <li>ARPANET 1969 年誕生，TCP/IP 1974 年提出，WWW 1991 年開放，奠定現代網路</li>
+            <li>六大拓樸：Bus、Ring、Star（最常用）、Mesh、Tree、Hybrid</li>
+            <li>Hub 廣播、Switch 學習 MAC 位址、Router 轉送 IP 封包，功能層次不同</li>
+            <li>頻寬是上限，吞吐量是實際值，延遲是時間，三者獨立衡量</li>
+            <li>Client-Server 是主流架構；P2P 去中心化，BitTorrent 為代表</li>
+            <li>IETF 的 RFC 是最權威的協定規格文件來源</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <!-- ── Sidebar ── -->
+    <aside>
+
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">1 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>Computer Network</li>
+          <li><span>#</span>Protocol（協定）</li>
+          <li><span>#</span>Packet Switching</li>
+          <li><span>#</span>Circuit Switching</li>
+          <li><span>#</span>ARPANET</li>
+          <li><span>#</span>LAN / WAN</li>
+          <li><span>#</span>Topology（拓樸）</li>
+          <li><span>#</span>Hub / Switch / Router</li>
+          <li><span>#</span>Bandwidth（頻寬）</li>
+          <li><span>#</span>Latency（延遲）</li>
+          <li><span>#</span>Client-Server</li>
+          <li><span>#</span>P2P</li>
+          <li><span>#</span>RFC</li>
+          <li><span>#</span>IETF / IEEE / ISO</li>
+        </ul>
+      </div>
+
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="index.html">
+            <span>課程首頁</span>
+            <span>&uarr;</span>
+          </a>
+          <a href="day2.html">
+            <span>Day 2: OSI 七層模型</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 01 / 16</p>
+    <p>下一課：<a href="day2.html" style="color:var(--accent);text-decoration:none;">OSI 七層模型 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

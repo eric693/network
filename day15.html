@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 15 — 無線網路與行動通訊 | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink:#1a1a1a;--paper:#f5f0e8;--accent:#c0392b;--mid:#7a6a5a;--line:rgba(26,26,26,0.12);--code-bg:rgba(26,26,26,0.06); }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{background-color:var(--paper);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:300;line-height:1.9;min-height:100vh;}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;}
+    .topnav{position:relative;z-index:10;padding:20px 8vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);}
+    .topnav a{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;color:var(--mid);text-decoration:none;text-transform:uppercase;transition:color .2s;}
+    .topnav a:hover{color:var(--accent);}
+    .topnav .breadcrumb{display:flex;align-items:center;gap:8px;}
+    .topnav .sep{color:var(--line);font-size:14px;}
+    .topnav .nav-group{display:flex;gap:24px;}
+    .hero{position:relative;z-index:1;padding:64px 8vw 56px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:48px;align-items:end;}
+    .hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;margin-bottom:18px;}
+    .hero h1{font-family:'Noto Serif TC',serif;font-size:clamp(2rem,4.5vw,3.4rem);font-weight:700;line-height:1.25;letter-spacing:-.02em;}
+    .hero-desc{margin-top:20px;font-size:1rem;color:var(--mid);max-width:560px;}
+    .hero-meta .day-num{font-family:'IBM Plex Mono',monospace;font-size:6rem;font-weight:500;line-height:1;color:var(--ink);opacity:.08;display:block;}
+    .toc-bar{position:relative;z-index:1;padding:24px 8vw;border-bottom:1px solid var(--line);background:rgba(26,26,26,.03);}
+    .toc-bar h2{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mid);margin-bottom:14px;}
+    .toc-list{display:flex;flex-wrap:wrap;gap:8px 24px;list-style:none;}
+    .toc-list li a{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mid);text-decoration:none;transition:color .2s;}
+    .toc-list li a:hover{color:var(--accent);}
+    .toc-list li::before{content:attr(data-n) ". ";color:var(--accent);font-size:10px;}
+    .main-wrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr 260px;align-items:start;}
+    article{padding:64px 6vw 80px 8vw;border-right:1px solid var(--line);}
+    .lesson-section{margin-bottom:72px;}
+    .lesson-section:last-child{margin-bottom:0;}
+    .section-num{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:10px;}
+    .lesson-section h2{font-family:'Noto Serif TC',serif;font-size:1.75rem;font-weight:600;line-height:1.3;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--line);}
+    .lesson-section h3{font-family:'Noto Serif TC',serif;font-size:1.15rem;font-weight:600;margin:36px 0 12px;}
+    .lesson-section p{margin-bottom:16px;font-size:.97rem;}
+    .lesson-section p:last-child{margin-bottom:0;}
+    strong{font-weight:500;color:var(--ink);}
+    code{font-family:'IBM Plex Mono',monospace;font-size:.85em;background:var(--code-bg);padding:2px 6px;color:var(--ink);}
+    .highlight-box{margin:28px 0;padding:20px 24px;border-left:3px solid var(--accent);background:rgba(192,57,43,.05);}
+    .highlight-box .box-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;margin-bottom:8px;}
+    .highlight-box p{margin:0;font-size:.92rem;}
+    .info-box{margin:28px 0;padding:20px 24px;border-left:3px solid var(--mid);background:var(--code-bg);}
+    .info-box .box-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--mid);text-transform:uppercase;margin-bottom:8px;}
+    .info-box p{margin:0;font-size:.92rem;color:var(--mid);}
+    .def-table{width:100%;border-collapse:collapse;margin:24px 0;font-size:.9rem;}
+    .def-table th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--mid);text-align:left;padding:10px 16px;background:var(--code-bg);border-bottom:1px solid var(--line);}
+    .def-table td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.7;}
+    .def-table tr:last-child td{border-bottom:none;}
+    .def-table td:first-child{font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:500;color:var(--accent);white-space:nowrap;}
+    .diagram{margin:28px 0;background:var(--code-bg);border:1px solid var(--line);padding:28px 24px;}
+    .diagram-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--mid);text-transform:uppercase;margin-bottom:20px;}
+    .diagram pre{font-family:'IBM Plex Mono',monospace;font-size:.78rem;line-height:1.75;color:var(--ink);overflow-x:auto;white-space:pre;}
+    /* generation timeline */
+    .gen-timeline{margin:28px 0;border:1px solid var(--line);overflow:hidden;}
+    .gt-header{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--paper);text-transform:uppercase;background:var(--ink);padding:10px 16px;}
+    .gt-row{display:grid;grid-template-columns:64px 110px 1fr;border-bottom:1px solid var(--line);}
+    .gt-row:last-child{border-bottom:none;}
+    .gt-row:not(:first-child):hover{background:rgba(26,26,26,.03);}
+    .gt-gen{font-family:'IBM Plex Mono',monospace;font-size:1.1rem;font-weight:500;color:var(--paper);background:var(--accent);padding:14px 0;border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;}
+    .gt-era{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--mid);padding:14px 12px;border-right:1px solid var(--line);display:flex;align-items:center;}
+    .gt-body{padding:14px 16px;}
+    .gt-title{font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:500;color:var(--ink);margin-bottom:4px;}
+    .gt-desc{font-size:.84rem;color:var(--mid);line-height:1.6;}
+    /* wifi cards */
+    .wifi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0;border:1px solid var(--line);margin:24px 0;}
+    .wifi-card{padding:18px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transition:background .15s;}
+    .wifi-card:hover{background:rgba(26,26,26,.03);}
+    .wifi-name{font-family:'IBM Plex Mono',monospace;font-size:.95rem;font-weight:500;color:var(--accent);margin-bottom:2px;}
+    .wifi-alias{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--mid);margin-bottom:8px;}
+    .wifi-row{display:flex;gap:8px;margin-bottom:5px;align-items:baseline;}
+    .wifi-k{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--mid);flex-shrink:0;width:44px;text-transform:uppercase;}
+    .wifi-v{font-size:.82rem;color:var(--ink);}
+    /* band bar */
+    .band-bar{margin:28px 0;border:1px solid var(--line);overflow:hidden;}
+    .band-header{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--paper);text-transform:uppercase;background:var(--ink);padding:10px 16px;}
+    .band-row{display:grid;grid-template-columns:82px 1fr;border-bottom:1px solid var(--line);}
+    .band-row:last-child{border-bottom:none;}
+    .band-row:hover{background:rgba(26,26,26,.03);}
+    .band-freq{font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:500;color:var(--accent);padding:12px 12px;border-right:1px solid var(--line);display:flex;align-items:center;}
+    .band-info{padding:12px 16px;}
+    .band-name{font-family:'IBM Plex Mono',monospace;font-size:.8rem;font-weight:500;color:var(--ink);margin-bottom:3px;}
+    .band-desc{font-size:.82rem;color:var(--mid);line-height:1.55;}
+    .divider{border:none;border-top:1px solid var(--line);margin:48px 0;}
+    .summary-box{margin-top:48px;padding:28px 32px;background:var(--ink);color:var(--paper);}
+    .summary-box .summary-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.25em;color:rgba(245,240,232,.5);text-transform:uppercase;margin-bottom:16px;}
+    .summary-box h3{font-family:'Noto Serif TC',serif;font-size:1.1rem;font-weight:600;color:var(--paper);margin-bottom:16px;}
+    .summary-box ul{list-style:none;padding:0;}
+    .summary-box ul li{font-size:.9rem;color:rgba(245,240,232,.8);padding:6px 0 6px 16px;border-bottom:1px solid rgba(245,240,232,.08);position:relative;}
+    .summary-box ul li::before{content:'—';position:absolute;left:0;color:var(--accent);font-size:.8rem;}
+    aside{padding:48px 28px;position:sticky;top:0;}
+    .aside-section{margin-bottom:40px;}
+    .aside-section h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--mid);text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+    .keyword-list{list-style:none;padding:0;}
+    .keyword-list li{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--mid);padding:5px 0;border-bottom:1px solid var(--line);transition:color .2s;}
+    .keyword-list li:hover{color:var(--accent);}
+    .keyword-list li span{color:var(--accent);margin-right:6px;}
+    .progress-bar{height:3px;background:var(--line);margin:12px 0 20px;position:relative;}
+    .progress-bar::after{content:'';position:absolute;left:0;top:0;height:100%;width:93.75%;background:var(--accent);}
+    .progress-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mid);letter-spacing:.1em;}
+    .nav-links{display:flex;flex-direction:column;gap:8px;}
+    .nav-links a{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mid);text-decoration:none;padding:8px 12px;border:1px solid var(--line);transition:border-color .2s,color .2s;display:flex;justify-content:space-between;align-items:center;}
+    .nav-links a:hover{border-color:var(--accent);color:var(--accent);}
+    footer{position:relative;z-index:1;padding:32px 8vw;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+    footer p{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mid);letter-spacing:.1em;}
+    @media(max-width:900px){
+      .main-wrap{grid-template-columns:1fr;}
+      aside{position:static;border-top:1px solid var(--line);padding:40px 8vw;display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+      article{padding:48px 8vw 64px;border-right:none;}
+      .hero{grid-template-columns:1fr;}.hero-meta{display:none;}
+      .wifi-grid{grid-template-columns:1fr 1fr;}
+      .gt-row{grid-template-columns:52px 90px 1fr;}
+    }
+    @media(max-width:600px){
+      aside{grid-template-columns:1fr;}
+      .wifi-grid{grid-template-columns:1fr;}
+      .gt-row{grid-template-columns:44px 1fr;}
+      .gt-era{display:none;}
+    }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .hero,.toc-bar,article,aside{animation:fadeUp .5s ease both;}
+    .toc-bar{animation-delay:.10s;}article{animation-delay:.15s;}aside{animation-delay:.20s;}
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a><span class="sep">/</span><a href="#">Day 15</a>
+    </div>
+    <div class="nav-group">
+      <a href="day14.html">&larr; Day 14</a>
+      <a href="day16.html">Day 16 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 04 &mdash; 實務與工具 &mdash; Day 15 / 16</p>
+      <h1>無線網路與行動通訊<br>沒有網路線的世界如何運作</h1>
+      <p class="hero-desc">
+        從 Wi-Fi 6E 的 6 GHz 頻段到 5G 的毫米波切片技術，
+        無線通訊已從「有線的替代品」進化為現代基礎設施的核心。
+        本課帶你理解電磁波如何承載資料、OFDMA 如何讓多個設備同時傳輸、
+        5G 核心網為何捨棄傳統電話架構，
+        以及 LoRaWAN 和 NB-IoT 各自適合什麼樣的物聯網場景。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">15</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">無線通訊基礎：電磁波與頻譜</a></li>
+      <li data-n="2"><a href="#s2">Wi-Fi 標準演進</a></li>
+      <li data-n="3"><a href="#s3">OFDM、MIMO 與 MU-MIMO</a></li>
+      <li data-n="4"><a href="#s4">Wi-Fi 安全：WPA2 到 WPA3</a></li>
+      <li data-n="5"><a href="#s5">行動通訊世代演進</a></li>
+      <li data-n="6"><a href="#s6">5G 架構深度解析</a></li>
+      <li data-n="7"><a href="#s7">短距離無線技術</a></li>
+      <li data-n="8"><a href="#s8">低功耗廣域網路（LPWAN）</a></li>
+      <li data-n="9"><a href="#s9">無線網路安全威脅與防護</a></li>
+      <li data-n="10"><a href="#s10">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <!-- S1 -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>無線通訊基礎：電磁波與頻譜</h2>
+        <p>
+          所有無線通訊都是透過電磁波傳遞資訊。不同頻率的電磁波有截然不同的傳播特性，
+          理解這些特性能解釋為什麼 5G 毫米波速度極快卻覆蓋極小，
+          為什麼 LoRaWAN 用 1 瓦就能傳輸 15 公里。
+        </p>
+
+        <div class="band-bar">
+          <div class="band-header">無線通訊主要頻段特性</div>
+          <div class="band-row">
+            <div class="band-freq">Sub-1 GHz</div>
+            <div class="band-info">
+              <div class="band-name">超長波段（700 / 900 MHz）</div>
+              <div class="band-desc">波長長，繞射能力強，穿透牆壁容易，覆蓋廣（數公里至數十公里）。頻寬窄，速率低。用途：4G 低頻段、LoRaWAN、Sigfox、廣播電視</div>
+            </div>
+          </div>
+          <div class="band-row">
+            <div class="band-freq">2.4 GHz</div>
+            <div class="band-info">
+              <div class="band-name">Wi-Fi / Bluetooth / Zigbee 的共用頻段</div>
+              <div class="band-desc">覆蓋範圍較廣（~50m 室內），穿透能力佳。只有 3 個不重疊頻道（1/6/11），干擾嚴重（微波爐、藍牙同在此頻段）。最高 ~600 Mbps（Wi-Fi 4）</div>
+            </div>
+          </div>
+          <div class="band-row">
+            <div class="band-freq">5 GHz</div>
+            <div class="band-info">
+              <div class="band-name">Wi-Fi 5/6 主力頻段</div>
+              <div class="band-desc">~23 個不重疊頻道，干擾少，速率高（Wi-Fi 6 最高 9.6 Gbps）。穿透能力比 2.4 GHz 弱，覆蓋較小（~30m 室內）</div>
+            </div>
+          </div>
+          <div class="band-row">
+            <div class="band-freq">6 GHz</div>
+            <div class="band-info">
+              <div class="band-name">Wi-Fi 6E / Wi-Fi 7 專用新頻段</div>
+              <div class="band-desc">新開放頻段，1,200 MHz 頻寬（比 2.4+5 GHz 總和還多），59 個 20 MHz 頻道，幾乎無既有干擾源。台灣 2022 年開放，適合高密度部署</div>
+            </div>
+          </div>
+          <div class="band-row">
+            <div class="band-freq">毫米波</div>
+            <div class="band-info">
+              <div class="band-name">24–100 GHz（5G FR2 / Wi-Fi 7 320 MHz 頻道）</div>
+              <div class="band-desc">極大頻寬，速率 10+ Gbps，延遲極低。傳播距離短（&lt;100m），幾乎無穿透能力（玻璃即可阻擋），需密集小基站。適合體育場、演唱會等超高密度場景</div>
+            </div>
+          </div>
+        </div>
+
+        <h3>調變技術：如何在電波上承載資料</h3>
+        <p>
+          數位資料必須透過<strong>調變（Modulation）</strong>轉換成可在無線電波上傳輸的訊號。
+          調變階數越高，單位頻寬承載的資料越多，但需要更高的訊雜比（SNR）。
+          設備會根據與 AP 的距離和訊號品質<strong>自動調整調變方式（Adaptive Modulation）</strong>。
+        </p>
+        <table class="def-table">
+          <thead><tr><th>調變方式</th><th>每符號位元數</th><th>需求 SNR</th><th>適用距離</th></tr></thead>
+          <tbody>
+            <tr><td>BPSK</td><td>1 bit</td><td>極低</td><td>最遠，訊號弱時備援</td></tr>
+            <tr><td>QPSK</td><td>2 bits</td><td>低</td><td>遠距離，如 LTE 邊緣覆蓋</td></tr>
+            <tr><td>64-QAM</td><td>6 bits</td><td>中高</td><td>一般 Wi-Fi / 4G 典型值</td></tr>
+            <tr><td>256-QAM</td><td>8 bits</td><td>高</td><td>Wi-Fi 5/6，訊號強時</td></tr>
+            <tr><td>1024-QAM</td><td>10 bits</td><td>極高</td><td>Wi-Fi 6/7，近距離高品質連線</td></tr>
+            <tr><td>4096-QAM</td><td>12 bits</td><td>最高</td><td>Wi-Fi 7，極近距離極低干擾</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S2 -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>Wi-Fi 標準演進</h2>
+        <p>
+          Wi-Fi 標準由 IEEE 802.11 工作組制定，Wi-Fi Alliance 負責認證。
+          2019 年起改用數字命名（Wi-Fi 4/5/6/6E/7）取代難以記憶的字母後綴。
+        </p>
+
+        <div class="wifi-grid">
+          <div class="wifi-card">
+            <div class="wifi-name">802.11n</div>
+            <div class="wifi-alias">Wi-Fi 4 &nbsp;·&nbsp; 2009</div>
+            <div class="wifi-row"><span class="wifi-k">頻段</span><span class="wifi-v">2.4 + 5 GHz 雙頻</span></div>
+            <div class="wifi-row"><span class="wifi-k">最高速</span><span class="wifi-v">600 Mbps（4×4 MIMO）</span></div>
+            <div class="wifi-row"><span class="wifi-k">技術</span><span class="wifi-v">MIMO、40 MHz 頻道、OFDM</span></div>
+            <div class="wifi-row"><span class="wifi-k">現況</span><span class="wifi-v">老舊設備，逐漸淘汰</span></div>
+          </div>
+          <div class="wifi-card">
+            <div class="wifi-name">802.11ac</div>
+            <div class="wifi-alias">Wi-Fi 5 &nbsp;·&nbsp; 2013</div>
+            <div class="wifi-row"><span class="wifi-k">頻段</span><span class="wifi-v">5 GHz 專用</span></div>
+            <div class="wifi-row"><span class="wifi-k">最高速</span><span class="wifi-v">6.9 Gbps（理論）</span></div>
+            <div class="wifi-row"><span class="wifi-k">技術</span><span class="wifi-v">MU-MIMO（下行 4 用戶）、256-QAM、160 MHz 頻道</span></div>
+            <div class="wifi-row"><span class="wifi-k">現況</span><span class="wifi-v">目前最普及，大多數路由器</span></div>
+          </div>
+          <div class="wifi-card">
+            <div class="wifi-name">802.11ax</div>
+            <div class="wifi-alias">Wi-Fi 6 &nbsp;·&nbsp; 2019</div>
+            <div class="wifi-row"><span class="wifi-k">頻段</span><span class="wifi-v">2.4 + 5 GHz</span></div>
+            <div class="wifi-row"><span class="wifi-k">最高速</span><span class="wifi-v">9.6 Gbps（理論）</span></div>
+            <div class="wifi-row"><span class="wifi-k">技術</span><span class="wifi-v">OFDMA、上下行 MU-MIMO 各 8 用戶、BSS Coloring、TWT、1024-QAM</span></div>
+            <div class="wifi-row"><span class="wifi-k">重點</span><span class="wifi-v">密集場景效率提升 4×（非單設備速率）</span></div>
+          </div>
+          <div class="wifi-card">
+            <div class="wifi-name">802.11ax</div>
+            <div class="wifi-alias">Wi-Fi 6E &nbsp;·&nbsp; 2021</div>
+            <div class="wifi-row"><span class="wifi-k">頻段</span><span class="wifi-v">2.4 + 5 + <strong>6 GHz</strong> 三頻</span></div>
+            <div class="wifi-row"><span class="wifi-k">最高速</span><span class="wifi-v">9.6 Gbps（6 GHz 頻段）</span></div>
+            <div class="wifi-row"><span class="wifi-k">技術</span><span class="wifi-v">Wi-Fi 6 全功能 + 6 GHz（59 個不重疊頻道）</span></div>
+            <div class="wifi-row"><span class="wifi-k">重點</span><span class="wifi-v">6 GHz 幾乎無干擾，適合企業密集部署</span></div>
+          </div>
+          <div class="wifi-card">
+            <div class="wifi-name">802.11be</div>
+            <div class="wifi-alias">Wi-Fi 7 &nbsp;·&nbsp; 2024</div>
+            <div class="wifi-row"><span class="wifi-k">頻段</span><span class="wifi-v">2.4 + 5 + 6 GHz 三頻</span></div>
+            <div class="wifi-row"><span class="wifi-k">最高速</span><span class="wifi-v">46 Gbps（理論）</span></div>
+            <div class="wifi-row"><span class="wifi-k">技術</span><span class="wifi-v">MLO（多頻段同時傳輸）、320 MHz 頻道、4096-QAM、16 空間流</span></div>
+            <div class="wifi-row"><span class="wifi-k">重點</span><span class="wifi-v">延遲降至 ~1ms，適合 VR/AR 和工業 IoT</span></div>
+          </div>
+          <div class="wifi-card">
+            <div class="wifi-name">802.11p</div>
+            <div class="wifi-alias">V2X 車聯網 &nbsp;·&nbsp; DSRC</div>
+            <div class="wifi-row"><span class="wifi-k">頻段</span><span class="wifi-v">5.9 GHz（DSRC 專用）</span></div>
+            <div class="wifi-row"><span class="wifi-k">最高速</span><span class="wifi-v">27 Mbps</span></div>
+            <div class="wifi-row"><span class="wifi-k">技術</span><span class="wifi-v">超低延遲 &lt;10ms，車輛高速移動下穩定通訊</span></div>
+            <div class="wifi-row"><span class="wifi-k">用途</span><span class="wifi-v">車輛間（V2V）、車路（V2I）通訊</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S3 -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>OFDM、MIMO 與 MU-MIMO</h2>
+
+        <h3>OFDM 與 OFDMA</h3>
+        <p>
+          <strong>OFDM（正交頻分多工）</strong>將一個寬頻道切分成數百個相互正交的窄子載波，
+          各子載波獨立傳送資料、互不干擾，大幅提升抗多路徑衰落（Multipath Fading）能力。
+        </p>
+        <p>
+          Wi-Fi 6 引入 <strong>OFDMA</strong>：進一步把子載波分組成<strong>資源單元（RU）</strong>，
+          允許 AP 在同一時間對多個客戶端分別分配不同 RU，
+          實現真正的多用戶並發傳輸——這是 Wi-Fi 6 在密集場景效率大幅提升的核心原因。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">OFDM vs OFDMA：從獨佔頻道到同時服務多設備</div>
+          <pre>
+  Wi-Fi 5（OFDM）：一次只服務一台設備
+  時間 ──────────────────────────────────────────────→
+  頻道│  Device A 獨佔整個頻道  │  Device B 等待  │
+      └──────────────────────────────────────────────
+
+  Wi-Fi 6（OFDMA）：同時服務多台設備
+  時間 ──────────────────────────────────────────────→
+  頻道│  RU-A（Device A）│RU-B（Device B）│RU-C（Device C）│
+      └──────────────────────────────────────────────
+
+  場景效益：100 個 IoT 設備同時上網 → Wi-Fi 6 整體效率是 Wi-Fi 5 的 4×</pre>
+        </div>
+
+        <h3>MIMO 與 MU-MIMO</h3>
+        <p>
+          <strong>MIMO（多輸入多輸出）</strong>使用多根天線同時傳送多個獨立資料流（Spatial Stream），
+          利用多路徑的空間差異讓吞吐量成倍提升。<code>4×4 MIMO</code> 表示 4 發射、4 接收天線，最多 4 個空間流。
+        </p>
+        <p>
+          <strong>MU-MIMO</strong>讓一個 AP 透過 Beamforming（波束成形）同時對多個設備傳送不同資料流。
+          Wi-Fi 5 只支援下行最多 4 個用戶，Wi-Fi 6 同時支援<strong>上下行各 8 個用戶</strong>。
+        </p>
+
+        <h3>Wi-Fi 6 其他關鍵技術</h3>
+        <table class="def-table">
+          <thead><tr><th>技術</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>BSS Coloring</td><td>為每個 BSS 標記顏色碼，設備偵測到不同顏色的訊號時視為背景雜訊（非干擾），允許同時傳輸，提升密集 AP 部署的頻道重用率</td></tr>
+            <tr><td>TWT（Target Wake Time）</td><td>AP 與 IoT 設備協商喚醒時間，設備在不傳輸時完全睡眠，延長 IoT 電池壽命數倍</td></tr>
+            <tr><td>MLO（Wi-Fi 7）</td><td>Multi-Link Operation：設備同時使用 2.4/5/6 GHz 多個頻段連線，動態分配資料到最佳頻段，徹底消除單頻段壅塞，延遲降至 ~1ms</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S4 -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>Wi-Fi 安全：WPA2 到 WPA3</h2>
+
+        <table class="def-table">
+          <thead><tr><th>標準</th><th>年份</th><th>加密</th><th>認證</th><th>主要弱點</th></tr></thead>
+          <tbody>
+            <tr><td>WEP</td><td>1999</td><td>RC4（已破解）</td><td>共享金鑰</td><td>數分鐘可破解，已完全棄用</td></tr>
+            <tr><td>WPA（TKIP）</td><td>2003</td><td>RC4+TKIP</td><td>PSK / 802.1X</td><td>TKIP 已知弱點，已棄用</td></tr>
+            <tr><td>WPA2-Personal</td><td>2004</td><td>AES-CCMP</td><td>Pre-Shared Key（PSK）</td><td>離線字典攻擊（擷取四向握手後暴力破解）；KRACK（2017）</td></tr>
+            <tr><td>WPA2-Enterprise</td><td>2004</td><td>AES-CCMP</td><td>802.1X（EAP + RADIUS）</td><td>配置複雜；EAP 類型選擇不當有風險</td></tr>
+            <tr><td>WPA3-Personal</td><td>2018</td><td>AES-GCMP-256</td><td>SAE（Dragonfly）</td><td>SAE 提供前向保密，抵抗離線字典攻擊；Dragonblood（2019）已修補</td></tr>
+            <tr><td>WPA3-Enterprise</td><td>2018</td><td>AES-256-GCMP</td><td>802.1X（強制 PMF）</td><td>192-bit 安全套件，適合高安全需求環境</td></tr>
+          </tbody>
+        </table>
+
+        <h3>WPA3 的核心改進：SAE 取代 PSK</h3>
+        <p>
+          WPA2-Personal 的 PSK 問題：攻擊者只需擷取四向握手訊息，
+          就可以在離線狀態下對密碼進行暴力破解（試遍字典），密碼越弱破解越快。
+        </p>
+        <p>
+          WPA3 的 <strong>SAE（Simultaneous Authentication of Equals，Dragonfly 握手）</strong>
+          每次連線都進行互動式金鑰協商，攻擊者<strong>無法離線</strong>測試密碼，
+          必須和 AP 互動才能嘗試一個密碼——大幅提高暴力破解難度，即使密碼較短也相對安全。
+          SAE 同時提供<strong>前向保密</strong>：每次連線金鑰不同，舊流量即使被擷取也無法解密。
+        </p>
+
+        <h3>企業 Wi-Fi：802.1X 與 RADIUS</h3>
+        <div class="diagram">
+          <div class="diagram-title">802.1X 企業認證流程（每個使用者有獨立憑證）</div>
+          <pre>
+  客戶端（Supplicant）    AP（Authenticator）      RADIUS Server
+       │                       │                       │
+       │── EAPOL-Start ────────>│                       │
+       │&lt;── EAP-Request/ID ─────│                       │
+       │── EAP-Response（身份）─>│── RADIUS Access-Req──>│
+       │                       │&lt;── Access-Challenge ──│
+       │&lt;── EAP-Request（挑戰）─│                       │
+       │── EAP-Response（憑證）─>│── RADIUS Access-Req──>│
+       │                       │                       │（驗證）
+       │                       │&lt;── Access-Accept ─────│
+       │&lt;── EAP-Success ────────│（含動態 VLAN 指派屬性）│
+       │  連線成功，開放網路存取  │                       │
+
+  重點：AP 不知道密碼，只轉發 EAP 訊息；每人獨立憑證；
+  RADIUS 回應可包含 VLAN ID，依角色動態分配網段</pre>
+        </div>
+      </section>
+
+      <!-- S5 -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>行動通訊世代演進</h2>
+
+        <div class="gen-timeline">
+          <div class="gt-header">行動通訊六個世代</div>
+          <div class="gt-row">
+            <div class="gt-gen">1G</div>
+            <div class="gt-era">1980 年代</div>
+            <div class="gt-body">
+              <div class="gt-title">類比語音（AMPS / NMT）</div>
+              <div class="gt-desc">純類比訊號，只支援語音通話。訊號未加密，無線掃描器可竊聽。已完全停用。</div>
+            </div>
+          </div>
+          <div class="gt-row">
+            <div class="gt-gen">2G</div>
+            <div class="gt-era">1990 年代</div>
+            <div class="gt-body">
+              <div class="gt-title">數位語音 + SMS（GSM / CDMA）</div>
+              <div class="gt-desc">GSM 使用 TDMA（時分多工），CDMA 使用碼分多工，引入數位加密。GPRS（2.5G，~50 Kbps）、EDGE（2.75G，~200 Kbps）支援低速資料。</div>
+            </div>
+          </div>
+          <div class="gt-row">
+            <div class="gt-gen">3G</div>
+            <div class="gt-era">2000 年代</div>
+            <div class="gt-body">
+              <div class="gt-title">行動寬頻（WCDMA / HSPA / CDMA2000）</div>
+              <div class="gt-desc">UMTS ~384 Kbps、HSPA ~14 Mbps、HSPA+ ~42 Mbps，支援視訊通話和行動網路。WCDMA 採用 5 MHz 寬頻 CDMA 技術。</div>
+            </div>
+          </div>
+          <div class="gt-row">
+            <div class="gt-gen">4G</div>
+            <div class="gt-era">2010 年代</div>
+            <div class="gt-body">
+              <div class="gt-title">LTE / LTE-A：全 IP 網路，放棄電路交換</div>
+              <div class="gt-desc">使用 OFDMA（下行）和 SC-FDMA（上行）。LTE 理論 150 Mbps，LTE-A 載波聚合（CA）可達 1 Gbps。引入 eNodeB 扁平化架構和 EPC 核心網，VoLTE 語音也走 IP。</div>
+            </div>
+          </div>
+          <div class="gt-row">
+            <div class="gt-gen">5G</div>
+            <div class="gt-era">2019 年起</div>
+            <div class="gt-body">
+              <div class="gt-title">NR（New Radio）：三大應用場景、核心網服務化</div>
+              <div class="gt-desc">eMBB（增強行動寬頻，~10 Gbps）、uRLLC（超可靠低延遲，&lt;1ms，自動駕駛）、mMTC（大規模 IoT，每平方公里 100 萬設備）。核心網全面服務化架構（SBA），支援網路切片。</div>
+            </div>
+          </div>
+          <div class="gt-row">
+            <div class="gt-gen">6G</div>
+            <div class="gt-era">2030+ 研究中</div>
+            <div class="gt-body">
+              <div class="gt-title">太赫茲（THz）+ AI 原生網路 + 通訊感知一體</div>
+              <div class="gt-desc">目標 1 Tbps 峰值速率、&lt;0.1ms 延遲，AI 原生設計。通訊與感知整合（基站同時作為雷達）。目前仍在研究和標準制定階段，預計 2030 年商用。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S6 -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>5G 架構深度解析</h2>
+        <p>
+          5G 從根本上重新設計了核心網架構——
+          以服務化、容器化和 API 驅動為基礎，
+          讓電信網路像雲端服務一樣靈活部署和擴縮容。
+        </p>
+
+        <h3>5G 三種部署頻段</h3>
+        <table class="def-table">
+          <thead><tr><th>頻段</th><th>頻率範圍</th><th>覆蓋 / 速率</th><th>台灣現況</th></tr></thead>
+          <tbody>
+            <tr><td>FR1 低頻（Sub-6 GHz）</td><td>600 MHz – 2.1 GHz</td><td>廣覆蓋（數公里），100–300 Mbps</td><td>700/900 MHz，農村廣域覆蓋</td></tr>
+            <tr><td>FR1 中頻（Sub-6 GHz）</td><td>2.5 GHz – 4.9 GHz</td><td>平衡，600 Mbps – 2 Gbps</td><td>3.5 GHz 是台灣 5G 主力頻段</td></tr>
+            <tr><td>FR2 毫米波（mmWave）</td><td>24 GHz – 52 GHz</td><td>超高速（10+ Gbps），覆蓋 &lt;100m</td><td>28 GHz 已開放，場館 / 車站密集部署</td></tr>
+          </tbody>
+        </table>
+
+        <h3>5G 核心網（5GC）服務化架構</h3>
+        <div class="diagram">
+          <div class="diagram-title">5GC 網路功能（NF）架構——所有 NF 透過 HTTP/2 服務化介面溝通</div>
+          <pre>
+  ┌──────────────────────────────────────────────────────────────┐
+  │  NRF（NF Repository Function）— NF 服務目錄，負責發現與註冊   │
+  └──────────────────────────────────────────────────────────────┘
+  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐
+  │ AMF  │ │ SMF  │ │ UPF  │ │ PCF  │ │ UDM  │ │ AUSF │
+  │接取管│ │會話管│ │用戶面│ │策略控│ │用戶資│ │認證功│
+  │理功能│ │理功能│ │轉發  │ │制功能│ │料管理│ │能    │
+  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘ └──────┘
+      ↑（N2 / N4 介面）
+  ┌───┴────────────────────────────────────────────────────┐
+  │  gNB（5G 基站 Next Generation NodeB）                   │
+  │  CU（集中單元）+ DU（分散單元）分離，可虛擬化部署         │
+  └────────────────────────────────────────────────────────┘
+              ↑
+          UE（用戶設備）
+
+  AMF：接取與行動管理（取代 4G MME）
+  SMF：會話管理，控制 UPF 的轉發規則（CP/UP 分離）
+  UPF：用戶面功能，實際轉發資料封包（可下沉至 MEC）
+  PCF：策略控制（QoS、切片策略）
+  UDM：用戶資料管理（取代 4G HSS）</pre>
+        </div>
+
+        <h3>網路切片（Network Slicing）</h3>
+        <p>
+          在同一套實體基礎設施上，為不同業務創建多個邏輯上獨立的虛擬網路，
+          每個切片有獨立的 QoS 保障、安全隔離和資源分配。
+        </p>
+        <table class="def-table">
+          <thead><tr><th>切片類型</th><th>場景</th><th>關鍵需求</th></tr></thead>
+          <tbody>
+            <tr><td>eMBB 切片</td><td>消費者行動寬頻</td><td>高速率（峰值 10 Gbps），延遲可容忍（~10ms）</td></tr>
+            <tr><td>uRLLC 切片</td><td>工業自動化、遠端手術、自動駕駛</td><td>超低延遲（&lt;1ms）、超高可靠性（99.9999%）</td></tr>
+            <tr><td>mMTC 切片</td><td>智慧城市、農業 IoT、電表抄讀</td><td>超大連線數（1M/km²），極低功耗</td></tr>
+            <tr><td>企業私網切片</td><td>工廠、校園、醫院</td><td>資料不出廠（MEC 本地處理），安全隔離，專屬 SLA</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">MEC：行動邊緣計算</p>
+          <p>
+            <strong>MEC（Multi-access Edge Computing）</strong>將計算資源部署在靠近基站的位置，
+            UPF 下沉到基站附近，資料在本地處理不需繞行骨幹網。
+            工廠 5G 私網典型部署：機器人控制訊號在廠內 MEC 處理，
+            往返延遲 &lt;5ms，即使網際網路中斷工廠仍能正常運作。
+          </p>
+        </div>
+      </section>
+
+      <!-- S7 -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>短距離無線技術</h2>
+        <table class="def-table">
+          <thead><tr><th>技術</th><th>頻段 / 範圍</th><th>速率</th><th>主要用途與特點</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Bluetooth Classic</td>
+              <td>2.4 GHz / ~10m</td>
+              <td>最高 3 Mbps</td>
+              <td>耳機、喇叭、HID 設備。FHSS（跳頻）避免干擾</td>
+            </tr>
+            <tr>
+              <td>Bluetooth LE（BLE）</td>
+              <td>2.4 GHz / ~10–100m</td>
+              <td>最高 2 Mbps</td>
+              <td>IoT 感測器、iBeacon 室內定位、AirTag。極低功耗（鈕扣電池用數年）</td>
+            </tr>
+            <tr>
+              <td>Zigbee（IEEE 802.15.4）</td>
+              <td>2.4 GHz / ~100m（Mesh）</td>
+              <td>250 Kbps</td>
+              <td>智慧家居（燈光/插座/感測器）。Mesh 設備互相轉發，覆蓋範圍廣。CSA（Matter 底層）</td>
+            </tr>
+            <tr>
+              <td>Z-Wave</td>
+              <td>868/908 MHz / ~100m（Mesh）</td>
+              <td>100 Kbps</td>
+              <td>智慧家居。Sub-GHz 穿透牆壁佳；最大 232 個節點；生態系統較封閉</td>
+            </tr>
+            <tr>
+              <td>Thread（IEEE 802.15.4）</td>
+              <td>2.4 GHz / Mesh</td>
+              <td>250 Kbps</td>
+              <td>IPv6 原生 IoT Mesh 協定。Matter 標準（Apple/Google/Amazon）的底層傳輸層之一</td>
+            </tr>
+            <tr>
+              <td>NFC</td>
+              <td>13.56 MHz / &lt;20 cm</td>
+              <td>424 Kbps</td>
+              <td>近場支付（Apple/Google Pay）、門禁卡、設備快速配對</td>
+            </tr>
+            <tr>
+              <td>UWB（Ultra-Wideband）</td>
+              <td>3.1–10.6 GHz / ~30m</td>
+              <td>27 Mbps</td>
+              <td>精確室內定位（誤差 &lt;30cm）。Apple AirTag 方向性定位、汽車數位鑰匙（U1 晶片）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">Matter：打破智慧家居碎片化的統一標準</p>
+          <p>
+            過去智慧家居設備各用不同協定（Zigbee / Z-Wave / Wi-Fi），不同廠商無法互通。
+            <strong>Matter</strong>（CSA 主導，Apple / Google / Amazon / Samsung 共同支持）
+            定義了統一的應用層協定，底層可運行在 Wi-Fi、Thread 或乙太網路上。
+            Matter 設備可同時被 HomeKit、Google Home 和 Alexa 控制。
+            2022 年發布，2024 年已有數千款認證設備。
+          </p>
+        </div>
+      </section>
+
+      <!-- S8 -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>低功耗廣域網路（LPWAN）</h2>
+        <p>
+          IoT 的許多場景需要電池供電的感測器定期回報少量資料，覆蓋數公里到數十公里。
+          Wi-Fi 太耗電、蜂巢式太昂貴，這個空白由 <strong>LPWAN</strong> 填補。
+        </p>
+        <table class="def-table">
+          <thead><tr><th>技術</th><th>頻段</th><th>範圍</th><th>速率</th><th>特點</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>LoRaWAN</td>
+              <td>Sub-GHz 免授權（台灣 923 MHz）</td>
+              <td>城市 2–5 km；鄉村 15 km+</td>
+              <td>0.3–50 Kbps</td>
+              <td>開放標準，可自建私有網路（無需租用電信商頻道）。CSS 調變，抗干擾強。適合農業、環境監測、資產追蹤</td>
+            </tr>
+            <tr>
+              <td>Sigfox</td>
+              <td>Sub-GHz（868/902 MHz）</td>
+              <td>城市 10 km；鄉村 40 km</td>
+              <td>100–600 bps</td>
+              <td>超窄頻（UNB）調變，速率極低但距離極遠。由 Sigfox 公司提供商用網路（2023 年公司重組）</td>
+            </tr>
+            <tr>
+              <td>NB-IoT</td>
+              <td>授權頻段（LTE 頻段內）</td>
+              <td>城市 1–10 km</td>
+              <td>~20 Kbps（上行）</td>
+              <td>3GPP 標準，運行在電信商 LTE 頻段內，高覆蓋深度（地下室 / 電表間），支援漫遊。電表、水表的主流選擇</td>
+            </tr>
+            <tr>
+              <td>LTE-M（Cat-M1）</td>
+              <td>授權頻段（LTE 頻段內）</td>
+              <td>城市 5–10 km</td>
+              <td>~1 Mbps</td>
+              <td>比 NB-IoT 速率高，支援 VoLTE 語音，適合移動中的 IoT（穿戴裝置、車輛追蹤、緊急按鈕）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="diagram">
+          <div class="diagram-title">LPWAN 技術選擇指南</div>
+          <pre>
+  高速率 ↑
+  1 Mbps │                            LTE-M ●
+         │            Wi-Fi ●
+  100 K  │         BLE ●
+         │    NB-IoT ●
+  10 K   │
+         │  LoRaWAN ●           Sigfox ●
+  &lt;1 K   │
+         └────────────────────────────────────→ 距離
+              100m    1km     10km    40km+
+
+  選擇原則：
+  需要移動 + 語音       → LTE-M
+  固定資產，深度覆蓋     → NB-IoT
+  自建網路，廣域監測     → LoRaWAN
+  近距離極低功耗         → BLE / Zigbee / Thread</pre>
+        </div>
+      </section>
+
+      <!-- S9 -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>無線網路安全威脅與防護</h2>
+
+        <table class="def-table">
+          <thead><tr><th>威脅</th><th>說明</th><th>防護</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Evil Twin AP</td>
+              <td>攻擊者架設與合法 AP 同名的假熱點，以更強訊號吸引設備連入，執行 MitM 攻擊</td>
+              <td>企業使用 802.1X（假 AP 無法通過 RADIUS）；強制 VPN；WIDS 偵測未授權 AP</td>
+            </tr>
+            <tr>
+              <td>KRACK（WPA2 攻擊）</td>
+              <td>2017 年發現，利用 WPA2 四向握手重放漏洞強制重用加密 nonce，可解密部分流量</td>
+              <td>更新設備韌體；升級到 WPA3；應用層仍應使用 TLS（縱深防禦）</td>
+            </tr>
+            <tr>
+              <td>Deauth 攻擊</td>
+              <td>發送偽造的 802.11 Deauthentication 訊框（未加密），強制設備斷線（DoS 或配合 Evil Twin）</td>
+              <td>WPA3 的 Protected Management Frames（PMF / 802.11w）強制加密管理訊框</td>
+            </tr>
+            <tr>
+              <td>IMSI Catcher（偽基站）</td>
+              <td>偽裝成合法基站（Stingray），讓手機連入後擷取 IMSI 號碼和通訊內容</td>
+              <td>5G 的 SUCI（使用公鑰加密 IMSI 後再傳輸），端到端加密（Signal 等協定）</td>
+            </tr>
+            <tr>
+              <td>BLE 設備追蹤</td>
+              <td>BLE 廣播的 MAC 位址可用於追蹤用戶位置（零售商 / 機場人流分析）</td>
+              <td>iOS / Android 啟用 BLE MAC 位址隨機化（每次連線更換 MAC）</td>
+            </tr>
+            <tr>
+              <td>無線竊聽</td>
+              <td>開放 Wi-Fi（無加密）上，攻擊者可用監聽模式擷取所有未加密流量</td>
+              <td>啟用 WPA3；強制 HTTPS（HSTS）；在不受信任的 Wi-Fi 上使用 VPN</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">企業無線安全最佳實踐</p>
+          <p>
+            使用 WPA3-Enterprise + 802.1X + RADIUS，每個使用者 / 設備有獨立憑證；
+            啟用 PMF 抵抗 Deauth 攻擊；部署 WIDS 持續掃描未授權 AP；
+            訪客 Wi-Fi 使用獨立 SSID 對應隔離 VLAN；
+            所有重要流量即使在 Wi-Fi 層加密，仍應在應用層使用 TLS（縱深防禦）。
+          </p>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Summary -->
+      <section class="lesson-section" id="s10">
+        <div class="summary-box">
+          <div class="summary-label">Day 15 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>頻率越高：速率越快，但覆蓋越小、穿透越弱；6 GHz 是 Wi-Fi 6E 的新頻段，幾乎無干擾</li>
+            <li>調變階數越高（4096-QAM）承載 bits 越多，但需更好的訊號；設備自動根據距離調整</li>
+            <li>OFDMA（Wi-Fi 6）把頻道分成資源單元同時服務多設備，密集場景整體效率比 Wi-Fi 5 高 4×</li>
+            <li>MU-MIMO 讓 AP 同時 Beamforming 多設備；Wi-Fi 6 支援上下行各 8 個用戶</li>
+            <li>Wi-Fi 7 最大亮點：MLO（多頻段同時連線）+320 MHz 頻道 +4096-QAM，理論 46 Gbps，延遲 ~1ms</li>
+            <li>WPA3 的 SAE（Dragonfly）每次連線互動式協商金鑰，抵抗離線字典攻擊；PMF 防 Deauth 攻擊</li>
+            <li>4G LTE 全面 IP 化（VoLTE）；5G NR 三大場景：eMBB / uRLLC / mMTC</li>
+            <li>5GC 服務化架構（SBA）：AMF / SMF / UPF 等 NF 透過 HTTP/2 溝通，像微服務一樣部署</li>
+            <li>網路切片在同一實體設施提供多個虛擬網路，各有獨立 QoS 和安全隔離</li>
+            <li>MEC 讓 UPF 下沉至基站邊緣，工廠私網資料不出廠，延遲 &lt;5ms</li>
+            <li>LPWAN 選擇：自建選 LoRaWAN；深度覆蓋選 NB-IoT；需要移動 / 語音選 LTE-M</li>
+            <li>Matter 統一了 Zigbee / Thread / Wi-Fi 的智慧家居生態，Apple / Google / Amazon 共同支持</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">15 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>頻譜 / 頻段特性</li>
+          <li><span>#</span>QAM / Adaptive Modulation</li>
+          <li><span>#</span>OFDM / OFDMA / RU</li>
+          <li><span>#</span>MIMO / MU-MIMO / Beamforming</li>
+          <li><span>#</span>BSS Coloring / TWT</li>
+          <li><span>#</span>Wi-Fi 6 / 6E / 7</li>
+          <li><span>#</span>MLO（多鏈路運作）</li>
+          <li><span>#</span>WPA3 / SAE / PMF</li>
+          <li><span>#</span>802.1X / RADIUS / EAP</li>
+          <li><span>#</span>1G–5G 演進</li>
+          <li><span>#</span>LTE / VoLTE / LTE-A CA</li>
+          <li><span>#</span>5G NR / FR1 / FR2 mmWave</li>
+          <li><span>#</span>eMBB / uRLLC / mMTC</li>
+          <li><span>#</span>5GC / SBA / AMF / UPF</li>
+          <li><span>#</span>網路切片（Slicing）</li>
+          <li><span>#</span>MEC（行動邊緣計算）</li>
+          <li><span>#</span>BLE / Zigbee / Thread</li>
+          <li><span>#</span>UWB / NFC</li>
+          <li><span>#</span>Matter（智慧家居標準）</li>
+          <li><span>#</span>LoRaWAN / NB-IoT / LTE-M</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day14.html"><span>&larr; Day 14: 雲端網路架構</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day16.html"><span>Day 16: 網路未來展望</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 15 / 16</p>
+    <p>下一課：<a href="day16.html" style="color:var(--accent);text-decoration:none;">網路未來展望 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

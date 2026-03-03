@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 5 — 路由原理與協定 | 網路通訊課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:     #1a1a1a;
+      --paper:   #f5f0e8;
+      --accent:  #c0392b;
+      --mid:     #7a6a5a;
+      --line:    rgba(26,26,26,0.12);
+      --code-bg: rgba(26,26,26,0.06);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.9;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: relative;
+      z-index: 10;
+      padding: 20px 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .topnav a:hover { color: var(--accent); }
+
+    .topnav .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topnav .sep { color: var(--line); font-size: 14px; }
+
+    .topnav .nav-group {
+      display: flex;
+      gap: 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: end;
+    }
+
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: var(--mid);
+      max-width: 560px;
+    }
+
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 6rem;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+      opacity: 0.08;
+      display: block;
+    }
+
+    /* ── TOC ── */
+    .toc-bar {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw;
+      border-bottom: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 14px;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      list-style: none;
+    }
+
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc-list li a:hover { color: var(--accent); }
+
+    .toc-list li::before {
+      content: attr(data-n) ". ";
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      align-items: start;
+    }
+
+    article {
+      padding: 64px 6vw 80px 8vw;
+      border-right: 1px solid var(--line);
+    }
+
+    /* ── Sections ── */
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 36px 0 12px;
+    }
+
+    .lesson-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--mid);
+      margin: 24px 0 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .lesson-section p {
+      margin-bottom: 16px;
+      font-size: 0.97rem;
+    }
+
+    .lesson-section p:last-child { margin-bottom: 0; }
+
+    strong { font-weight: 500; color: var(--ink); }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      color: var(--ink);
+    }
+
+    /* ── Boxes ── */
+    .highlight-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--accent);
+      background: rgba(192,57,43,0.05);
+    }
+
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+
+    .info-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--mid);
+      background: var(--code-bg);
+    }
+
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    /* ── Tables ── */
+    .def-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .def-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      line-height: 1.7;
+    }
+
+    .def-table tr:last-child td { border-bottom: none; }
+
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── Route table visual ── */
+    .route-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.88rem;
+    }
+
+    .route-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--paper);
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--ink);
+    }
+
+    .route-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .route-table tr:last-child td { border-bottom: none; }
+    .route-table tr:hover td { background: rgba(26,26,26,0.03); }
+
+    .route-table td.dest   { color: var(--accent); font-weight: 500; }
+    .route-table td.iface  { color: var(--mid); }
+    .route-table td.metric { color: var(--mid); text-align: center; }
+    .route-table td.proto  {
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+    }
+
+    .route-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      padding: 2px 6px;
+      text-transform: uppercase;
+    }
+
+    .route-badge.connected { background: rgba(26,26,26,0.12); color: var(--ink); }
+    .route-badge.static    { background: rgba(192,57,43,0.15); color: var(--accent); }
+    .route-badge.ospf      { background: rgba(139,69,19,0.15); color: #8b4513; }
+    .route-badge.bgp       { background: rgba(122,106,90,0.2); color: var(--mid); }
+
+    /* ── Protocol comparison cards ── */
+    .proto-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 28px 0;
+    }
+
+    .proto-card {
+      padding: 22px 20px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .proto-card:nth-child(3n) { border-right: none; }
+    .proto-card:nth-last-child(-n+3) { border-bottom: none; }
+
+    .proto-card-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .proto-card-full {
+      font-size: 0.78rem;
+      color: var(--mid);
+      margin-bottom: 14px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .proto-card-attr {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      align-items: baseline;
+    }
+
+    .proto-card-attr .attr-key {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      flex-shrink: 0;
+      width: 72px;
+    }
+
+    .proto-card-attr .attr-val {
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+
+    /* ── AS diagram ── */
+    .as-diagram {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      background: var(--code-bg);
+      padding: 28px 24px;
+    }
+
+    /* ── Algorithm comparison ── */
+    .algo-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 28px 0;
+      overflow: hidden;
+    }
+
+    .algo-card { padding: 22px 20px; }
+    .algo-card:first-child { border-right: 1px solid var(--line); }
+
+    .algo-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .algo-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+
+    .algo-row .algo-k {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      flex-shrink: 0;
+      width: 64px;
+    }
+
+    .algo-row .algo-v { color: var(--ink); }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 48px 0;
+    }
+
+    /* ── Summary ── */
+    .summary-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .summary-box ul { list-style: none; padding: 0; }
+
+    .summary-box ul li {
+      font-size: 0.9rem;
+      color: rgba(245,240,232,0.8);
+      padding: 6px 0 6px 16px;
+      border-bottom: 1px solid rgba(245,240,232,0.08);
+      position: relative;
+    }
+
+    .summary-box ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      padding: 48px 28px;
+      position: sticky;
+      top: 0;
+    }
+
+    .aside-section { margin-bottom: 40px; }
+
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .keyword-list { list-style: none; padding: 0; }
+
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+      transition: color 0.2s;
+    }
+
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--line);
+      margin: 12px 0 20px;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 31.25%;
+      background: var(--accent);
+    }
+
+    .progress-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+
+      aside {
+        position: static;
+        border-top: 1px solid var(--line);
+        padding: 40px 8vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      article {
+        padding: 48px 8vw 64px;
+        border-right: none;
+      }
+
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+
+      .algo-compare { grid-template-columns: 1fr; }
+      .algo-card:first-child { border-right: none; border-bottom: 1px solid var(--line); }
+
+      .proto-grid { grid-template-columns: 1fr 1fr; }
+      .proto-card:nth-child(3n) { border-right: 1px solid var(--line); }
+      .proto-card:nth-child(2n) { border-right: none; }
+    }
+
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .proto-grid { grid-template-columns: 1fr; }
+      .proto-card { border-right: none !important; }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .toc-bar, article, aside {
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .toc-bar  { animation-delay: 0.10s; }
+    article   { animation-delay: 0.15s; }
+    aside     { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ── -->
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 5</a>
+    </div>
+    <div class="nav-group">
+      <a href="day4.html">&larr; Day 4</a>
+      <a href="day6.html">Day 6 &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 02 &mdash; 網路層與傳輸層 &mdash; Day 05 / 16</p>
+      <h1>路由原理與協定<br>封包如何找到回家的路</h1>
+      <p class="hero-desc">
+        路由是網際網路的核心智慧：當一個封包需要穿越數十個網路才能到達目的地，
+        是什麼機制讓它找到最佳路徑？本課深入路由表的運作原理、
+        靜態與動態路由的設計哲學，以及驅動今日網際網路的 RIP、OSPF、BGP 協定。
+      </p>
+    </div>
+    <div class="hero-meta">
+      <span class="day-num">05</span>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">路由的本質</a></li>
+      <li data-n="2"><a href="#s2">路由表詳解</a></li>
+      <li data-n="3"><a href="#s3">靜態路由</a></li>
+      <li data-n="4"><a href="#s4">動態路由概論</a></li>
+      <li data-n="5"><a href="#s5">距離向量：RIP</a></li>
+      <li data-n="6"><a href="#s6">鏈路狀態：OSPF</a></li>
+      <li data-n="7"><a href="#s7">路徑向量：BGP</a></li>
+      <li data-n="8"><a href="#s8">路由選擇原則</a></li>
+      <li data-n="9"><a href="#s9">路由協定比較</a></li>
+      <li data-n="10"><a href="#s10">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main-wrap">
+    <article>
+
+      <!-- ══ Section 1 ══ -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>路由的本質</h2>
+
+        <p>
+          <strong>路由（Routing）</strong>是決定封包如何從來源網路
+          傳遞至目的網路的過程。每當一個 IP 封包抵達路由器，
+          路由器必須在毫秒之內回答一個問題：
+          「這個封包的目的地 IP 是 <code>X.X.X.X</code>，
+          我應該把它送往哪個介面、哪個下一跳（Next Hop）？」
+        </p>
+
+        <p>
+          這個決策依賴<strong>路由表（Routing Table）</strong>——
+          一張記錄「目的網路 → 如何到達」的對照表。
+          路由器查詢路由表、找到最符合的條目、
+          更新 MAC 標頭（MAC 位址每跳都換，IP 位址不換），然後送出封包。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">路由器的封包轉送決策流程</div>
+          <pre>
+封包抵達路由器入口介面
+          │
+          ▼
+讀取 IP Header → 取出目的地 IP
+          │
+          ▼
+查詢路由表（最長前綴匹配 Longest Prefix Match）
+          │
+    ┌─────┴──────┐
+    │ 找到匹配條目 │   找不到（且無預設路由）
+    └─────┬──────┘           │
+          │               丟棄封包 + 回傳 ICMP Destination Unreachable
+          ▼
+確認出口介面（Outgoing Interface）與下一跳 IP
+          │
+          ▼
+TTL -= 1，若 TTL = 0 → 丟棄 + 回傳 ICMP Time Exceeded
+          │
+          ▼
+重新計算 IP Header Checksum（因 TTL 改變）
+          │
+          ▼
+透過 ARP 取得下一跳的 MAC 位址
+更新 Ethernet Frame（新的 Src/Dst MAC）
+          │
+          ▼
+從出口介面送出封包
+          </pre>
+        </div>
+
+        <p>
+          路由與交換的根本差異在於層次：
+          <strong>交換（Switching）</strong>在 Layer 2 依 MAC 位址在同一網路區段內轉送訊框；
+          <strong>路由（Routing）</strong>在 Layer 3 依 IP 位址在不同網路之間轉送封包。
+          路由器是跨網路的橋樑，每穿越一個路由器稱為一個<strong>跳（Hop）</strong>。
+        </p>
+      </section>
+
+      <!-- ══ Section 2 ══ -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>路由表詳解</h2>
+
+        <p>
+          路由表是路由器的「導航地圖」，每條路由條目包含以下欄位：
+          <strong>目的網路（Destination）</strong>、
+          <strong>子網路遮罩（Mask）</strong>、
+          <strong>下一跳（Next Hop）</strong>、
+          <strong>出口介面（Interface）</strong>、
+          <strong>度量值（Metric）</strong>以及
+          <strong>路由來源（Protocol）</strong>。
+        </p>
+
+        <h4>典型路由表範例（Linux <code>ip route show</code> 或 Cisco <code>show ip route</code>）</h4>
+
+        <table class="route-table">
+          <thead>
+            <tr>
+              <th>目的網路</th>
+              <th>下一跳</th>
+              <th>介面</th>
+              <th>Metric</th>
+              <th>來源</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="dest">192.168.1.0/24</td>
+              <td>直接連接</td>
+              <td class="iface">eth0</td>
+              <td class="metric">0</td>
+              <td class="proto"><span class="route-badge connected">Connected</span></td>
+            </tr>
+            <tr>
+              <td class="dest">10.0.0.0/8</td>
+              <td>192.168.1.254</td>
+              <td class="iface">eth0</td>
+              <td class="metric">1</td>
+              <td class="proto"><span class="route-badge static">Static</span></td>
+            </tr>
+            <tr>
+              <td class="dest">172.16.0.0/12</td>
+              <td>192.168.1.1</td>
+              <td class="iface">eth0</td>
+              <td class="metric">110</td>
+              <td class="proto"><span class="route-badge ospf">OSPF</span></td>
+            </tr>
+            <tr>
+              <td class="dest">203.0.113.0/24</td>
+              <td>192.168.1.1</td>
+              <td class="iface">eth0</td>
+              <td class="metric">20</td>
+              <td class="proto"><span class="route-badge bgp">BGP</span></td>
+            </tr>
+            <tr>
+              <td class="dest">0.0.0.0/0</td>
+              <td>192.168.1.1</td>
+              <td class="iface">eth1</td>
+              <td class="metric">1</td>
+              <td class="proto"><span class="route-badge static">Static（預設）</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>最長前綴匹配（Longest Prefix Match）</h3>
+
+        <p>
+          當路由表中有多個條目都符合目的 IP 時，路由器選擇
+          <strong>前綴最長（最精確）</strong>的那條。這個規則稱為
+          <strong>LPM（Longest Prefix Match）</strong>，是現代路由器查表的核心演算法。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">LPM 決策範例：目的 IP = 192.168.1.100</div>
+          <pre>
+路由表條目（按前綴長度排序）：
+
+  條目 A：0.0.0.0/0       → 預設路由（匹配任何 IP）
+  條目 B：192.168.0.0/16  → 匹配 192.168.x.x
+  條目 C：192.168.1.0/24  → 匹配 192.168.1.x    ← 最長，選這條
+  條目 D：192.168.1.128/25 → 匹配 192.168.1.128–.255（不符合 .100）
+
+結論：192.168.1.100 命中條目 C（/24），因為 /24 比 /16 更精確，
+      且比 /25 的範圍包含 .100。
+          </pre>
+        </div>
+
+        <p>
+          預設路由 <code>0.0.0.0/0</code>（又稱<strong>預設閘道</strong>）
+          是前綴長度為 0 的特殊路由，匹配所有 IP，但因為最短，
+          只在沒有更精確的匹配時才會被選中。
+          它是封包「出城」的最後一條路——若路由表中完全沒有符合的條目，
+          封包就走這裡；若連這條都沒有，封包就被丟棄。
+        </p>
+
+        <h3>AD 值：管理距離</h3>
+
+        <p>
+          若路由表中有兩條到達相同目的地、但來自<strong>不同來源協定</strong>的路由，
+          路由器使用<strong>管理距離（Administrative Distance, AD）</strong>來決定優先順序。
+          AD 值越小，信任度越高，優先採用。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>路由來源</th>
+              <th>AD 值（Cisco）</th>
+              <th>說明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Connected</td>
+              <td>0</td>
+              <td>直接連接的介面，最高可信度</td>
+            </tr>
+            <tr>
+              <td>Static</td>
+              <td>1</td>
+              <td>手動設定的靜態路由</td>
+            </tr>
+            <tr>
+              <td>EIGRP（內部）</td>
+              <td>90</td>
+              <td>Cisco 專有的混合型路由協定</td>
+            </tr>
+            <tr>
+              <td>OSPF</td>
+              <td>110</td>
+              <td>最廣泛使用的開放標準 IGP</td>
+            </tr>
+            <tr>
+              <td>IS-IS</td>
+              <td>115</td>
+              <td>電信骨幹網路常用</td>
+            </tr>
+            <tr>
+              <td>RIP</td>
+              <td>120</td>
+              <td>最老的動態路由協定，已逐漸淘汰</td>
+            </tr>
+            <tr>
+              <td>eBGP</td>
+              <td>20</td>
+              <td>外部 BGP，AS 之間的路由交換</td>
+            </tr>
+            <tr>
+              <td>iBGP</td>
+              <td>200</td>
+              <td>內部 BGP，AS 內部 BGP 路由器間的同步</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 3 ══ -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>靜態路由（Static Routing）</h2>
+
+        <p>
+          靜態路由由網路管理員<strong>手動設定</strong>，直接告訴路由器
+          「到達 X 網路，請走 Y 介面，下一跳是 Z」。
+          路由器不會自動學習或更新這些路由，完全由管理員掌控。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">靜態路由設定範例</div>
+          <pre>
+# Linux（ip route add）
+ip route add 10.0.0.0/8 via 192.168.1.254 dev eth0
+ip route add default via 192.168.1.1
+
+# Cisco IOS
+ip route 10.0.0.0 255.0.0.0 192.168.1.254
+ip route 0.0.0.0 0.0.0.0 192.168.1.1
+
+# 格式解析：
+# ip route [目的網路] [子網路遮罩] [下一跳 IP 或出口介面]
+          </pre>
+        </div>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>面向</th>
+              <th>靜態路由</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>設定方式</td>
+              <td>管理員手動輸入每一條路由</td>
+            </tr>
+            <tr>
+              <td>資源消耗</td>
+              <td>極低，無需協定運算、無路由廣播流量</td>
+            </tr>
+            <tr>
+              <td>安全性</td>
+              <td>高，外部無法注入惡意路由</td>
+            </tr>
+            <tr>
+              <td>可擴展性</td>
+              <td>差，網路規模增大時管理負擔急劇上升</td>
+            </tr>
+            <tr>
+              <td>容錯能力</td>
+              <td>差，鏈路故障後無法自動切換備援路徑</td>
+            </tr>
+            <tr>
+              <td>適用場景</td>
+              <td>小型網路、末梢路由器（Stub Network）、預設閘道設定、測試環境</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">浮動靜態路由（Floating Static Route）</p>
+          <p>
+            透過設定較高 AD 值的靜態路由，可以實現備援功能：
+            主要動態路由（如 OSPF AD=110）正常時使用，
+            當主路由消失後，AD=200 的浮動靜態路由才生效並接手流量。
+            這是在動態路由之上加一層靜態備援的常見設計模式。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 4 ══ -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>動態路由概論</h2>
+
+        <p>
+          動態路由協定讓路由器自動互相學習網路拓樸，
+          並在連線故障時<strong>自動重新收斂（Convergence）</strong>到新的最佳路徑。
+          管理員只需設定協定參數，路由器負責維護路由表。
+        </p>
+
+        <p>
+          動態路由協定依據運作範圍分為兩大類：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>類型</th>
+              <th>全名</th>
+              <th>運作範圍</th>
+              <th>代表協定</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>IGP</td>
+              <td>內部閘道協定（Interior Gateway Protocol）</td>
+              <td>同一個自治系統（AS）內部</td>
+              <td>RIP、OSPF、EIGRP、IS-IS</td>
+            </tr>
+            <tr>
+              <td>EGP</td>
+              <td>外部閘道協定（Exterior Gateway Protocol）</td>
+              <td>不同自治系統（AS）之間</td>
+              <td>BGP（事實上唯一在用的 EGP）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          <strong>自治系統（AS, Autonomous System）</strong>是網際網路的基本管理單位，
+          指一組在同一個行政管理下、使用一致路由策略的網路集合，
+          每個 AS 擁有一個全球唯一的 <strong>ASN（AS Number）</strong>。
+          ISP、大型企業、雲端服務商（AWS、Google、Cloudflare）各有其 ASN。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">IGP 與 EGP 的運作範圍</div>
+          <pre>
+  ┌───────────────────────────┐     ┌───────────────────────────┐
+  │   AS 65001（企業 A）       │     │   AS 13335（Cloudflare）    │
+  │                           │     │                           │
+  │  R1 ─── OSPF ─── R2      │     │  R5 ─── OSPF ─── R6      │
+  │   │               │      │     │   │               │      │
+  │  R3 ─── OSPF ─── R4      │     │  R7 ─── OSPF ─── R8      │
+  │           │               │     │           │               │
+  └───────────┼───────────────┘     └───────────┼───────────────┘
+              │                                 │
+              └──────────── eBGP ───────────────┘
+                     (AS 間路由交換)
+
+  同一 AS 內：IGP（OSPF）負責
+  AS 之間：   EGP（BGP）負責
+          </pre>
+        </div>
+
+        <p>
+          動態路由演算法依「如何計算最短路徑」分為三大類：
+          <strong>距離向量（Distance Vector）</strong>、
+          <strong>鏈路狀態（Link State）</strong>、
+          <strong>路徑向量（Path Vector）</strong>。
+        </p>
+
+        <div class="algo-compare">
+          <div class="algo-card">
+            <div class="algo-title">Distance Vector（距離向量）</div>
+            <div class="algo-row">
+              <span class="algo-k">原理</span>
+              <span class="algo-v">每個路由器只知道到各目的地的距離與方向，從鄰居那裡聽說路由資訊</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">類比</span>
+              <span class="algo-v">問路：「去台北要走哪條路？要多遠？」只知道鄰居說的結果</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">演算法</span>
+              <span class="algo-v">Bellman-Ford</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">缺點</span>
+              <span class="algo-v">收斂慢、計數到無窮問題（Count-to-Infinity）</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">代表</span>
+              <span class="algo-v">RIP、EIGRP（混合型）</span>
+            </div>
+          </div>
+          <div class="algo-card">
+            <div class="algo-title">Link State（鏈路狀態）</div>
+            <div class="algo-row">
+              <span class="algo-k">原理</span>
+              <span class="algo-v">每個路由器廣播自己所有鏈路的狀態，所有路由器都擁有完整的拓樸地圖</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">類比</span>
+              <span class="algo-v">擁有完整地圖，自己用 GPS 計算最短路徑</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">演算法</span>
+              <span class="algo-v">Dijkstra（最短路徑樹 SPF）</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">缺點</span>
+              <span class="algo-v">記憶體與 CPU 需求較高，大型網路需分區</span>
+            </div>
+            <div class="algo-row">
+              <span class="algo-k">代表</span>
+              <span class="algo-v">OSPF、IS-IS</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Section 5 ══ -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>距離向量協定：RIP</h2>
+
+        <p>
+          <strong>RIP（Routing Information Protocol）</strong>是最古老的動態路由協定，
+          1988 年正式標準化為 RFC 1058。RIP 使用<strong>跳數（Hop Count）</strong>
+          作為度量值，最大允許 15 跳（16 跳 = 不可達），
+          每 30 秒向所有鄰居廣播一次完整路由表。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>版本</th>
+              <th>發布年份</th>
+              <th>主要差異</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>RIPv1</td>
+              <td>1988</td>
+              <td>有類別路由（不含子網路資訊）、廣播更新、無認證</td>
+            </tr>
+            <tr>
+              <td>RIPv2</td>
+              <td>1994</td>
+              <td>支援 CIDR（含子網路遮罩）、多播更新（224.0.0.9）、MD5 認證</td>
+            </tr>
+            <tr>
+              <td>RIPng</td>
+              <td>1997</td>
+              <td>IPv6 版本，使用 UDP Port 521、多播位址 ff02::9</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>計數到無窮問題（Count-to-Infinity）</h3>
+
+        <p>
+          RIP 最著名的缺陷。假設 A—B—C 三個路由器串聯，
+          C 到某網路的跳數是 1，B 到該網路跳數是 2，A 跳數是 3。
+          若 C 的鏈路突然斷掉：
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">Count-to-Infinity 問題演示</div>
+          <pre>
+正常狀態：  A(3) ─── B(2) ─── C(1) ─── 目標網路
+
+C 的鏈路斷掉後：
+  C 知道自己到目標網路不可達（metric = 16 = 無窮大）
+  但在 C 廣播之前，B 已向 C 廣播「我可以 metric=2 到達目標」
+  C 誤以為可以繞過 B 到達（metric = 2+1 = 3）
+  B 聽到 C 說 metric=3，更新為 3+1=4
+  C 再聽到 B 說 4，更新為 5...
+  持續遞增直到 metric = 16 才停止
+
+  解決方案：
+  - 水平分割（Split Horizon）：不向學到路由的介面廣播該路由
+  - 毒性逆轉（Poison Reverse）：主動向學到路由的介面廣播 metric=16
+  - 觸發更新（Triggered Update）：拓樸變化時立即廣播，不等 30 秒
+          </pre>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">RIP 的現狀</p>
+          <p>
+            由於最大 15 跳的限制使其無法用於大型網路，
+            加上收斂速度慢（最壞情況需數分鐘），RIP 在企業網路中已幾乎被 OSPF 取代。
+            今日 RIP 主要出現在教學環境和某些老舊小型設備中。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 6 ══ -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>鏈路狀態協定：OSPF</h2>
+
+        <p>
+          <strong>OSPF（Open Shortest Path First）</strong>是目前企業與服務商網路
+          最廣泛使用的 IGP，定義於 RFC 2328（OSPFv2）和 RFC 5340（OSPFv3，支援 IPv6）。
+          OSPF 使用 <strong>Dijkstra 最短路徑優先演算法（SPF）</strong>，
+          以<strong>頻寬（Cost）</strong>而非跳數作為度量值，
+          Cost = 10⁸ / 介面頻寬（bps），因此 100 Mbps 的 Cost = 1，
+          10 Mbps 的 Cost = 10。
+        </p>
+
+        <h3>OSPF 的四個核心概念</h3>
+
+        <p>
+          <strong>1. 鏈路狀態廣告（LSA, Link State Advertisement）</strong>：
+          每個路由器將自己所有介面的狀態（鄰居、Cost、網路位址）
+          打包成 LSA，洪泛（Flood）給 OSPF 區域內所有路由器。
+        </p>
+
+        <p>
+          <strong>2. 鏈路狀態資料庫（LSDB, Link State Database）</strong>：
+          每個路由器都維護一份完整的 LSDB，記錄整個 OSPF 區域的拓樸。
+          同一區域的所有路由器 LSDB 必須完全相同，這是 OSPF 收斂的標誌。
+        </p>
+
+        <p>
+          <strong>3. SPF 樹計算</strong>：
+          每個路由器以自己為根，對 LSDB 執行 Dijkstra 演算法，
+          建構出到達所有目的地的<strong>最短路徑樹（SPT）</strong>，
+          再將樹的葉節點轉換為路由表條目。
+        </p>
+
+        <p>
+          <strong>4. 區域（Area）設計</strong>：
+          大型 OSPF 網路使用<strong>分區（Area）</strong>設計降低 LSDB 的規模。
+          Area 0（骨幹區域）是所有其他 Area 的核心，
+          Area 間路由需透過 ABR（Area Border Router）轉接。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">OSPF 多區域架構</div>
+          <pre>
+                        ┌──────────────────────────────┐
+                        │        Area 0（骨幹）          │
+                        │                              │
+                        │   R1 ────────── R2           │
+                        │   │             │            │
+                        └───┼─────────────┼────────────┘
+                            │ ABR         │ ABR
+               ┌────────────┼──┐    ┌────┼────────────┐
+               │  Area 1   R3  │    │ R4  Area 2      │
+               │               │    │                 │
+               │  R5 ── R6     │    │   R7 ── R8      │
+               └───────────────┘    └─────────────────┘
+
+  Area 0：骨幹區域（Backbone Area），所有其他 Area 必須連接到 Area 0
+  ABR：區域邊界路由器，同時屬於兩個 Area
+  每個 Area 內的路由器只需維護自己 Area 的 LSDB
+          </pre>
+        </div>
+
+        <h3>OSPF 鄰居建立過程（LSDB 同步）</h3>
+
+        <div class="diagram">
+          <div class="diagram-title">OSPF 鄰居狀態機（Seven States）</div>
+          <pre>
+Down → Init → 2-Way → ExStart → Exchange → Loading → Full
+
+  Down     ： 尚未收到任何 Hello 封包
+  Init     ： 收到對方 Hello，但對方的 Hello 尚未包含自己的 Router-ID
+  2-Way    ： 雙向通訊確立（含 DR/BDR 選舉）
+  ExStart  ： 協商 DBD（Database Description）交換的主從關係與序號
+  Exchange ： 交換 DBD（LSDB 目錄摘要）
+  Loading  ： 請求並接收缺少的 LSA
+  Full     ： LSDB 完全同步，鄰居關係建立完成
+          </pre>
+        </div>
+
+        <p>
+          在廣播型網路（如乙太網路）上，OSPF 選出一個
+          <strong>DR（Designated Router，指定路由器）</strong>
+          與一個 <strong>BDR（Backup DR）</strong>，
+          其他路由器（DROther）只與 DR/BDR 建立完整鄰居關係，
+          避免 N²個鄰居關係造成的洪泛風暴。DR 的選舉依據是優先權（Priority）值，
+          相同時比較 Router-ID（越大越優先）。
+        </p>
+      </section>
+
+      <!-- ══ Section 7 ══ -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>路徑向量協定：BGP</h2>
+
+        <p>
+          <strong>BGP（Border Gateway Protocol）</strong>是網際網路的「路由協定之王」，
+          負責在全球數萬個 AS 之間交換路由資訊，當前版本 BGP-4 定義於 RFC 4271。
+          整個網際網路的路由系統本質上就是一張由 BGP 維護的巨大路由表，
+          全球路由表目前超過 90 萬條前綴。
+        </p>
+
+        <p>
+          BGP 與 RIP/OSPF 的根本不同在於：
+          它不是單純追求「最短路徑」，而是根據
+          <strong>路由策略（Policy）</strong>選擇路徑。
+          ISP 可能基於商業協議、流量成本、法律合規等因素選擇非最短路徑。
+          BGP 是政治性的路由協定，不是純技術性的。
+        </p>
+
+        <h3>BGP 的兩種形態</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>類型</th>
+              <th>說明</th>
+              <th>特性</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>eBGP（外部 BGP）</td>
+              <td>不同 AS 之間的 BGP 連線，通常為直接相連的對等點（Peer）</td>
+              <td>TTL = 1（預設只允許直連），AS-PATH 屬性用於防環</td>
+            </tr>
+            <tr>
+              <td>iBGP（內部 BGP）</td>
+              <td>同一 AS 內部多個 BGP 路由器之間的連線</td>
+              <td>需要全互連（Full Mesh）或使用路由反射器（Route Reflector）以避免環路</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>BGP 路徑屬性（Path Attributes）</h3>
+
+        <p>
+          BGP 使用豐富的路徑屬性來描述每條路由，管理員透過操控這些屬性實現路由策略。
+          最重要的幾個屬性：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>屬性</th>
+              <th>類型</th>
+              <th>說明與用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>AS-PATH</td>
+              <td>Well-known Mandatory</td>
+              <td>記錄路由經過的所有 AS 號碼序列，用於防止路由環路；AS-PATH 越短通常越優先</td>
+            </tr>
+            <tr>
+              <td>NEXT-HOP</td>
+              <td>Well-known Mandatory</td>
+              <td>到達目的地的下一跳 IP 位址；eBGP 更新時自動更換，iBGP 預設不變</td>
+            </tr>
+            <tr>
+              <td>LOCAL-PREF</td>
+              <td>Well-known Discretionary</td>
+              <td>在 AS 內部影響出口路徑選擇，值越高越優先，只在 iBGP 傳播</td>
+            </tr>
+            <tr>
+              <td>MED</td>
+              <td>Optional Non-transitive</td>
+              <td>Multi-Exit Discriminator，向鄰居 AS 建議入口，值越小越優先</td>
+            </tr>
+            <tr>
+              <td>COMMUNITY</td>
+              <td>Optional Transitive</td>
+              <td>32 位元標籤，用於路由分組與策略套用，如 Blackhole Community 用於 DDoS 防護</td>
+            </tr>
+            <tr>
+              <td>WEIGHT</td>
+              <td>Cisco 專有</td>
+              <td>只影響本地路由器，值越高越優先，是 BGP 選路的第一順位</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">BGP Hijacking</p>
+          <p>
+            BGP 沒有內建的路由來源驗證機制，惡意或配置錯誤的 AS
+            可以廣告它不擁有的 IP 前綴，吸引全球流量繞經自己——稱為 <strong>BGP Hijacking</strong>。
+            歷史上有多起重大事件，包括 2010 年中國電信意外廣告美國政府 IP 前綴。
+            防護機制包含 <strong>RPKI（Resource Public Key Infrastructure）</strong>，
+            透過數位憑證綁定 AS 與其擁有的 IP 前綴，讓路由器驗證路由的合法性。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 8 ══ -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>路由選擇原則與最佳化</h2>
+
+        <h3>OSPF Cost 計算</h3>
+
+        <p>
+          OSPF 的 Cost 預設公式是 <strong>10⁸ / 介面頻寬（bps）</strong>，
+          結果取整數。當介面速度超過 100 Mbps 時，Cost 都會計算為 1，
+          無法區分 100 Mbps、1 Gbps 和 10 Gbps 的鏈路。
+          現代網路通常將參考頻寬（Reference Bandwidth）調高至 100 Gbps，
+          讓高速介面之間的差異可以反映在 Cost 上。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">OSPF Cost 路徑選擇範例</div>
+          <pre>
+           Cost=10              Cost=1
+  A ─────────────── B ─────────────── D
+  │                                   │
+  │    Cost=1          Cost=1         │
+  └─────────── C ─────────────────────┘
+               Cost=100（慢速備援）
+
+從 A 到 D 的兩條路徑：
+  路徑 1：A→B→D  Total Cost = 10 + 1 = 11
+  路徑 2：A→C→D  Total Cost = 1 + 1 = 2  ← OSPF 選這條
+
+若 C 故障，OSPF 重新收斂後改走 A→B→D，自動容錯。
+          </pre>
+        </div>
+
+        <h3>等價多路徑（ECMP）</h3>
+
+        <p>
+          當到達同一目的地有兩條（或多條）Cost 完全相同的路徑時，
+          路由器可以同時使用所有路徑，稱為
+          <strong>ECMP（Equal-Cost Multi-Path）</strong>。
+          ECMP 提升了頻寬利用率與容錯能力。
+          流量分配方式通常基於來源/目的 IP 的雜湊，
+          確保同一條連線的封包走同一條路徑（避免亂序）。
+        </p>
+
+        <h3>收斂時間（Convergence Time）</h3>
+
+        <p>
+          <strong>收斂</strong>指網路拓樸發生變化後，
+          所有路由器更新路由表至一致狀態所需的時間。
+          收斂期間可能出現暫時的路由錯誤或封包遺失。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>協定</th>
+              <th>典型收斂時間</th>
+              <th>影響因素</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>RIP</td>
+              <td>數分鐘</td>
+              <td>30 秒更新週期、Count-to-Infinity</td>
+            </tr>
+            <tr>
+              <td>OSPF</td>
+              <td>秒級（通常 &lt;1 秒）</td>
+              <td>Hello/Dead Interval 調整、SPF 計算時間</td>
+            </tr>
+            <tr>
+              <td>BGP</td>
+              <td>數秒至數分鐘</td>
+              <td>MRAI（最小路由廣告間隔）、AS 路徑長度</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 9 ══ -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>路由協定全面比較</h2>
+
+        <div class="proto-grid">
+          <div class="proto-card">
+            <div class="proto-card-name">RIP v2</div>
+            <div class="proto-card-full">Routing Information Protocol</div>
+            <div class="proto-card-attr">
+              <span class="attr-key">類型</span>
+              <span class="attr-val">距離向量 IGP</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">度量值</span>
+              <span class="attr-val">跳數（最大 15）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">更新方式</span>
+              <span class="attr-val">定期廣播（30 秒）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">傳輸層</span>
+              <span class="attr-val">UDP Port 520</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">VLSM</span>
+              <span class="attr-val">支援（v2）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">適用</span>
+              <span class="attr-val">小型網路、教學</span>
+            </div>
+          </div>
+
+          <div class="proto-card">
+            <div class="proto-card-name">OSPF</div>
+            <div class="proto-card-full">Open Shortest Path First</div>
+            <div class="proto-card-attr">
+              <span class="attr-key">類型</span>
+              <span class="attr-val">鏈路狀態 IGP</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">度量值</span>
+              <span class="attr-val">Cost（10⁸/頻寬）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">更新方式</span>
+              <span class="attr-val">觸發式 LSA 洪泛</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">傳輸層</span>
+              <span class="attr-val">IP Protocol 89</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">VLSM</span>
+              <span class="attr-val">支援</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">適用</span>
+              <span class="attr-val">企業、服務商 IGP</span>
+            </div>
+          </div>
+
+          <div class="proto-card">
+            <div class="proto-card-name">EIGRP</div>
+            <div class="proto-card-full">Enhanced Interior Gateway Routing Protocol</div>
+            <div class="proto-card-attr">
+              <span class="attr-key">類型</span>
+              <span class="attr-val">混合型（Cisco 專有）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">度量值</span>
+              <span class="attr-val">頻寬 + 延遲（複合）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">更新方式</span>
+              <span class="attr-val">觸發式（DUAL 演算法）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">傳輸層</span>
+              <span class="attr-val">IP Protocol 88</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">VLSM</span>
+              <span class="attr-val">支援</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">適用</span>
+              <span class="attr-val">Cisco 設備為主的企業</span>
+            </div>
+          </div>
+
+          <div class="proto-card">
+            <div class="proto-card-name">IS-IS</div>
+            <div class="proto-card-full">Intermediate System to Intermediate System</div>
+            <div class="proto-card-attr">
+              <span class="attr-key">類型</span>
+              <span class="attr-val">鏈路狀態 IGP</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">度量值</span>
+              <span class="attr-val">Cost（可自訂）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">更新方式</span>
+              <span class="attr-val">觸發式 LSP 洪泛</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">傳輸層</span>
+              <span class="attr-val">直接在 L2（非 IP）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">VLSM</span>
+              <span class="attr-val">支援</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">適用</span>
+              <span class="attr-val">電信骨幹、ISP 核心</span>
+            </div>
+          </div>
+
+          <div class="proto-card">
+            <div class="proto-card-name">BGP-4</div>
+            <div class="proto-card-full">Border Gateway Protocol version 4</div>
+            <div class="proto-card-attr">
+              <span class="attr-key">類型</span>
+              <span class="attr-val">路徑向量 EGP</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">度量值</span>
+              <span class="attr-val">多屬性（策略性）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">更新方式</span>
+              <span class="attr-val">增量觸發式</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">傳輸層</span>
+              <span class="attr-val">TCP Port 179</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">VLSM</span>
+              <span class="attr-val">支援（CIDR）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">適用</span>
+              <span class="attr-val">ISP 互連、網際網路骨幹</span>
+            </div>
+          </div>
+
+          <div class="proto-card">
+            <div class="proto-card-name">靜態路由</div>
+            <div class="proto-card-full">Static Routing</div>
+            <div class="proto-card-attr">
+              <span class="attr-key">類型</span>
+              <span class="attr-val">手動設定</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">度量值</span>
+              <span class="attr-val">手動指定</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">更新方式</span>
+              <span class="attr-val">無（不自動更新）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">傳輸層</span>
+              <span class="attr-val">N/A</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">容錯</span>
+              <span class="attr-val">無（需浮動靜態）</span>
+            </div>
+            <div class="proto-card-attr">
+              <span class="attr-key">適用</span>
+              <span class="attr-val">末梢網路、預設閘道</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- ══ Summary ══ -->
+      <section class="lesson-section" id="s10">
+        <div class="summary-box">
+          <div class="summary-label">Day 5 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>路由器依最長前綴匹配（LPM）查詢路由表，每跳 TTL 遞減、MAC 位址更換</li>
+            <li>路由表欄位：目的網路、下一跳、出口介面、Metric、來源協定</li>
+            <li>AD 值決定不同協定路由的優先順序：Connected(0) &gt; Static(1) &gt; OSPF(110) &gt; RIP(120)</li>
+            <li>靜態路由簡單安全但無法自動容錯；浮動靜態路由可做備援</li>
+            <li>IGP 在 AS 內部運作（RIP、OSPF）；EGP 在 AS 之間（BGP）</li>
+            <li>RIP 用跳數、最大 15 跳、每 30 秒廣播；Count-to-Infinity 是主要缺陷</li>
+            <li>OSPF 用 Dijkstra + Cost（10⁸/頻寬）、觸發式洪泛、多區域設計、秒級收斂</li>
+            <li>BGP 是路徑向量協定，透過 AS-PATH、LOCAL-PREF、MED 等屬性實現策略性路由</li>
+            <li>ECMP 允許多條等價路徑同時使用，提升頻寬與容錯</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <!-- ── Sidebar ── -->
+    <aside>
+
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">5 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>Routing Table</li>
+          <li><span>#</span>Next Hop</li>
+          <li><span>#</span>LPM（最長前綴匹配）</li>
+          <li><span>#</span>Administrative Distance</li>
+          <li><span>#</span>Static Route</li>
+          <li><span>#</span>IGP / EGP</li>
+          <li><span>#</span>AS / ASN</li>
+          <li><span>#</span>Distance Vector</li>
+          <li><span>#</span>Link State</li>
+          <li><span>#</span>RIP / Count-to-Infinity</li>
+          <li><span>#</span>OSPF / SPF / LSDB</li>
+          <li><span>#</span>DR / BDR</li>
+          <li><span>#</span>BGP-4 / AS-PATH</li>
+          <li><span>#</span>BGP Hijacking / RPKI</li>
+          <li><span>#</span>ECMP</li>
+          <li><span>#</span>Convergence Time</li>
+        </ul>
+      </div>
+
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day4.html">
+            <span>&larr; Day 4: IP 位址與子網路</span>
+          </a>
+          <a href="index.html">
+            <span>課程首頁</span>
+            <span>&uarr;</span>
+          </a>
+          <a href="day6.html">
+            <span>Day 6: ARP 與 ICMP</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 05 / 16</p>
+    <p>下一課：<a href="day6.html" style="color:var(--accent);text-decoration:none;">ARP 與 ICMP &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

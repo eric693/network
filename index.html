@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>網路通訊完整課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:    #1a1a1a;
+      --paper:  #f5f0e8;
+      --accent: #c0392b;
+      --mid:    #7a6a5a;
+      --line:   rgba(26,26,26,0.12);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.8;
+      min-height: 100vh;
+    }
+
+    /* ── Grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative;
+      z-index: 1;
+      padding: 80px 8vw 60px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 40px;
+    }
+
+    .header-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .header-meta {
+      text-align: right;
+    }
+
+    .header-meta .big-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 5rem;
+      font-weight: 500;
+      color: var(--ink);
+      line-height: 1;
+      display: block;
+    }
+
+    .header-meta .big-label {
+      font-size: 12px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Intro strip ── */
+    .intro {
+      position: relative;
+      z-index: 1;
+      padding: 48px 8vw;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .intro p {
+      font-size: 1.05rem;
+      color: var(--mid);
+    }
+
+    .intro-stats {
+      display: flex;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 2rem;
+      font-weight: 500;
+      color: var(--ink);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 40px;
+      background: var(--line);
+    }
+
+    /* ── Section title ── */
+    .section-title {
+      position: relative;
+      z-index: 1;
+      padding: 56px 8vw 32px;
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+    }
+
+    .section-title h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+
+    .section-title .rule {
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    /* ── Course grid ── */
+    .course-grid {
+      position: relative;
+      z-index: 1;
+      padding: 0 8vw 80px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0;
+      border-top: 1px solid var(--line);
+    }
+
+    /* ── Day card ── */
+    .day-card {
+      position: relative;
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      padding: 32px 28px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      transition: background 0.2s ease;
+      overflow: hidden;
+    }
+
+    .day-card:nth-child(3n) {
+      border-right: none;
+    }
+
+    .day-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--ink);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .day-card:hover::after {
+      opacity: 0.04;
+    }
+
+    .day-card:hover .card-arrow {
+      transform: translateX(4px);
+      color: var(--accent);
+    }
+
+    .card-day {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-day::before {
+      content: '';
+      display: inline-block;
+      width: 18px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .card-title {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    .card-subtitle {
+      font-size: 0.82rem;
+      color: var(--mid);
+      line-height: 1.6;
+    }
+
+    .card-arrow {
+      display: block;
+      margin-top: 20px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    /* ── Phase markers ── */
+    .phase-header {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw 8px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .phase-tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--paper);
+      background: var(--ink);
+      padding: 4px 10px;
+    }
+
+    .phase-name {
+      font-size: 0.85rem;
+      color: var(--mid);
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 40px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    footer .footer-accent {
+      color: var(--accent);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .intro {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      header {
+        grid-template-columns: 1fr;
+      }
+
+      .header-meta {
+        text-align: left;
+        display: flex;
+        gap: 20px;
+        align-items: baseline;
+      }
+
+      .course-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      }
+
+      .day-card:nth-child(3n) {
+        border-right: 1px solid var(--line);
+      }
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 48px 6vw 40px;
+      }
+
+      .intro,
+      .section-title,
+      .course-grid,
+      .phase-header,
+      footer {
+        padding-left: 6vw;
+        padding-right: 6vw;
+      }
+
+      .course-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .day-card {
+        border-right: none;
+      }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    header,
+    .intro,
+    .phase-header,
+    .day-card {
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .day-card:nth-child(1)  { animation-delay: 0.05s; }
+    .day-card:nth-child(2)  { animation-delay: 0.10s; }
+    .day-card:nth-child(3)  { animation-delay: 0.15s; }
+    .day-card:nth-child(4)  { animation-delay: 0.20s; }
+    .day-card:nth-child(5)  { animation-delay: 0.25s; }
+    .day-card:nth-child(6)  { animation-delay: 0.30s; }
+    .day-card:nth-child(7)  { animation-delay: 0.35s; }
+    .day-card:nth-child(8)  { animation-delay: 0.40s; }
+    .day-card:nth-child(9)  { animation-delay: 0.45s; }
+    .day-card:nth-child(10) { animation-delay: 0.50s; }
+    .day-card:nth-child(11) { animation-delay: 0.55s; }
+    .day-card:nth-child(12) { animation-delay: 0.60s; }
+    .day-card:nth-child(13) { animation-delay: 0.65s; }
+    .day-card:nth-child(14) { animation-delay: 0.70s; }
+    .day-card:nth-child(15) { animation-delay: 0.75s; }
+    .day-card:nth-child(16) { animation-delay: 0.80s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div>
+      <p class="header-label">完整網路通訊課程 / Network Communications</p>
+      <h1>從零開始<br>掌握<span>網路</span>通訊</h1>
+    </div>
+    <div class="header-meta">
+      <span class="big-num">16</span>
+      <span class="big-label">天完整課程</span>
+    </div>
+  </header>
+
+  <!-- ── Intro ── -->
+  <div class="intro">
+    <p>
+      本課程從最基礎的網路概念出發，逐步深入至傳輸層、應用層協定、網路安全與現代架構設計。
+      無論你是初學者或有一定基礎的工程師，都能在這 16 天內建立紮實的網路知識體系。
+    </p>
+    <div class="intro-stats">
+      <div class="stat">
+        <span class="stat-num">16</span>
+        <span class="stat-label">堂課</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num">4</span>
+        <span class="stat-label">學習階段</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num">OSI</span>
+        <span class="stat-label">架構為核心</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       Phase 1: 基礎概念
+  ════════════════════════════════ -->
+  <div class="section-title">
+    <h2>課程大綱</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="phase-header">
+    <span class="phase-tag">Phase 01</span>
+    <span class="phase-name">網路基礎概念 &mdash; Day 1–4</span>
+  </div>
+
+  <div class="course-grid">
+
+    <a class="day-card" href="day1.html">
+      <span class="card-day">DAY 01</span>
+      <div class="card-title">網路是什麼？</div>
+      <div class="card-subtitle">
+        網路的定義、歷史演進、基本術語與拓樸結構介紹
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day2.html">
+      <span class="card-day">DAY 02</span>
+      <div class="card-title">OSI 七層模型</div>
+      <div class="card-subtitle">
+        開放式系統互連模型各層功能、封裝解封裝概念與層間互動
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day3.html">
+      <span class="card-day">DAY 03</span>
+      <div class="card-title">TCP/IP 協定族</div>
+      <div class="card-subtitle">
+        TCP/IP 四層架構、與 OSI 對照，以及網際網路的實際運作基礎
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day4.html">
+      <span class="card-day">DAY 04</span>
+      <div class="card-title">IP 位址與子網路</div>
+      <div class="card-subtitle">
+        IPv4、IPv6 位址格式、子網路遮罩、CIDR 表示法與私有位址規劃
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+  </div>
+
+  <!-- ════════════════════════════════
+       Phase 2: 網路層與傳輸層
+  ════════════════════════════════ -->
+  <div class="phase-header">
+    <span class="phase-tag">Phase 02</span>
+    <span class="phase-name">網路層與傳輸層深入 &mdash; Day 5–8</span>
+  </div>
+
+  <div class="course-grid">
+
+    <a class="day-card" href="day5.html">
+      <span class="card-day">DAY 05</span>
+      <div class="card-title">路由原理與協定</div>
+      <div class="card-subtitle">
+        靜態路由、動態路由、RIP、OSPF、BGP 概念與封包轉送決策
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day6.html">
+      <span class="card-day">DAY 06</span>
+      <div class="card-title">ARP 與 ICMP</div>
+      <div class="card-subtitle">
+        位址解析協定運作機制、ICMP 訊息類型、ping 與 traceroute 實作原理
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day7.html">
+      <span class="card-day">DAY 07</span>
+      <div class="card-title">TCP 傳輸控制協定</div>
+      <div class="card-subtitle">
+        三向交握、四向揮手、流量控制、壅塞控制、滑動視窗機制
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day8.html">
+      <span class="card-day">DAY 08</span>
+      <div class="card-title">UDP 與多播技術</div>
+      <div class="card-subtitle">
+        UDP 的無連線特性、適用場景、多播與廣播通訊原理
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+  </div>
+
+  <!-- ════════════════════════════════
+       Phase 3: 應用層協定
+  ════════════════════════════════ -->
+  <div class="phase-header">
+    <span class="phase-tag">Phase 03</span>
+    <span class="phase-name">應用層協定與服務 &mdash; Day 9–12</span>
+  </div>
+
+  <div class="course-grid">
+
+    <a class="day-card" href="day9.html">
+      <span class="card-day">DAY 09</span>
+      <div class="card-title">DNS 網域名稱系統</div>
+      <div class="card-subtitle">
+        DNS 解析流程、遞迴查詢、權威伺服器、記錄類型 A/AAAA/MX/CNAME
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day10.html">
+      <span class="card-day">DAY 10</span>
+      <div class="card-title">HTTP 與 HTTPS</div>
+      <div class="card-subtitle">
+        HTTP/1.1、HTTP/2、HTTP/3 演進、請求回應結構、狀態碼與快取機制
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day11.html">
+      <span class="card-day">DAY 11</span>
+      <div class="card-title">電子郵件協定</div>
+      <div class="card-subtitle">
+        SMTP 傳送、POP3 與 IMAP 接收、郵件格式、垃圾信防護機制
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day12.html">
+      <span class="card-day">DAY 12</span>
+      <div class="card-title">DHCP 與 NAT</div>
+      <div class="card-subtitle">
+        動態位址分配流程、NAT 位址轉換類型、NAPT 與家用路由器運作原理
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+  </div>
+
+  <!-- ════════════════════════════════
+       Phase 4: 安全與現代架構
+  ════════════════════════════════ -->
+  <div class="phase-header">
+    <span class="phase-tag">Phase 04</span>
+    <span class="phase-name">網路安全與現代架構 &mdash; Day 13–16</span>
+  </div>
+
+  <div class="course-grid">
+
+    <a class="day-card" href="day13.html">
+      <span class="card-day">DAY 13</span>
+      <div class="card-title">網路安全基礎</div>
+      <div class="card-subtitle">
+        常見攻擊手法、防火牆原理、DDoS 防護、IDS/IPS 系統概述
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day14.html">
+      <span class="card-day">DAY 14</span>
+      <div class="card-title">TLS/SSL 與加密</div>
+      <div class="card-subtitle">
+        對稱與非對稱加密、TLS 握手過程、憑證鏈、PKI 公開金鑰基礎建設
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day15.html">
+      <span class="card-day">DAY 15</span>
+      <div class="card-title">VPN 與軟體定義網路</div>
+      <div class="card-subtitle">
+        VPN 通道協定、IPSec、WireGuard、SDN 概念與 OpenFlow 架構介紹
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+    <a class="day-card" href="day16.html">
+      <span class="card-day">DAY 16</span>
+      <div class="card-title">現代網路架構與總複習</div>
+      <div class="card-subtitle">
+        CDN、負載平衡、微服務網路、WebSocket、課程知識整合與學習路線圖
+      </div>
+      <span class="card-arrow">閱讀課程 &rarr;</span>
+    </a>
+
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>網路通訊完整課程 &mdash; 16 Days</p>
+    <p><span class="footer-accent">Day 1</span> 開始你的旅程</p>
+  </footer>
+
+</body>
+</html>

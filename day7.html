@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 7 — TCP 傳輸控制協定 | 網路通訊課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:     #1a1a1a;
+      --paper:   #f5f0e8;
+      --accent:  #c0392b;
+      --mid:     #7a6a5a;
+      --line:    rgba(26,26,26,0.12);
+      --code-bg: rgba(26,26,26,0.06);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.9;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: relative;
+      z-index: 10;
+      padding: 20px 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .topnav a:hover { color: var(--accent); }
+
+    .topnav .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topnav .sep { color: var(--line); font-size: 14px; }
+
+    .topnav .nav-group {
+      display: flex;
+      gap: 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: end;
+    }
+
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: var(--mid);
+      max-width: 560px;
+    }
+
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 6rem;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+      opacity: 0.08;
+      display: block;
+    }
+
+    /* ── TOC ── */
+    .toc-bar {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw;
+      border-bottom: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 14px;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      list-style: none;
+    }
+
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc-list li a:hover { color: var(--accent); }
+
+    .toc-list li::before {
+      content: attr(data-n) ". ";
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      align-items: start;
+    }
+
+    article {
+      padding: 64px 6vw 80px 8vw;
+      border-right: 1px solid var(--line);
+    }
+
+    /* ── Sections ── */
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 36px 0 12px;
+    }
+
+    .lesson-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--mid);
+      margin: 24px 0 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .lesson-section p {
+      margin-bottom: 16px;
+      font-size: 0.97rem;
+    }
+
+    .lesson-section p:last-child { margin-bottom: 0; }
+
+    strong { font-weight: 500; color: var(--ink); }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      color: var(--ink);
+    }
+
+    /* ── Boxes ── */
+    .highlight-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--accent);
+      background: rgba(192,57,43,0.05);
+    }
+
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+
+    .info-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--mid);
+      background: var(--code-bg);
+    }
+
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    /* ── Tables ── */
+    .def-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .def-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      line-height: 1.7;
+    }
+
+    .def-table tr:last-child td { border-bottom: none; }
+
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── TCP header visual ── */
+    .tcp-header {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .tcp-header-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--paper);
+      text-transform: uppercase;
+      background: var(--ink);
+      padding: 10px 16px;
+    }
+
+    .tcp-row {
+      display: grid;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tcp-row:last-child { border-bottom: none; }
+
+    .tcp-field {
+      padding: 11px 14px;
+      border-right: 1px solid var(--line);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .tcp-field:last-child { border-right: none; }
+
+    .tcp-field .tf-name {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .tcp-field .tf-val {
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+
+    .tcp-field .tf-bits {
+      font-size: 0.62rem;
+      color: var(--mid);
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* ── Flag badges ── */
+    .flag-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .flag-card {
+      border: 1px solid var(--line);
+      padding: 12px 16px;
+      min-width: 120px;
+    }
+
+    .flag-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .flag-full {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--mid);
+      margin-bottom: 6px;
+    }
+
+    .flag-desc {
+      font-size: 0.8rem;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    /* ── Window visualiser ── */
+    .window-vis {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .window-vis-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--paper);
+      text-transform: uppercase;
+      background: var(--ink);
+      padding: 10px 16px;
+    }
+
+    .window-track {
+      display: flex;
+      height: 40px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .window-seg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      border-right: 1px solid var(--line);
+      flex: 1;
+    }
+
+    .window-seg:last-child { border-right: none; }
+    .window-seg.acked   { background: var(--ink); color: var(--paper); }
+    .window-seg.inflight{ background: rgba(192,57,43,0.2); color: var(--accent); }
+    .window-seg.ready   { background: rgba(26,26,26,0.06); color: var(--mid); }
+    .window-seg.blocked { background: var(--paper); color: rgba(26,26,26,0.2); }
+
+    .window-legend {
+      display: flex;
+      gap: 24px;
+      padding: 12px 16px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--mid);
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+
+    .legend-dot.acked   { background: var(--ink); }
+    .legend-dot.inflight{ background: rgba(192,57,43,0.4); }
+    .legend-dot.ready   { background: rgba(26,26,26,0.1); border: 1px solid var(--line); }
+    .legend-dot.blocked { background: var(--paper); border: 1px solid var(--line); }
+
+    /* ── State machine ── */
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 24px 0;
+    }
+
+    .state-card {
+      padding: 14px 16px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      transition: background 0.15s;
+    }
+
+    .state-card:hover { background: rgba(26,26,26,0.03); }
+
+    .state-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .state-desc {
+      font-size: 0.8rem;
+      color: var(--mid);
+      line-height: 1.6;
+    }
+
+    /* ── Congestion phases ── */
+    .cc-phases {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 24px 0;
+    }
+
+    .cc-phase {
+      padding: 18px 16px;
+      border-right: 1px solid var(--line);
+    }
+
+    .cc-phase:last-child { border-right: none; }
+
+    .cc-phase-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .cc-phase-algo {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--mid);
+      margin-bottom: 8px;
+    }
+
+    .cc-phase-desc {
+      font-size: 0.82rem;
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    /* ── Timeline (handshake) ── */
+    .handshake-vis {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .handshake-vis pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.8;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 48px 0;
+    }
+
+    /* ── Summary ── */
+    .summary-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .summary-box ul { list-style: none; padding: 0; }
+
+    .summary-box ul li {
+      font-size: 0.9rem;
+      color: rgba(245,240,232,0.8);
+      padding: 6px 0 6px 16px;
+      border-bottom: 1px solid rgba(245,240,232,0.08);
+      position: relative;
+    }
+
+    .summary-box ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      padding: 48px 28px;
+      position: sticky;
+      top: 0;
+    }
+
+    .aside-section { margin-bottom: 40px; }
+
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .keyword-list { list-style: none; padding: 0; }
+
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+      transition: color 0.2s;
+    }
+
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--line);
+      margin: 12px 0 20px;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 43.75%;
+      background: var(--accent);
+    }
+
+    .progress-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+
+      aside {
+        position: static;
+        border-top: 1px solid var(--line);
+        padding: 40px 8vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+
+      .cc-phases { grid-template-columns: 1fr 1fr; }
+      .cc-phase:nth-child(2) { border-right: none; }
+      .cc-phase:nth-child(1),
+      .cc-phase:nth-child(2) { border-bottom: 1px solid var(--line); }
+    }
+
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .cc-phases { grid-template-columns: 1fr; }
+      .cc-phase { border-right: none; border-bottom: 1px solid var(--line); }
+      .cc-phase:last-child { border-bottom: none; }
+      .flag-grid { gap: 8px; }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar  { animation-delay: 0.10s; }
+    article   { animation-delay: 0.15s; }
+    aside     { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ── -->
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 7</a>
+    </div>
+    <div class="nav-group">
+      <a href="day6.html">&larr; Day 6</a>
+      <a href="day8.html">Day 8 &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 02 &mdash; 網路層與傳輸層 &mdash; Day 07 / 16</p>
+      <h1>TCP 傳輸控制協定<br>可靠性背後的精密機械</h1>
+      <p class="hero-desc">
+        TCP 是現代網路最複雜的核心協定之一。它在 IP 「盡力傳送」的不可靠基礎上，
+        建構出有序、完整、可靠的位元組串流。本課深入三向交握、序號機制、
+        滑動視窗、流量控制到壅塞控制的完整運作邏輯。
+      </p>
+    </div>
+    <div class="hero-meta">
+      <span class="day-num">07</span>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">TCP 的設計目標</a></li>
+      <li data-n="2"><a href="#s2">TCP 標頭結構</a></li>
+      <li data-n="3"><a href="#s3">控制旗標</a></li>
+      <li data-n="4"><a href="#s4">三向交握與四向揮手</a></li>
+      <li data-n="5"><a href="#s5">序號與確認號</a></li>
+      <li data-n="6"><a href="#s6">滑動視窗與流量控制</a></li>
+      <li data-n="7"><a href="#s7">壅塞控制</a></li>
+      <li data-n="8"><a href="#s8">重傳機制</a></li>
+      <li data-n="9"><a href="#s9">TCP 狀態機</a></li>
+      <li data-n="10"><a href="#s10">TCP 效能最佳化</a></li>
+      <li data-n="11"><a href="#s11">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main-wrap">
+    <article>
+
+      <!-- ══ Section 1 ══ -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>TCP 的設計目標</h2>
+
+        <p>
+          <strong>TCP（Transmission Control Protocol）</strong>定義於 RFC 793（1981 年），
+          是 TCP/IP 協定族傳輸層最核心的協定。
+          它的設計目標可以用四個詞概括：
+          <strong>可靠（Reliable）</strong>、<strong>有序（Ordered）</strong>、
+          <strong>無重複（No Duplicate）</strong>、<strong>位元組串流（Byte Stream）</strong>。
+        </p>
+
+        <p>
+          TCP 在 IP 層的「盡力傳送」（封包可能遺失、亂序、重複）之上，
+          透過一系列精密機制實現對應用程式看起來像在直接讀寫一條
+          可靠管道的抽象。應用程式呼叫 <code>send()</code> 與 <code>recv()</code>，
+          不需要關心底層的封包切割、重傳、排序——這些全由 TCP 處理。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>問題</th>
+              <th>IP 的行為</th>
+              <th>TCP 的解決機制</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>封包遺失</td>
+              <td>直接丟棄，不通知</td>
+              <td>ACK 確認 + 逾時重傳（Retransmission）</td>
+            </tr>
+            <tr>
+              <td>封包亂序</td>
+              <td>依抵達順序交付</td>
+              <td>序號（Sequence Number）排序重組</td>
+            </tr>
+            <tr>
+              <td>封包重複</td>
+              <td>可能重複交付</td>
+              <td>序號去重，丟棄已接收的重複封包</td>
+            </tr>
+            <tr>
+              <td>接收方過慢</td>
+              <td>不限速，可能淹沒接收方</td>
+              <td>接收視窗（rwnd）流量控制</td>
+            </tr>
+            <tr>
+              <td>網路壅塞</td>
+              <td>不感知壅塞，繼續傳送</td>
+              <td>壅塞視窗（cwnd）壅塞控制</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">TCP 的代價</p>
+          <p>
+            可靠性不是免費的。TCP 的握手需要至少 1 個 RTT 才能開始傳輸資料，
+            ACK 確認機制增加了往返延遲，壅塞控制在丟包時主動降速。
+            這些機制讓 TCP 不適合對延遲極度敏感的應用（如 DNS 查詢、線上遊戲），
+            這類應用會選擇 UDP（Day 8）。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 2 ══ -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>TCP 標頭結構</h2>
+
+        <p>
+          TCP 標頭最小 <strong>20 bytes</strong>（無選項時），
+          最大 60 bytes（含選項欄位）。
+          每個欄位都服務於特定的 TCP 機制，理解標頭是理解整個 TCP 的基礎。
+        </p>
+
+        <div class="tcp-header">
+          <div class="tcp-header-title">TCP Header（每列 32 bits = 4 bytes）</div>
+
+          <div class="tcp-row" style="grid-template-columns: 1fr 1fr;">
+            <div class="tcp-field">
+              <span class="tf-name">Source Port（來源連接埠）</span>
+              <span class="tf-val">傳送方的連接埠號</span>
+              <span class="tf-bits">16 bits</span>
+            </div>
+            <div class="tcp-field">
+              <span class="tf-name">Destination Port（目的連接埠）</span>
+              <span class="tf-val">接收方的連接埠號（如 80、443）</span>
+              <span class="tf-bits">16 bits</span>
+            </div>
+          </div>
+
+          <div class="tcp-row" style="grid-template-columns: 1fr;">
+            <div class="tcp-field">
+              <span class="tf-name">Sequence Number（序號）</span>
+              <span class="tf-val">此 Segment 第一個位元組在整個位元組串流中的位置編號</span>
+              <span class="tf-bits">32 bits</span>
+            </div>
+          </div>
+
+          <div class="tcp-row" style="grid-template-columns: 1fr;">
+            <div class="tcp-field">
+              <span class="tf-name">Acknowledgment Number（確認號）</span>
+              <span class="tf-val">期待接收的下一個位元組序號（表示此號之前的都已收到）</span>
+              <span class="tf-bits">32 bits</span>
+            </div>
+          </div>
+
+          <div class="tcp-row" style="grid-template-columns: 80px 80px 1fr;">
+            <div class="tcp-field">
+              <span class="tf-name">Data Offset</span>
+              <span class="tf-val">Header 長度（4 byte 為單位）</span>
+              <span class="tf-bits">4 bits</span>
+            </div>
+            <div class="tcp-field">
+              <span class="tf-name">Reserved</span>
+              <span class="tf-val">保留（全為 0）</span>
+              <span class="tf-bits">4 bits</span>
+            </div>
+            <div class="tcp-field">
+              <span class="tf-name">Control Flags（控制旗標）</span>
+              <span class="tf-val">CWR、ECE、URG、ACK、PSH、RST、SYN、FIN</span>
+              <span class="tf-bits">8 bits</span>
+            </div>
+          </div>
+
+          <div class="tcp-row" style="grid-template-columns: 1fr 1fr;">
+            <div class="tcp-field">
+              <span class="tf-name">Window Size（視窗大小）</span>
+              <span class="tf-val">接收方還能接收的位元組數（rwnd），用於流量控制</span>
+              <span class="tf-bits">16 bits（最大 65,535 bytes，可用 Window Scale 選項擴展）</span>
+            </div>
+            <div class="tcp-field">
+              <span class="tf-name">Checksum</span>
+              <span class="tf-val">覆蓋 TCP Header + Data + IP 假標頭（Pseudo Header）</span>
+              <span class="tf-bits">16 bits</span>
+            </div>
+          </div>
+
+          <div class="tcp-row" style="grid-template-columns: 1fr 1fr;">
+            <div class="tcp-field">
+              <span class="tf-name">Urgent Pointer</span>
+              <span class="tf-val">當 URG 旗標設起時，指向緊急資料的偏移量</span>
+              <span class="tf-bits">16 bits</span>
+            </div>
+            <div class="tcp-field">
+              <span class="tf-name">Options（選項）</span>
+              <span class="tf-val">MSS、Window Scale、SACK、Timestamps、NOP 等選項</span>
+              <span class="tf-bits">0–40 bytes（需 4 bytes 對齊）</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>重要 TCP Options</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>選項</th>
+              <th>全名</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>MSS</td>
+              <td>Maximum Segment Size</td>
+              <td>在 SYN 中宣告自己能接收的最大 Segment 大小，通常為 MTU - 40（1460 bytes for Ethernet）</td>
+            </tr>
+            <tr>
+              <td>Window Scale</td>
+              <td>RFC 7323</td>
+              <td>將 Window Size 左移 N 位元，允許視窗最大達 1 GB（解決高頻寬長距離網路的效率問題）</td>
+            </tr>
+            <tr>
+              <td>SACK</td>
+              <td>Selective Acknowledgment</td>
+              <td>允許接收方告知傳送方哪些不連續的區塊已收到，讓重傳只補缺漏的部分，而非全部重傳</td>
+            </tr>
+            <tr>
+              <td>Timestamps</td>
+              <td>RFC 7323</td>
+              <td>精確測量 RTT（回傳時間戳記的 echo），以及 PAWS（防止舊封包混入新連線）</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 3 ══ -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>控制旗標（Control Flags）</h2>
+
+        <p>
+          TCP 標頭中的 8 個控制旗標（各 1 bit）是 TCP 狀態機的驅動力，
+          控制連線的建立、維持、傳輸模式與終止。
+        </p>
+
+        <div class="flag-grid">
+          <div class="flag-card">
+            <div class="flag-name">SYN</div>
+            <div class="flag-full">Synchronize</div>
+            <div class="flag-desc">連線建立請求；同步序號。只在三向交握的前兩個封包中設起</div>
+          </div>
+          <div class="flag-card">
+            <div class="flag-name">ACK</div>
+            <div class="flag-full">Acknowledgment</div>
+            <div class="flag-desc">確認號欄位有效。除第一個 SYN 外，所有封包幾乎都設起此旗標</div>
+          </div>
+          <div class="flag-card">
+            <div class="flag-name">FIN</div>
+            <div class="flag-full">Finish</div>
+            <div class="flag-desc">通知對方「我沒有更多資料要傳送了」，啟動四向揮手關閉流程</div>
+          </div>
+          <div class="flag-card">
+            <div class="flag-name">RST</div>
+            <div class="flag-full">Reset</div>
+            <div class="flag-desc">立即重置連線，不等待四向揮手。連到不存在的埠、錯誤狀態時使用</div>
+          </div>
+          <div class="flag-card">
+            <div class="flag-name">PSH</div>
+            <div class="flag-full">Push</div>
+            <div class="flag-desc">要求接收方立即將此資料交付給應用程式，不要在緩衝區中等待</div>
+          </div>
+          <div class="flag-card">
+            <div class="flag-name">URG</div>
+            <div class="flag-full">Urgent</div>
+            <div class="flag-desc">緊急指標欄位有效，此 Segment 含需優先處理的緊急資料（如 SSH Ctrl+C）</div>
+          </div>
+          <div class="flag-card">
+            <div class="flag-name">ECE</div>
+            <div class="flag-full">ECN-Echo</div>
+            <div class="flag-desc">ECN（Explicit Congestion Notification）機制：通知傳送方網路正在壅塞</div>
+          </div>
+          <div class="flag-card">
+            <div class="flag-name">CWR</div>
+            <div class="flag-full">Congestion Window Reduced</div>
+            <div class="flag-desc">ECN 機制：確認已收到 ECE 通知並已降低傳送速率</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Section 4 ══ -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>三向交握與四向揮手</h2>
+
+        <h3>三向交握（Three-Way Handshake）</h3>
+
+        <p>
+          TCP 連線建立需要三個步驟，確保雙方都同意連線，
+          並完成初始序號（ISN, Initial Sequence Number）的同步。
+          ISN 是隨機選擇的（防止舊連線的封包被誤認為新連線的資料），
+          現代系統使用時間+隨機數演算法生成。
+        </p>
+
+        <div class="handshake-vis">
+          <pre>
+    Client                                    Server
+    CLOSED                                    LISTEN
+      │                                         │
+      │──── SYN ────────────────────────────────>│  Client: 我想建立連線
+      │     Flags: SYN                           │  seq=x（Client 的 ISN）
+      │     seq=x                                │
+      │                                  SYN_RCVD│
+      │<─── SYN-ACK ─────────────────────────────│  Server: 好的，我也準備好
+      │     Flags: SYN, ACK                      │  seq=y（Server 的 ISN）
+      │     seq=y, ack=x+1                       │  ack=x+1（期待 Client 的 x+1）
+      │                                          │
+      │──── ACK ────────────────────────────────>│  Client: 確認，開始傳資料
+      │     Flags: ACK                           │
+      │     seq=x+1, ack=y+1                     │
+ ESTABLISHED                              ESTABLISHED
+      │                                         │
+      │════════════ 資料傳輸中 ════════════════════│
+          </pre>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">為什麼需要三步，而非兩步？</p>
+          <p>
+            兩步驟握手（只有 SYN + SYN-ACK）只讓 Server 知道 Client 能傳送，
+            但 Client 不知道 Server 能傳送給自己。
+            第三步的 ACK 讓 Server 確認「我的 SYN-ACK 被收到了，雙向通訊確立」。
+            少一步就無法確保雙向連線品質。
+          </p>
+        </div>
+
+        <h3>四向揮手（Four-Way Handshake / Connection Termination）</h3>
+
+        <p>
+          由於 TCP 是全雙工的，關閉連線時兩個方向各自獨立關閉，
+          所以需要四個步驟。這讓「半關閉（Half-Close）」成為可能：
+          一方已不再傳送資料（發出 FIN），但仍可繼續接收對方的資料。
+        </p>
+
+        <div class="handshake-vis">
+          <pre>
+    Client (主動關閉方)              Server (被動關閉方)
+    ESTABLISHED                      ESTABLISHED
+      │                                   │
+      │──── FIN ─────────────────────────>│  Client: 我傳完了
+      │     seq=u                          │
+      │                             CLOSE_WAIT
+      │<─── ACK ──────────────────────────│  Server: 收到，等我傳完
+      │     ack=u+1                        │
+      │                                   │  Server 可繼續傳送剩餘資料
+      │<─── FIN ──────────────────────────│  Server: 我也傳完了
+      │     seq=v                          │
+      │                              LAST_ACK
+      │──── ACK ─────────────────────────>│  Client: 確認
+      │     ack=v+1                        │
+      │                                   CLOSED
+      │ (等待 2*MSL 後)                   │
+    CLOSED                                │
+
+  MSL = Maximum Segment Lifetime（封包最大存活時間，通常 60 秒）
+  TIME_WAIT 狀態持續 2*MSL = 120 秒，確保網路中殘留的舊封包消散
+          </pre>
+        </div>
+
+        <div class="highlight-box">
+          <p class="box-label">TIME_WAIT 狀態的存在意義</p>
+          <p>
+            主動關閉方在送出最後一個 ACK 後進入 TIME_WAIT 狀態，持續 2×MSL（通常 120 秒）。
+            這確保兩件事：第一，若最後的 ACK 遺失，Server 重傳的 FIN 能被正確回應；
+            第二，網路中所有屬於舊連線的封包在此期間消散，
+            不會混入使用相同四元組的新連線。
+            高並發伺服器上 TIME_WAIT 累積過多可能耗盡連接埠，
+            解法包含 <code>SO_REUSEADDR</code> 和調整 <code>tcp_tw_reuse</code> 核心參數。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 5 ══ -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>序號與確認號機制</h2>
+
+        <p>
+          TCP 以<strong>位元組為單位</strong>編號，而不是以封包為單位。
+          連線建立後，雙方各自維護一個 32 位元的序號計數器，
+          記錄已發送的位元組偏移量。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">序號與確認號的運作（以傳送 3 個 Segment 為例）</div>
+          <pre>
+傳送方                                接收方
+  │                                    │
+  │── Segment 1（seq=1, len=500）──────>│  含位元組 1–500
+  │── Segment 2（seq=501, len=500）────>│  含位元組 501–1000
+  │── Segment 3（seq=1001, len=500）───>│  含位元組 1001–1500
+  │                                    │
+  │<── ACK（ack=1501）─────────────────│  「我已收到 1500 bytes，期待 1501」
+  │                                    │
+  ▲ 累積確認（Cumulative ACK）：ack=N 表示 N-1 及之前的所有位元組都已收到
+
+若 Segment 2 遺失：
+  │── Segment 1（seq=1）───────────────>│
+  │── Segment 2（seq=501）── 遺失 ──X  │
+  │── Segment 3（seq=1001）────────────>│  收到但亂序
+  │                                    │
+  │<── ACK（ack=501）──────────────────│  「期待 501，之後的都先暫存」
+  │<── ACK（ack=501）──────────────────│  重複 ACK（Duplicate ACK）
+  │<── ACK（ack=501）──────────────────│  三次重複 ACK → 觸發快速重傳
+  │── Segment 2（seq=501）重傳 ────────>│
+  │<── ACK（ack=1501）─────────────────│  收到後一次確認所有
+          </pre>
+        </div>
+
+        <p>
+          <strong>累積確認（Cumulative ACK）</strong>是 TCP 的基本確認模式：
+          ACK 號表示「我已收到此號之前的所有位元組」。
+          若中間有封包遺失，接收方會持續對最後連續收到的序號發出重複 ACK，
+          傳送方收到三次重複 ACK 時觸發<strong>快速重傳（Fast Retransmit）</strong>，
+          不等逾時計時器到期就立刻補傳遺失的封包。
+        </p>
+
+        <p>
+          搭配 <strong>SACK（Selective Acknowledgment）</strong>選項時，
+          接收方可以在 ACK 中附帶「我已收到的不連續區塊資訊」，
+          例如告訴傳送方「我收到了 1–500 和 1001–1500，只缺 501–1000」，
+          讓重傳只補缺口，大幅提升效率。
+        </p>
+      </section>
+
+      <!-- ══ Section 6 ══ -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>滑動視窗與流量控制</h2>
+
+        <p>
+          <strong>流量控制（Flow Control）</strong>解決「傳送方太快、接收方緩衝區被淹沒」的問題。
+          機制是接收方在每個 ACK 中告知傳送方自己的
+          <strong>接收視窗（rwnd, Receive Window）</strong>——
+          接收緩衝區還有多少空間。傳送方不能讓「已傳送但未確認的資料量」超過 rwnd。
+        </p>
+
+        <div class="window-vis">
+          <div class="window-vis-title">滑動視窗（Sliding Window）狀態示意</div>
+          <div class="window-track">
+            <div class="window-seg acked">1</div>
+            <div class="window-seg acked">2</div>
+            <div class="window-seg acked">3</div>
+            <div class="window-seg acked">4</div>
+            <div class="window-seg inflight">5</div>
+            <div class="window-seg inflight">6</div>
+            <div class="window-seg inflight">7</div>
+            <div class="window-seg ready">8</div>
+            <div class="window-seg ready">9</div>
+            <div class="window-seg ready">10</div>
+            <div class="window-seg blocked">11</div>
+            <div class="window-seg blocked">12</div>
+          </div>
+          <div class="window-legend">
+            <div class="legend-item">
+              <div class="legend-dot acked"></div>
+              <span>已傳送且已確認（ACKed）</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot inflight"></div>
+              <span>已傳送，等待 ACK（In-Flight）</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot ready"></div>
+              <span>可傳送（視窗內，尚未傳）</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot blocked"></div>
+              <span>暫不可傳（視窗外）</span>
+            </div>
+          </div>
+        </div>
+
+        <p>
+          視窗「滑動」的意思是：每當接收方發出新的 ACK，
+          視窗左邊界向右移動（確認的資料移出視窗），
+          同時視窗右邊界根據新的 rwnd 值調整。
+          傳送方持續填滿可傳送的視窗，形成「流水線（Pipeline）」效果，
+          使得傳輸效率遠高於每次等待 ACK 再傳下一個的「停等（Stop-and-Wait）」模式。
+        </p>
+
+        <h3>零視窗與視窗探測</h3>
+
+        <p>
+          當接收方緩衝區滿了，它會宣告 <code>rwnd = 0</code>，
+          稱為<strong>零視窗（Zero Window）</strong>。
+          傳送方此時必須停止傳送資料。
+          但如果接收方緩衝區騰出後忘記發 ACK 通知，雙方就會進入僵局。
+          為避免此情況，傳送方會定期發送<strong>視窗探測封包（Window Probe）</strong>，
+          詢問接收方的視窗大小是否有更新。
+        </p>
+
+        <div class="info-box">
+          <p class="box-label">Silly Window Syndrome（愚蠢視窗症候群）</p>
+          <p>
+            接收方每騰出 1 byte 就廣播 rwnd=1，
+            導致傳送方發出含大量標頭但只有 1 byte 資料的超小封包，
+            嚴重浪費頻寬。解法是 <strong>Clark 演算法</strong>（接收方延遲更新視窗直到緩衝區有足夠空間）
+            和 <strong>Nagle 演算法</strong>（傳送方累積小資料直到上一個封包被確認或湊滿 MSS 再傳）。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 7 ══ -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>壅塞控制（Congestion Control）</h2>
+
+        <p>
+          流量控制防止接收方被淹沒，
+          但不能防止<strong>網路本身</strong>被過量流量壅塞。
+          <strong>壅塞控制（Congestion Control）</strong>讓 TCP 感知網路壅塞並主動降速，
+          避免所有主機同時高速傳送而癱瘓路由器。
+        </p>
+
+        <p>
+          TCP 維護一個<strong>壅塞視窗（cwnd, Congestion Window）</strong>，
+          實際傳送量受 <code>min(rwnd, cwnd)</code> 限制。
+          cwnd 根據網路狀況動態調整，由四個演算法相互配合：
+        </p>
+
+        <div class="cc-phases">
+          <div class="cc-phase">
+            <div class="cc-phase-name">Slow Start</div>
+            <div class="cc-phase-algo">cwnd 初始值 1 MSS</div>
+            <div class="cc-phase-desc">
+              每收到一個 ACK，cwnd += 1 MSS，實現指數成長。
+              每個 RTT 視窗加倍，快速探測可用頻寬，
+              直到達到 ssthresh（慢啟動門限）為止。
+            </div>
+          </div>
+          <div class="cc-phase">
+            <div class="cc-phase-name">Congestion Avoidance</div>
+            <div class="cc-phase-algo">cwnd 達到 ssthresh 後</div>
+            <div class="cc-phase-desc">
+              每個 RTT cwnd += 1 MSS（線性成長），
+              比 Slow Start 保守，避免急速衝破瓶頸頻寬。
+              持續增長直到偵測到丟包（視窗壅塞信號）。
+            </div>
+          </div>
+          <div class="cc-phase">
+            <div class="cc-phase-name">Fast Retransmit</div>
+            <div class="cc-phase-algo">3 次重複 ACK</div>
+            <div class="cc-phase-desc">
+              收到三個重複 ACK 代表輕微丟包（網路未完全壅塞）。
+              立即重傳遺失的 Segment，不等計時器。
+              ssthresh = cwnd / 2，然後進入 Fast Recovery。
+            </div>
+          </div>
+          <div class="cc-phase">
+            <div class="cc-phase-name">Fast Recovery</div>
+            <div class="cc-phase-algo">Reno / CUBIC 演算法</div>
+            <div class="cc-phase-desc">
+              快速重傳後不回到 Slow Start，
+              cwnd 設為新 ssthresh + 3 MSS，繼續線性增長，
+              直到收到對重傳封包的 ACK 才恢復正常傳輸。
+            </div>
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">TCP 壅塞視窗（cwnd）隨時間的變化曲線</div>
+          <pre>
+cwnd
+(MSS)
+ 32 │                         ●
+ 28 │                       ●
+ 24 │                     ●
+ 20 │                   ●
+ 16 │─ ─ ─ ─ ─ ─ ─ ─ ─●─ ─ ─ ─ ─ ─ ─ ─ ← ssthresh=16（初始）
+ 12 │               ●         ●
+  8 │             ●             ●
+  4 │    ● ● ● ●                 ●       ← ssthresh=13（更新後）
+  2 │  ●                           ●● ●
+  1 │●                               ──────────
+    └──────────────────────────────────────────→ RTT
+     Slow Start  CongAvoid  Dup-ACK   Fast
+                            丟包↗     Recovery
+
+   第一段：Slow Start（指數成長）→ 達到 ssthresh=16 → Congestion Avoidance（線性）
+   丟包時：ssthresh=cwnd/2，cwnd=1，重新 Slow Start
+   3次重複 ACK：Fast Retransmit + Fast Recovery（不歸零，從 ssthresh 繼續）
+          </pre>
+        </div>
+
+        <h3>現代壅塞控制演算法</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>演算法</th>
+              <th>核心思路</th>
+              <th>適用場景</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>TCP Reno</td>
+              <td>以丟包為壅塞信號（Loss-based）；三次重複 ACK 觸發 Fast Recovery</td>
+              <td>Linux 早期預設，傳統網路</td>
+            </tr>
+            <tr>
+              <td>TCP CUBIC</td>
+              <td>以三次方函數增長 cwnd，對高頻寬長延遲（BDP 大）的網路更公平</td>
+              <td>Linux 2.6.19+ 預設，資料中心</td>
+            </tr>
+            <tr>
+              <td>TCP BBR</td>
+              <td>基於頻寬（Bandwidth）和延遲（RTT）的模型，不以丟包為信號，主動探測瓶頸頻寬</td>
+              <td>Google 開發；高丟包、衛星網路；YouTube 串流</td>
+            </tr>
+            <tr>
+              <td>QUIC（UDP）</td>
+              <td>在 UDP 上重實作 TCP 的可靠性 + 壅塞控制，並整合 TLS，消除 TCP 握手延遲</td>
+              <td>HTTP/3 的傳輸層，現代瀏覽器</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 8 ══ -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>重傳機制</h2>
+
+        <p>
+          TCP 保證可靠傳輸的核心是：若封包沒有收到 ACK，就<strong>重傳</strong>。
+          但「等多久不收到 ACK 才重傳」是個精細的問題——太短浪費頻寬，太長降低效能。
+        </p>
+
+        <h3>RTO：重傳逾時計時器</h3>
+
+        <p>
+          <strong>RTO（Retransmission Timeout）</strong>是觸發重傳的計時器。
+          它的值由<strong>RTT 估算</strong>動態計算，使用 Jacobson/Karels 演算法：
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">RTO 計算公式（RFC 6298）</div>
+          <pre>
+每次收到 ACK 更新 RTT 估算：
+
+  SRTT = (1 - α) × SRTT + α × RTTsample      α = 0.125（1/8）
+  RTTVAR = (1 - β) × RTTVAR + β × |SRTT - RTTsample|   β = 0.25（1/4）
+  RTO = SRTT + 4 × RTTVAR
+
+  SRTT：平滑 RTT（Smoothed RTT）
+  RTTVAR：RTT 變異量（RTT Variance）
+
+  RTO 下限：1 秒（RFC 6298）
+  RTO 上限：通常 60–120 秒
+
+重傳後 RTO 指數退避（Exponential Backoff）：
+  第 1 次重傳後 RTO × 2
+  第 2 次重傳後 RTO × 4
+  第 3 次重傳後 RTO × 8
+  ... 直到達到上限
+          </pre>
+        </div>
+
+        <h3>快速重傳 vs. 逾時重傳</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>機制</th>
+              <th>觸發條件</th>
+              <th>cwnd 變化</th>
+              <th>特點</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Fast Retransmit</td>
+              <td>連續收到 3 個重複 ACK</td>
+              <td>ssthresh = cwnd/2；cwnd = ssthresh（不歸 1）</td>
+              <td>速度快，cwnd 不必從 1 重新 Slow Start</td>
+            </tr>
+            <tr>
+              <td>Timeout Retransmit</td>
+              <td>RTO 計時器到期，沒有收到 ACK</td>
+              <td>ssthresh = cwnd/2；cwnd = 1（歸一，重新 Slow Start）</td>
+              <td>最嚴重，表示完全沒有 ACK 回來，重傳並大幅降速</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 9 ══ -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>TCP 狀態機</h2>
+
+        <p>
+          TCP 連線在任何時刻都處於一個明確的狀態。
+          理解狀態機能幫助你讀懂 <code>netstat</code>/<code>ss</code> 的輸出，
+          以及診斷各種連線問題。
+        </p>
+
+        <div class="state-grid">
+          <div class="state-card">
+            <div class="state-name">CLOSED</div>
+            <div class="state-desc">沒有連線，初始狀態</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">LISTEN</div>
+            <div class="state-desc">伺服器端等待連線，已呼叫 <code>listen()</code></div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">SYN_SENT</div>
+            <div class="state-desc">客戶端已送出 SYN，等待 SYN-ACK</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">SYN_RECEIVED</div>
+            <div class="state-desc">伺服器收到 SYN 並回送 SYN-ACK，等待最後的 ACK</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">ESTABLISHED</div>
+            <div class="state-desc">連線建立，雙向資料傳輸中</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">FIN_WAIT_1</div>
+            <div class="state-desc">主動關閉方已送出 FIN，等待 ACK</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">FIN_WAIT_2</div>
+            <div class="state-desc">收到 ACK，等待對方的 FIN</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">CLOSE_WAIT</div>
+            <div class="state-desc">被動關閉方收到 FIN，等待應用程式關閉</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">CLOSING</div>
+            <div class="state-desc">雙方同時發出 FIN，等待對方 ACK（罕見）</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">LAST_ACK</div>
+            <div class="state-desc">被動關閉方已送出 FIN，等待最後一個 ACK</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">TIME_WAIT</div>
+            <div class="state-desc">主動關閉方等待 2×MSL（120 秒）確保對方收到最後 ACK</div>
+          </div>
+          <div class="state-card">
+            <div class="state-name">CLOSED</div>
+            <div class="state-desc">2×MSL 超時後完全關閉，回到初始狀態</div>
+          </div>
+        </div>
+
+        <h4>用 ss 觀察連線狀態</h4>
+
+        <div class="diagram">
+          <div class="diagram-title">ss -tnp 輸出解析</div>
+          <pre>
+$ ss -tnp
+State      Recv-Q  Send-Q  Local Address:Port    Peer Address:Port
+LISTEN     0       128     0.0.0.0:80             0.0.0.0:*
+LISTEN     0       128     0.0.0.0:443            0.0.0.0:*
+ESTABLISHED 0      0       192.168.1.10:54321     93.184.216.34:443
+TIME-WAIT  0       0       192.168.1.10:54322     8.8.8.8:53
+CLOSE-WAIT 1       0       192.168.1.10:54323     1.2.3.4:80
+
+解析：
+  LISTEN 0/128    = Recv-Q/backlog，目前等待 accept() 的連線數/最大值
+  ESTABLISHED     = 活躍連線，Send-Q=0 表示無積壓資料
+  TIME-WAIT       = 剛關閉的連線，等待 2MSL
+  CLOSE-WAIT      = 對方已 FIN 但應用程式尚未 close()，Recv-Q=1 有資料待讀取
+                    CLOSE-WAIT 累積過多通常表示應用程式 bug（未關閉連線）
+          </pre>
+        </div>
+      </section>
+
+      <!-- ══ Section 10 ══ -->
+      <section class="lesson-section" id="s10">
+        <span class="section-num">Section 10</span>
+        <h2>TCP 效能最佳化</h2>
+
+        <h3>TCP Fast Open（TFO）</h3>
+
+        <p>
+          標準 TCP 建立連線需要一個 RTT 的三向交握才能傳送第一筆資料，
+          對短連線（如 DNS over TCP、HTTP 短請求）影響顯著。
+          <strong>TCP Fast Open（RFC 7413）</strong>允許客戶端在 SYN 封包中夾帶資料，
+          讓伺服器在回傳 SYN-ACK 的同時就開始處理請求，
+          節省一個 RTT 的延遲（後續連線）。
+        </p>
+
+        <h3>Keep-Alive</h3>
+
+        <p>
+          <strong>TCP Keep-Alive</strong> 是一個偵測閒置連線是否仍然存活的機制。
+          啟用後，若連線一段時間（預設 7200 秒）沒有資料往來，
+          TCP 會定期發送探測封包（Keep-Alive Probe）。
+          若對方沒有回應，連線被判定死亡並關閉。
+          這對 NAT 環境尤其重要，因為 NAT 的映射表會在一段時間後自動老化刪除閒置連線。
+        </p>
+
+        <h3>Nagle 演算法與 TCP_NODELAY</h3>
+
+        <p>
+          <strong>Nagle 演算法</strong>預設啟用，它讓 TCP 累積小資料直到
+          「上一個未確認 Segment 被 ACK」或「資料量達到 MSS」才送出，
+          避免大量小封包浪費頻寬。
+          但對於互動式應用（如 SSH 鍵入、遊戲指令、gRPC 雙向串流），
+          Nagle 演算法引入的延遲是不可接受的，
+          應使用 <code>TCP_NODELAY</code> socket 選項停用它。
+        </p>
+
+        <h3>MTU Path Discovery 與 Path MTU</h3>
+
+        <p>
+          封包在網路路徑上經過的每個鏈路都有最大傳輸單元（MTU）限制。
+          若封包超過某個鏈路的 MTU，且 DF（Don't Fragment）旗標設起，
+          路由器會丟棄封包並回傳 ICMP Type 3 Code 4（Fragmentation Needed）。
+          TCP 利用這個機制自動探測整條路徑的最小 MTU，
+          稱為<strong>Path MTU Discovery（PMTUD，RFC 1191）</strong>，
+          並將 MSS 設為 PMTU - 40，避免分割帶來的效能損耗。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>常用 TCP Socket 選項</th>
+              <th>作用</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>TCP_NODELAY</td>
+              <td>停用 Nagle 演算法，立即傳送小資料，適用互動式應用</td>
+            </tr>
+            <tr>
+              <td>SO_KEEPALIVE</td>
+              <td>啟用 Keep-Alive 探測，偵測死亡連線</td>
+            </tr>
+            <tr>
+              <td>SO_REUSEADDR</td>
+              <td>允許在 TIME_WAIT 期間重用同一 port，避免 port 被長時間占用</td>
+            </tr>
+            <tr>
+              <td>TCP_FASTOPEN</td>
+              <td>啟用 TCP Fast Open，第二次連線可在 SYN 中夾帶資料</td>
+            </tr>
+            <tr>
+              <td>SO_RCVBUF / SO_SNDBUF</td>
+              <td>手動調整接收/傳送緩衝區大小，影響 rwnd 和傳輸效率</td>
+            </tr>
+            <tr>
+              <td>TCP_CORK</td>
+              <td>暫時阻塞傳送，累積資料後一次送出（與 Nagle 類似但由應用控制）</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- ══ Summary ══ -->
+      <section class="lesson-section" id="s11">
+        <div class="summary-box">
+          <div class="summary-label">Day 7 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>TCP 在 IP 不可靠的基礎上提供可靠、有序、無重複的位元組串流</li>
+            <li>TCP Header 20 bytes：Seq/Ack Number（排序+確認）、Window（流量控制）、Flags（狀態控制）</li>
+            <li>MSS、Window Scale、SACK、Timestamps 是四個最重要的 TCP Options</li>
+            <li>三向交握（SYN → SYN-ACK → ACK）建立連線；四向揮手（FIN/ACK × 2）關閉連線</li>
+            <li>TIME_WAIT 持續 2×MSL，確保最後 ACK 到達以及舊封包消散</li>
+            <li>滑動視窗：傳送方可以連續送出 cwnd 大小的資料，不必等每個 ACK</li>
+            <li>流量控制（rwnd）：防止接收方緩衝區溢出；壅塞控制（cwnd）：防止網路壅塞</li>
+            <li>Slow Start 指數成長 → Congestion Avoidance 線性成長 → 丟包時降速</li>
+            <li>3 次重複 ACK 觸發 Fast Retransmit（cwnd 減半）；RTO 超時觸發更嚴重的 Slow Start</li>
+            <li>CLOSE_WAIT 大量累積通常是應用程式 bug；TIME_WAIT 過多可用 SO_REUSEADDR 緩解</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <!-- ── Sidebar ── -->
+    <aside>
+
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">7 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>TCP（RFC 793）</li>
+          <li><span>#</span>Sequence Number</li>
+          <li><span>#</span>Acknowledgment Number</li>
+          <li><span>#</span>SYN / ACK / FIN / RST</li>
+          <li><span>#</span>Three-Way Handshake</li>
+          <li><span>#</span>Four-Way Termination</li>
+          <li><span>#</span>TIME_WAIT / 2×MSL</li>
+          <li><span>#</span>Sliding Window</li>
+          <li><span>#</span>rwnd（Flow Control）</li>
+          <li><span>#</span>cwnd（Congestion Control）</li>
+          <li><span>#</span>Slow Start / ssthresh</li>
+          <li><span>#</span>Fast Retransmit / Recovery</li>
+          <li><span>#</span>RTO / Exponential Backoff</li>
+          <li><span>#</span>SACK</li>
+          <li><span>#</span>TCP CUBIC / BBR</li>
+          <li><span>#</span>Nagle / TCP_NODELAY</li>
+          <li><span>#</span>MSS / PMTUD</li>
+        </ul>
+      </div>
+
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day6.html">
+            <span>&larr; Day 6: ARP 與 ICMP</span>
+          </a>
+          <a href="index.html">
+            <span>課程首頁</span>
+            <span>&uarr;</span>
+          </a>
+          <a href="day8.html">
+            <span>Day 8: UDP 與多播技術</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 07 / 16</p>
+    <p>下一課：<a href="day8.html" style="color:var(--accent);text-decoration:none;">UDP 與多播技術 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

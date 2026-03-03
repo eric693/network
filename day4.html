@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 4 — IP 位址與子網路 | 網路通訊課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:     #1a1a1a;
+      --paper:   #f5f0e8;
+      --accent:  #c0392b;
+      --mid:     #7a6a5a;
+      --line:    rgba(26,26,26,0.12);
+      --code-bg: rgba(26,26,26,0.06);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.9;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: relative;
+      z-index: 10;
+      padding: 20px 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .topnav a:hover { color: var(--accent); }
+
+    .topnav .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topnav .sep { color: var(--line); font-size: 14px; }
+
+    .topnav .nav-group {
+      display: flex;
+      gap: 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: end;
+    }
+
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: var(--mid);
+      max-width: 560px;
+    }
+
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 6rem;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+      opacity: 0.08;
+      display: block;
+    }
+
+    /* ── TOC ── */
+    .toc-bar {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw;
+      border-bottom: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 14px;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      list-style: none;
+    }
+
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc-list li a:hover { color: var(--accent); }
+
+    .toc-list li::before {
+      content: attr(data-n) ". ";
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      align-items: start;
+    }
+
+    article {
+      padding: 64px 6vw 80px 8vw;
+      border-right: 1px solid var(--line);
+    }
+
+    /* ── Sections ── */
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 36px 0 12px;
+    }
+
+    .lesson-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--mid);
+      margin: 24px 0 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .lesson-section p {
+      margin-bottom: 16px;
+      font-size: 0.97rem;
+    }
+
+    .lesson-section p:last-child { margin-bottom: 0; }
+
+    strong { font-weight: 500; color: var(--ink); }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      color: var(--ink);
+    }
+
+    /* ── Boxes ── */
+    .highlight-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--accent);
+      background: rgba(192,57,43,0.05);
+    }
+
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+
+    .info-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--mid);
+      background: var(--code-bg);
+    }
+
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    /* ── Tables ── */
+    .def-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .def-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      line-height: 1.7;
+    }
+
+    .def-table tr:last-child td { border-bottom: none; }
+
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── Binary visualiser ── */
+    .binary-vis {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .binary-vis-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--paper);
+      text-transform: uppercase;
+      background: var(--ink);
+      padding: 10px 16px;
+    }
+
+    .binary-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .binary-row:last-child { border-bottom: none; }
+
+    .binary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 12px 16px;
+      border-right: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+    }
+
+    .binary-bits {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      gap: 2px;
+    }
+
+    .bit {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      width: 18px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+    }
+
+    .bit.one {
+      background: var(--accent);
+      color: var(--paper);
+      border-color: var(--accent);
+    }
+
+    .bit.zero {
+      background: var(--code-bg);
+      color: var(--mid);
+    }
+
+    .bit.dot {
+      background: none;
+      border: none;
+      color: var(--mid);
+      font-size: 1rem;
+      font-weight: bold;
+    }
+
+    .octet-group {
+      display: flex;
+      gap: 2px;
+      margin-right: 4px;
+    }
+
+    /* ── Subnet calc block ── */
+    .subnet-example {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .subnet-example-header {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--paper);
+      background: var(--ink);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .subnet-example-header .example-label {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: rgba(245,240,232,0.4);
+      text-transform: uppercase;
+    }
+
+    .subnet-calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .calc-item {
+      padding: 14px 18px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .calc-item:nth-child(even) { border-right: none; }
+    .calc-item:nth-last-child(-n+2) { border-bottom: none; }
+
+    .calc-key {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .calc-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .calc-value.accent { color: var(--accent); }
+
+    /* ── CIDR cheat sheet ── */
+    .cidr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 24px 0;
+    }
+
+    .cidr-item {
+      padding: 12px 14px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      transition: background 0.15s;
+    }
+
+    .cidr-item:hover { background: rgba(26,26,26,0.04); }
+
+    .cidr-prefix {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 3px;
+    }
+
+    .cidr-mask {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--mid);
+      margin-bottom: 2px;
+    }
+
+    .cidr-hosts {
+      font-size: 0.78rem;
+      color: var(--ink);
+    }
+
+    /* ── Address class table ── */
+    .class-strip {
+      margin: 28px 0;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .class-row {
+      display: grid;
+      grid-template-columns: 60px 1fr 1fr 1fr 1fr;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.15s;
+    }
+
+    .class-row:last-child { border-bottom: none; }
+    .class-row:not(.class-header):hover { background: rgba(26,26,26,0.03); }
+
+    .class-header {
+      background: var(--ink);
+    }
+
+    .class-cell {
+      padding: 12px 14px;
+      font-size: 0.85rem;
+      border-right: 1px solid var(--line);
+      line-height: 1.5;
+    }
+
+    .class-cell:last-child { border-right: none; }
+
+    .class-header .class-cell {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(245,240,232,0.5);
+      padding: 9px 14px;
+    }
+
+    .class-cell.class-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .class-cell code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      background: var(--code-bg);
+      padding: 1px 5px;
+    }
+
+    /* ── Private range cards ── */
+    .private-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 24px 0;
+    }
+
+    .private-card {
+      padding: 20px 18px;
+      border-right: 1px solid var(--line);
+    }
+
+    .private-card:last-child { border-right: none; }
+
+    .private-range {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .private-cidr {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--mid);
+      margin-bottom: 8px;
+    }
+
+    .private-desc {
+      font-size: 0.82rem;
+      color: var(--mid);
+      line-height: 1.6;
+    }
+
+    /* ── IPv6 visual ── */
+    .ipv6-block {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 20px 24px;
+      margin: 20px 0;
+      line-height: 2;
+    }
+
+    .ipv6-block .ipv6-label {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .ipv6-block .group {
+      color: var(--accent);
+    }
+
+    .ipv6-block .colon {
+      color: var(--mid);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 48px 0;
+    }
+
+    /* ── Summary ── */
+    .summary-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .summary-box ul { list-style: none; padding: 0; }
+
+    .summary-box ul li {
+      font-size: 0.9rem;
+      color: rgba(245,240,232,0.8);
+      padding: 6px 0 6px 16px;
+      border-bottom: 1px solid rgba(245,240,232,0.08);
+      position: relative;
+    }
+
+    .summary-box ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      padding: 48px 28px;
+      position: sticky;
+      top: 0;
+    }
+
+    .aside-section { margin-bottom: 40px; }
+
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .keyword-list { list-style: none; padding: 0; }
+
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+      transition: color 0.2s;
+    }
+
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--line);
+      margin: 12px 0 20px;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 25%;
+      background: var(--accent);
+    }
+
+    .progress-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+
+      aside {
+        position: static;
+        border-top: 1px solid var(--line);
+        padding: 40px 8vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      article {
+        padding: 48px 8vw 64px;
+        border-right: none;
+      }
+
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+
+      .binary-row { grid-template-columns: 110px 1fr; }
+      .class-row { grid-template-columns: 48px 1fr 1fr 1fr; }
+      .class-row .class-cell:nth-child(5) { display: none; }
+      .class-header .class-cell:nth-child(5) { display: none; }
+      .private-grid { grid-template-columns: 1fr; }
+      .private-card { border-right: none; border-bottom: 1px solid var(--line); }
+      .private-card:last-child { border-bottom: none; }
+      .subnet-calc-grid { grid-template-columns: 1fr; }
+      .calc-item { border-right: none; }
+      .calc-item:nth-last-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .calc-item:last-child { border-bottom: none; }
+    }
+
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .cidr-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .toc-bar, article, aside {
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .toc-bar  { animation-delay: 0.10s; }
+    article   { animation-delay: 0.15s; }
+    aside     { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ── -->
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 4</a>
+    </div>
+    <div class="nav-group">
+      <a href="day3.html">&larr; Day 3</a>
+      <a href="day5.html">Day 5 &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 01 &mdash; 網路基礎概念 &mdash; Day 04 / 16</p>
+      <h1>IP 位址與子網路<br>為網路世界劃定疆界</h1>
+      <p class="hero-desc">
+        IP 位址是每台設備在網路上的門牌號碼，子網路劃分是管理這些號碼的系統。
+        掌握 IPv4 位址結構、CIDR 表示法與子網路計算，
+        是每位網路工程師不可或缺的基本功。
+      </p>
+    </div>
+    <div class="hero-meta">
+      <span class="day-num">04</span>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">IPv4 位址結構</a></li>
+      <li data-n="2"><a href="#s2">位址分類（Classful）</a></li>
+      <li data-n="3"><a href="#s3">子網路遮罩</a></li>
+      <li data-n="4"><a href="#s4">CIDR 無類別路由</a></li>
+      <li data-n="5"><a href="#s5">子網路計算實戰</a></li>
+      <li data-n="6"><a href="#s6">特殊用途位址</a></li>
+      <li data-n="7"><a href="#s7">私有位址與 NAT</a></li>
+      <li data-n="8"><a href="#s8">IPv6 位址詳解</a></li>
+      <li data-n="9"><a href="#s9">VLSM 可變長度子網路</a></li>
+      <li data-n="10"><a href="#s10">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main-wrap">
+    <article>
+
+      <!-- ══ Section 1 ══ -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>IPv4 位址結構</h2>
+
+        <p>
+          IPv4 位址是一個 <strong>32 位元（4 bytes）</strong>的二進位數字，
+          代表網路中某個介面的邏輯識別碼。
+          為了方便人類閱讀，我們將這 32 個位元拆成四組各 8 位元（稱為<strong>八位元組 / Octet</strong>），
+          每組以十進位表示，組間用點分隔，稱為<strong>點十進位表示法（Dotted Decimal Notation）</strong>。
+        </p>
+
+        <div class="binary-vis">
+          <div class="binary-vis-title">192.168.10.1 的二進位展開</div>
+
+          <div class="binary-row">
+            <div class="binary-label">十進位</div>
+            <div class="binary-bits" style="font-family:'IBM Plex Mono',monospace; font-size:0.85rem; align-items:center; color:var(--ink); gap:0; padding:14px 14px;">
+              <span style="margin-right:16px;">192</span>
+              <span style="color:var(--mid);margin-right:16px;">.</span>
+              <span style="margin-right:16px;">168</span>
+              <span style="color:var(--mid);margin-right:16px;">.</span>
+              <span style="margin-right:16px;">10</span>
+              <span style="color:var(--mid);margin-right:16px;">.</span>
+              <span>1</span>
+            </div>
+          </div>
+
+          <div class="binary-row">
+            <div class="binary-label">二進位（32 bits）</div>
+            <div class="binary-bits">
+              <div class="octet-group">
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+              </div>
+              <div class="bit dot">.</div>
+              <div class="octet-group">
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+              </div>
+              <div class="bit dot">.</div>
+              <div class="octet-group">
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit one">1</div><div class="bit zero">0</div>
+              </div>
+              <div class="bit dot">.</div>
+              <div class="octet-group">
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit one">1</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="binary-row">
+            <div class="binary-label">八位元組值</div>
+            <div class="binary-bits" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--mid);align-items:center;gap:0;padding:10px 14px;">
+              <span style="margin-right:8px;">1×128 + 1×64 = <strong style="color:var(--accent)">192</strong></span>
+              <span style="margin-right:8px; color:var(--line)">|</span>
+              <span style="margin-right:8px;">1×128+1×32+1×8 = <strong style="color:var(--accent)">168</strong></span>
+              <span style="margin-right:8px; color:var(--line)">|</span>
+              <span style="margin-right:8px;">1×8+1×2 = <strong style="color:var(--accent)">10</strong></span>
+              <span style="margin-right:8px; color:var(--line)">|</span>
+              <span>1×1 = <strong style="color:var(--accent)">1</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <p>
+          每個八位元組的值域是 0–255（2⁸ = 256 種狀態）。
+          32 位元的位址空間共可表示 2³² = <strong>4,294,967,296</strong> 個位址，
+          約 43 億個，而實際可用數量因各種保留位址而更少。
+        </p>
+
+        <p>
+          IPv4 位址本質上由兩部分組成：
+          <strong>網路部分（Network ID）</strong>識別所屬網路，
+          <strong>主機部分（Host ID）</strong>識別網路中的特定設備。
+          哪些位元屬於網路部分、哪些屬於主機部分，由<strong>子網路遮罩</strong>決定。
+        </p>
+      </section>
+
+      <!-- ══ Section 2 ══ -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>位址分類（Classful Addressing）</h2>
+
+        <p>
+          早期（1981–1993 年）網際網路使用<strong>有類別位址（Classful Addressing）</strong>，
+          根據 IP 位址的最高幾個位元自動決定網路與主機的分界。
+          雖然今日已被 CIDR 取代，理解分類制度對讀懂歷史文件與設備設定仍有幫助。
+        </p>
+
+        <div class="class-strip">
+          <div class="class-row class-header">
+            <div class="class-cell">類別</div>
+            <div class="class-cell">首位元</div>
+            <div class="class-cell">位址範圍</div>
+            <div class="class-cell">預設遮罩</div>
+            <div class="class-cell">主機數 / 網路</div>
+          </div>
+          <div class="class-row">
+            <div class="class-cell class-name">A</div>
+            <div class="class-cell"><code>0xxxxxxx</code></div>
+            <div class="class-cell"><code>1.0.0.0</code> – <code>126.255.255.255</code></div>
+            <div class="class-cell"><code>/8 (255.0.0.0)</code></div>
+            <div class="class-cell">16,777,214 台</div>
+          </div>
+          <div class="class-row">
+            <div class="class-cell class-name">B</div>
+            <div class="class-cell"><code>10xxxxxx</code></div>
+            <div class="class-cell"><code>128.0.0.0</code> – <code>191.255.255.255</code></div>
+            <div class="class-cell"><code>/16 (255.255.0.0)</code></div>
+            <div class="class-cell">65,534 台</div>
+          </div>
+          <div class="class-row">
+            <div class="class-cell class-name">C</div>
+            <div class="class-cell"><code>110xxxxx</code></div>
+            <div class="class-cell"><code>192.0.0.0</code> – <code>223.255.255.255</code></div>
+            <div class="class-cell"><code>/24 (255.255.255.0)</code></div>
+            <div class="class-cell">254 台</div>
+          </div>
+          <div class="class-row">
+            <div class="class-cell class-name">D</div>
+            <div class="class-cell"><code>1110xxxx</code></div>
+            <div class="class-cell"><code>224.0.0.0</code> – <code>239.255.255.255</code></div>
+            <div class="class-cell">N/A</div>
+            <div class="class-cell">多播（Multicast）用</div>
+          </div>
+          <div class="class-row">
+            <div class="class-cell class-name">E</div>
+            <div class="class-cell"><code>1111xxxx</code></div>
+            <div class="class-cell"><code>240.0.0.0</code> – <code>255.255.255.255</code></div>
+            <div class="class-cell">N/A</div>
+            <div class="class-cell">保留（實驗用）</div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <p class="box-label">為何 127.x.x.x 不在 Class A？</p>
+          <p>
+            <code>127.0.0.0/8</code> 整個區塊被保留為<strong>迴路位址（Loopback）</strong>，
+            最常用的是 <code>127.0.0.1</code>（也稱為 <code>localhost</code>）。
+            送到這個位址的封包不會離開主機，直接被作業系統的網路堆疊回送給發送者，
+            常用於本機服務測試。
+          </p>
+        </div>
+
+        <p>
+          有類別位址的致命缺陷是<strong>位址浪費</strong>：
+          一間只有 300 台電腦的公司申請 Class B 網路，
+          拿到 65,534 個位址卻只用 300 個，
+          超過 99% 的位址空白浪費。這是推動 CIDR 的根本原因。
+        </p>
+      </section>
+
+      <!-- ══ Section 3 ══ -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>子網路遮罩（Subnet Mask）</h2>
+
+        <p>
+          <strong>子網路遮罩</strong>是一個與 IP 位址同樣長的 32 位元數字，
+          用來指示 IP 位址中哪些位元屬於<strong>網路部分（1）</strong>，
+          哪些屬於<strong>主機部分（0）</strong>。
+          規則是：遮罩中的 1 必須連續排在左側，0 連續排在右側，不可交錯。
+        </p>
+
+        <div class="binary-vis">
+          <div class="binary-vis-title">192.168.1.100 / 255.255.255.0 的位元解析</div>
+
+          <div class="binary-row">
+            <div class="binary-label">IP 位址</div>
+            <div class="binary-bits">
+              <!-- 192 -->
+              <div class="octet-group">
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+              </div>
+              <div class="bit dot">.</div>
+              <!-- 168 -->
+              <div class="octet-group">
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+              </div>
+              <div class="bit dot">.</div>
+              <!-- 1 -->
+              <div class="octet-group">
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit one">1</div>
+              </div>
+              <div class="bit dot">.</div>
+              <!-- 100 -->
+              <div class="octet-group">
+                <div class="bit zero">0</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit one">1</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="binary-row">
+            <div class="binary-label">子網路遮罩</div>
+            <div class="binary-bits">
+              <!-- 255 -->
+              <div class="octet-group">
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+              </div>
+              <div class="bit dot">.</div>
+              <!-- 255 -->
+              <div class="octet-group">
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+              </div>
+              <div class="bit dot">.</div>
+              <!-- 255 -->
+              <div class="octet-group">
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+                <div class="bit one">1</div><div class="bit one">1</div>
+              </div>
+              <div class="bit dot">.</div>
+              <!-- 0 -->
+              <div class="octet-group">
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+                <div class="bit zero">0</div><div class="bit zero">0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="binary-row">
+            <div class="binary-label">AND 結果（網路 ID）</div>
+            <div class="binary-bits" style="font-family:'IBM Plex Mono',monospace;font-size:0.82rem;align-items:center;padding:12px 14px;gap:4px;">
+              <span style="color:var(--accent);font-weight:500;">192.168.1</span>
+              <span style="color:var(--mid);">.0</span>
+              <span style="color:var(--mid);margin-left:12px;font-size:0.75rem;">← 網路位址（Network Address）</span>
+            </div>
+          </div>
+        </div>
+
+        <p>
+          計算網路位址的方式是對 IP 位址與子網路遮罩進行
+          <strong>位元 AND 運算（Bitwise AND）</strong>：
+          兩個位元都是 1 時結果為 1，否則為 0。
+          AND 運算的結果就是這個 IP 所屬的<strong>網路位址（Network Address）</strong>。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>概念</th>
+              <th>說明</th>
+              <th>範例（192.168.1.100 /24）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>網路位址</td>
+              <td>主機部分全為 0，代表整個子網路，不可指派給主機</td>
+              <td><code>192.168.1.0</code></td>
+            </tr>
+            <tr>
+              <td>廣播位址</td>
+              <td>主機部分全為 1，封包送往此位址表示傳給子網路內所有主機</td>
+              <td><code>192.168.1.255</code></td>
+            </tr>
+            <tr>
+              <td>可用主機範圍</td>
+              <td>介於網路位址與廣播位址之間的所有位址</td>
+              <td><code>192.168.1.1</code> – <code>192.168.1.254</code></td>
+            </tr>
+            <tr>
+              <td>可用主機數量</td>
+              <td>2^（主機位元數）- 2（扣除網路位址與廣播位址）</td>
+              <td>2⁸ - 2 = <strong>254</strong> 台</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 4 ══ -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>CIDR：無類別網域間路由</h2>
+
+        <p>
+          1993 年，IETF 提出 <strong>CIDR（Classless Inter-Domain Routing，RFC 4632）</strong>，
+          以更靈活的方式分配位址。CIDR 廢除了 Class A/B/C 的固定邊界，
+          改以<strong>前綴長度（Prefix Length）</strong>自由指定網路位元數，
+          用斜線後接數字的方式表達，稱為<strong>CIDR 表示法</strong>，
+          如 <code>192.168.1.0/24</code>，其中 <code>/24</code> 表示網路部分有 24 個位元。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">CIDR 帶來的兩大革命</p>
+          <p>
+            <strong>路由聚合（Route Aggregation / Supernetting）</strong>：
+            多個連續的小網路可以合併成一條路由條目，大幅縮減骨幹路由器的路由表大小。
+            例如 <code>200.1.0.0/24</code>、<code>200.1.1.0/24</code>、
+            <code>200.1.2.0/24</code>、<code>200.1.3.0/24</code>
+            可以聚合為單條 <code>200.1.0.0/22</code>。
+            <strong>精準分配</strong>：按需求分配剛好大小的位址塊，
+            而非強制使用 Class A/B/C 的固定大小，大幅減少浪費。
+          </p>
+        </div>
+
+        <h4>CIDR 前綴速查表</h4>
+
+        <div class="cidr-grid">
+          <div class="cidr-item">
+            <div class="cidr-prefix">/8</div>
+            <div class="cidr-mask">255.0.0.0</div>
+            <div class="cidr-hosts">16,777,214 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/16</div>
+            <div class="cidr-mask">255.255.0.0</div>
+            <div class="cidr-hosts">65,534 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/20</div>
+            <div class="cidr-mask">255.255.240.0</div>
+            <div class="cidr-hosts">4,094 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/21</div>
+            <div class="cidr-mask">255.255.248.0</div>
+            <div class="cidr-hosts">2,046 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/22</div>
+            <div class="cidr-mask">255.255.252.0</div>
+            <div class="cidr-hosts">1,022 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/23</div>
+            <div class="cidr-mask">255.255.254.0</div>
+            <div class="cidr-hosts">510 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/24</div>
+            <div class="cidr-mask">255.255.255.0</div>
+            <div class="cidr-hosts">254 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/25</div>
+            <div class="cidr-mask">255.255.255.128</div>
+            <div class="cidr-hosts">126 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/26</div>
+            <div class="cidr-mask">255.255.255.192</div>
+            <div class="cidr-hosts">62 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/27</div>
+            <div class="cidr-mask">255.255.255.224</div>
+            <div class="cidr-hosts">30 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/28</div>
+            <div class="cidr-mask">255.255.255.240</div>
+            <div class="cidr-hosts">14 主機</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/30</div>
+            <div class="cidr-mask">255.255.255.252</div>
+            <div class="cidr-hosts">2 主機（點對點連線）</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/31</div>
+            <div class="cidr-mask">255.255.255.254</div>
+            <div class="cidr-hosts">2 主機（RFC 3021，點對點）</div>
+          </div>
+          <div class="cidr-item">
+            <div class="cidr-prefix">/32</div>
+            <div class="cidr-mask">255.255.255.255</div>
+            <div class="cidr-hosts">單一主機路由</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Section 5 ══ -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>子網路計算實戰</h2>
+
+        <p>
+          給定一個 IP 位址與前綴長度，能夠快速算出子網路的各個關鍵數值，
+          是網路考試與實際工作中都必備的技能。以下是系統化的計算步驟。
+        </p>
+
+        <h3>計算公式</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>數值</th>
+              <th>計算方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>子網路遮罩</td>
+              <td>將前綴長度個 1 從左填入 32 位元，其餘補 0，轉十進位</td>
+            </tr>
+            <tr>
+              <td>網路位址</td>
+              <td>IP AND 遮罩（主機部分全清為 0）</td>
+            </tr>
+            <tr>
+              <td>廣播位址</td>
+              <td>網路位址的主機部分全設為 1</td>
+            </tr>
+            <tr>
+              <td>可用主機範圍</td>
+              <td>網路位址 + 1 到廣播位址 − 1</td>
+            </tr>
+            <tr>
+              <td>可用主機數量</td>
+              <td>2^（32 − 前綴長度）− 2</td>
+            </tr>
+            <tr>
+              <td>子網路數量（等分切割時）</td>
+              <td>2^（借用位元數）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>範例一：172.16.5.130 /26</h3>
+
+        <div class="subnet-example">
+          <div class="subnet-example-header">
+            <span>172.16.5.130 / 26</span>
+            <span class="example-label">計算結果</span>
+          </div>
+          <div class="subnet-calc-grid">
+            <div class="calc-item">
+              <div class="calc-key">子網路遮罩</div>
+              <div class="calc-value">255.255.255.192</div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">主機位元數</div>
+              <div class="calc-value">32 − 26 = <span style="color:var(--accent)">6 bits</span></div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">網路位址</div>
+              <div class="calc-value accent">172.16.5.128</div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">廣播位址</div>
+              <div class="calc-value">172.16.5.191</div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">可用主機範圍</div>
+              <div class="calc-value" style="font-size:0.82rem;">172.16.5.129 – 172.16.5.190</div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">可用主機數量</div>
+              <div class="calc-value accent">2⁶ − 2 = 62 台</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">172.16.5.130 /26 的位元推導</div>
+          <pre>
+IP 位址：   172  .  16  .   5  .  130
+二進位：   10101100.00010000.00000101.10|000010
+                                        ^
+                          /26 的邊界（第 26 個位元後為主機部分）
+
+遮罩：     11111111.11111111.11111111.11000000 = 255.255.255.192
+
+AND 結果： 10101100.00010000.00000101.10000000 = 172.16.5.128 ← 網路位址
+廣播：     10101100.00010000.00000101.10111111 = 172.16.5.191 ← 主機部分全為 1
+          </pre>
+        </div>
+
+        <h3>範例二：將 10.0.0.0/8 切割為 /11（含多個子網路）</h3>
+
+        <div class="subnet-example">
+          <div class="subnet-example-header">
+            <span>10.0.0.0 / 8 → 切割為 /11</span>
+            <span class="example-label">借用 3 位元 → 8 個子網路</span>
+          </div>
+          <div class="subnet-calc-grid">
+            <div class="calc-item">
+              <div class="calc-key">借用位元數</div>
+              <div class="calc-value">11 − 8 = <span style="color:var(--accent)">3 bits</span></div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">子網路數量</div>
+              <div class="calc-value accent">2³ = 8 個</div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">每個子網路主機數</div>
+              <div class="calc-value">2²¹ − 2 = 2,097,150 台</div>
+            </div>
+            <div class="calc-item">
+              <div class="calc-key">子網路大小（區塊）</div>
+              <div class="calc-value">32（2²¹ = 2,097,152）</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">8 個 /11 子網路的網路位址</div>
+          <pre>
+子網路 1：  10.0.0.0   /11  （10.0.0.0   – 10.31.255.255）
+子網路 2：  10.32.0.0  /11  （10.32.0.0  – 10.63.255.255）
+子網路 3：  10.64.0.0  /11  （10.64.0.0  – 10.95.255.255）
+子網路 4：  10.96.0.0  /11  （10.96.0.0  – 10.127.255.255）
+子網路 5：  10.128.0.0 /11  （10.128.0.0 – 10.159.255.255）
+子網路 6：  10.160.0.0 /11  （10.160.0.0 – 10.191.255.255）
+子網路 7：  10.192.0.0 /11  （10.192.0.0 – 10.223.255.255）
+子網路 8：  10.224.0.0 /11  （10.224.0.0 – 10.255.255.255）
+
+各子網路步進值 = 256 / 2³ × 256 = 第二個八位元組每次遞增 32
+          </pre>
+        </div>
+      </section>
+
+      <!-- ══ Section 6 ══ -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>特殊用途 IPv4 位址</h2>
+
+        <p>
+          IANA 保留了一些位址範圍用於特定目的，這些位址不會在公用網際網路上路由。
+          在設計網路或排除故障時，遇到這些位址需要特別注意。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>位址範圍</th>
+              <th>CIDR</th>
+              <th>用途</th>
+              <th>RFC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0.0.0.0</td>
+              <td>/8</td>
+              <td>「本網路」預設路由或未指定來源（如 DHCP 請求時的來源）</td>
+              <td>RFC 1122</td>
+            </tr>
+            <tr>
+              <td>10.0.0.0</td>
+              <td>/8</td>
+              <td>私有位址（Class A 私有），企業內網常用</td>
+              <td>RFC 1918</td>
+            </tr>
+            <tr>
+              <td>100.64.0.0</td>
+              <td>/10</td>
+              <td>共享位址空間（CGN / Carrier-Grade NAT），ISP 內部使用</td>
+              <td>RFC 6598</td>
+            </tr>
+            <tr>
+              <td>127.0.0.0</td>
+              <td>/8</td>
+              <td>本地迴路（Loopback），127.0.0.1 = localhost</td>
+              <td>RFC 1122</td>
+            </tr>
+            <tr>
+              <td>169.254.0.0</td>
+              <td>/16</td>
+              <td>APIPA（Automatic Private IP Addressing），DHCP 失敗時自動指派</td>
+              <td>RFC 3927</td>
+            </tr>
+            <tr>
+              <td>172.16.0.0</td>
+              <td>/12</td>
+              <td>私有位址（Class B 私有），172.16.0.0 – 172.31.255.255</td>
+              <td>RFC 1918</td>
+            </tr>
+            <tr>
+              <td>192.0.2.0</td>
+              <td>/24</td>
+              <td>文件與範例用，永不在實際網路中路由（TEST-NET-1）</td>
+              <td>RFC 5737</td>
+            </tr>
+            <tr>
+              <td>192.168.0.0</td>
+              <td>/16</td>
+              <td>私有位址（Class C 私有），家用路由器最常見</td>
+              <td>RFC 1918</td>
+            </tr>
+            <tr>
+              <td>198.18.0.0</td>
+              <td>/15</td>
+              <td>效能測試專用位址，不可路由</td>
+              <td>RFC 2544</td>
+            </tr>
+            <tr>
+              <td>224.0.0.0</td>
+              <td>/4</td>
+              <td>多播（Multicast）位址範圍</td>
+              <td>RFC 5771</td>
+            </tr>
+            <tr>
+              <td>255.255.255.255</td>
+              <td>/32</td>
+              <td>有限廣播位址，只在本地子網路廣播，路由器不轉發</td>
+              <td>RFC 919</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">169.254.x.x 的診斷意義</p>
+          <p>
+            當你在 Windows 上執行 <code>ipconfig</code> 看到 <code>169.254.x.x</code>，
+            表示該電腦無法從 DHCP 伺服器獲取位址，改用 APIPA 自動配置。
+            這幾乎總是意味著：網路線未插好、Wi-Fi 未連接，或 DHCP 伺服器出問題。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 7 ══ -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>私有位址與 NAT</h2>
+
+        <p>
+          <strong>RFC 1918</strong> 定義了三個私有位址範圍，這些位址在公用網際網路上<strong>不可路由</strong>，
+          任何組織都可以在內部網路自由使用而無需向 IANA 申請。
+        </p>
+
+        <div class="private-grid">
+          <div class="private-card">
+            <div class="private-range">10.0.0.0 – 10.255.255.255</div>
+            <div class="private-cidr">10.0.0.0 /8</div>
+            <div class="private-desc">
+              單一大型私有網路，提供超過 1600 萬個位址。
+              適用於大型企業或雲端服務內部 VPC 規劃。
+            </div>
+          </div>
+          <div class="private-card">
+            <div class="private-range">172.16.0.0 – 172.31.255.255</div>
+            <div class="private-cidr">172.16.0.0 /12</div>
+            <div class="private-desc">
+              中型私有網路，提供超過 100 萬個位址。
+              Docker 預設的橋接網路即使用此範圍。
+            </div>
+          </div>
+          <div class="private-card">
+            <div class="private-range">192.168.0.0 – 192.168.255.255</div>
+            <div class="private-cidr">192.168.0.0 /16</div>
+            <div class="private-desc">
+              最廣為人知的私有範圍，提供 65,536 個位址。
+              家用路由器幾乎全部預設使用 192.168.0.x 或 192.168.1.x。
+            </div>
+          </div>
+        </div>
+
+        <h3>NAT（Network Address Translation）</h3>
+
+        <p>
+          由於私有位址無法直接在網際網路上路由，設備上網時需要
+          <strong>NAT（網路位址轉換）</strong>將私有位址轉換為公有位址。
+          這個工作通常由家用路由器或企業防火牆執行。
+        </p>
+
+        <p>
+          最常見的是 <strong>NAPT（Network Address and Port Translation）</strong>，
+          又稱為 <strong>PAT（Port Address Translation）</strong> 或俗稱「IP 偽裝（Masquerading）」。
+          它讓多台私有位址的設備<strong>共用一個公有 IP 位址</strong>上網，
+          透過不同的來源連接埠號加以區分。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">NAPT 運作示意（多台設備共用一個公有 IP）</div>
+          <pre>
+內部網路（私有位址）              NAT 路由器               網際網路
+192.168.1.10:54321  ──────────>  公有 IP：203.0.113.1     目標：8.8.8.8:53
+192.168.1.11:54322  ──────────>  NAT 轉換表：
+192.168.1.12:54323  ──────────>
+                                  私有 IP:Port         ↔  公有 IP:Port
+                                  192.168.1.10:54321  ↔  203.0.113.1:40001
+                                  192.168.1.11:54322  ↔  203.0.113.1:40002
+                                  192.168.1.12:54323  ↔  203.0.113.1:40003
+                                            ↓
+                                  送往 8.8.8.8 的封包來源為 203.0.113.1
+                                  回應封包依連接埠號轉發給正確的內部設備
+          </pre>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">NAT 的缺點</p>
+          <p>
+            NAT 破壞了 IP 設計中「端對端可定址性」的原則：外部設備無法主動連線到 NAT 後的設備，
+            必須使用連接埠轉發（Port Forwarding）才能讓外部連入。
+            這讓 P2P 應用、VoIP、遊戲伺服器的設定複雜化，也是 IPv6 普及後設計上試圖淘汰 NAT 的原因。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 8 ══ -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>IPv6 位址詳解</h2>
+
+        <p>
+          IPv6 使用 <strong>128 位元</strong>的位址空間，以<strong>冒號十六進位</strong>表示，
+          每 16 位元一組，共 8 組，組間以冒號 <code>:</code> 分隔。
+        </p>
+
+        <div class="ipv6-block">
+          <div class="ipv6-label">完整 IPv6 位址</div>
+          <span class="group">2001</span><span class="colon">:</span><span class="group">0db8</span><span class="colon">:</span><span class="group">85a3</span><span class="colon">:</span><span class="group">0000</span><span class="colon">:</span><span class="group">0000</span><span class="colon">:</span><span class="group">8a2e</span><span class="colon">:</span><span class="group">0370</span><span class="colon">:</span><span class="group">7334</span>
+        </div>
+
+        <h3>IPv6 縮寫規則</h3>
+
+        <p>
+          完整的 IPv6 位址很長，實際使用時遵循兩條縮寫規則使其更易讀：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>規則</th>
+              <th>說明</th>
+              <th>範例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>省略前導零</td>
+              <td>每組的前導零可省略（至少保留一個數字）</td>
+              <td><code>0db8</code> → <code>db8</code>，<code>0000</code> → <code>0</code></td>
+            </tr>
+            <tr>
+              <td>雙冒號縮寫</td>
+              <td>一段（或多段）連續的全零組可用 <code>::</code> 取代，全址只能用一次</td>
+              <td><code>::0000:0000::</code> 只能寫一個 <code>::</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="ipv6-block">
+          <div class="ipv6-label">縮寫過程</div>
+          完整：<span style="color:var(--mid)">2001:0db8:85a3:0000:0000:8a2e:0370:7334</span><br>
+          省略前導零：<span style="color:var(--mid)">2001:db8:85a3:0:0:8a2e:370:7334</span><br>
+          雙冒號縮寫：<span class="group">2001:db8:85a3::8a2e:370:7334</span>
+        </div>
+
+        <h3>IPv6 位址類型</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>類型</th>
+              <th>前綴</th>
+              <th>說明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>全球單播（GUA）</td>
+              <td><code>2000::/3</code></td>
+              <td>類似 IPv4 公有位址，可在網際網路上路由，目前主要分配 <code>2001::/32</code> 至 <code>2620::/23</code></td>
+            </tr>
+            <tr>
+              <td>連結本地（LLA）</td>
+              <td><code>fe80::/10</code></td>
+              <td>只在本地連結有效，不可路由。介面啟用後自動配置，用於鄰居發現（NDP）</td>
+            </tr>
+            <tr>
+              <td>唯一本地（ULA）</td>
+              <td><code>fc00::/7</code></td>
+              <td>類似 IPv4 私有位址，僅限組織內部，不可在公網路由</td>
+            </tr>
+            <tr>
+              <td>多播（Multicast）</td>
+              <td><code>ff00::/8</code></td>
+              <td>取代 IPv4 的廣播，所有廣播功能由多播實現，如 <code>ff02::1</code> = 所有節點</td>
+            </tr>
+            <tr>
+              <td>迴路（Loopback）</td>
+              <td><code>::1/128</code></td>
+              <td>等同 IPv4 的 <code>127.0.0.1</code>，共 128 個位元，全為 0 只除最後一個 1</td>
+            </tr>
+            <tr>
+              <td>未指定</td>
+              <td><code>::/128</code></td>
+              <td>全為零，等同 IPv4 的 <code>0.0.0.0</code>，表示「任意位址」</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>SLAAC：IPv6 的自動位址配置</h3>
+
+        <p>
+          IPv6 無需 DHCP 也能自動配置位址，機制稱為
+          <strong>SLAAC（Stateless Address Autoconfiguration，RFC 4862）</strong>。
+          主機透過<strong>路由器通告（Router Advertisement）</strong>取得網路前綴，
+          再結合自身的介面識別碼（從 MAC 位址衍生的 EUI-64 或隨機值）生成完整位址。
+          這大幅簡化了大規模網路的位址管理。
+        </p>
+      </section>
+
+      <!-- ══ Section 9 ══ -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>VLSM：可變長度子網路遮罩</h2>
+
+        <p>
+          固定長度的子網路切割（所有子網路大小相同）在實際網路規劃中非常浪費。
+          <strong>VLSM（Variable Length Subnet Mask）</strong>允許同一個主要網路
+          被切割成大小不同的子網路，讓每個區段拿到剛好夠用的位址數量。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">VLSM 規劃範例：公司總部網路 172.16.0.0/16</div>
+          <pre>
+需求：
+  - 研發部：500 台主機
+  - 業務部：100 台主機
+  - 行政部：50 台主機
+  - IT 部：25 台主機
+  - 路由器點對點連線：4 條（各需 2 台）
+
+VLSM 分配（由大到小分配，避免浪費）：
+
+  研發部    172.16.0.0  /23   → 可用 510 台  ✓ (2⁹−2 = 510)
+  業務部    172.16.2.0  /25   → 可用 126 台  ✓ (2⁷−2 = 126)
+  行政部    172.16.2.128/26   → 可用  62 台  ✓ (2⁶−2 = 62)
+  IT 部     172.16.2.192/27   → 可用  30 台  ✓ (2⁵−2 = 30)
+  P2P 連線1 172.16.2.224/30   → 可用   2 台  ✓
+  P2P 連線2 172.16.2.228/30   → 可用   2 台  ✓
+  P2P 連線3 172.16.2.232/30   → 可用   2 台  ✓
+  P2P 連線4 172.16.2.236/30   → 可用   2 台  ✓
+
+  剩餘空間：172.16.2.240/28 及後續，供未來擴充
+          </pre>
+        </div>
+
+        <div class="highlight-box">
+          <p class="box-label">VLSM 規劃原則</p>
+          <p>
+            始終從最大需求的子網路開始分配，依序遞減。
+            每個子網路的起始位址必須是其區塊大小的整數倍（稱為<strong>位元邊界對齊</strong>），
+            否則計算會出錯。例如 /26（64 個位址）的網路位址必須是 64 的倍數：
+            0、64、128、192。
+          </p>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- ══ Summary ══ -->
+      <section class="lesson-section" id="s10">
+        <div class="summary-box">
+          <div class="summary-label">Day 4 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>IPv4 是 32 位元，點十進位表示，分為網路部分與主機部分</li>
+            <li>Classful 按首位元自動分界（A/B/C），因位址浪費嚴重於 1993 年被 CIDR 取代</li>
+            <li>子網路遮罩 AND 運算取網路位址；主機部分全 1 為廣播位址；可用數 = 2ⁿ − 2</li>
+            <li>CIDR 用 /前綴長度 靈活劃分，支援路由聚合，大幅縮減路由表</li>
+            <li>三個 RFC 1918 私有範圍：10/8、172.16/12、192.168/16，不可在公網路由</li>
+            <li>NAPT 讓多台設備共用一個公有 IP，透過來源連接埠區分連線</li>
+            <li>IPv6 128 位元，冒號十六進位；:: 縮寫連續零組；無廣播，改用多播</li>
+            <li>VLSM 允許同一網路切成不同大小子網路；規劃時由大到小、注意位元邊界對齊</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <!-- ── Sidebar ── -->
+    <aside>
+
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">4 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>IPv4 / 32-bit</li>
+          <li><span>#</span>Dotted Decimal</li>
+          <li><span>#</span>Classful A/B/C</li>
+          <li><span>#</span>Subnet Mask</li>
+          <li><span>#</span>Bitwise AND</li>
+          <li><span>#</span>Network Address</li>
+          <li><span>#</span>Broadcast Address</li>
+          <li><span>#</span>CIDR</li>
+          <li><span>#</span>Prefix Length</li>
+          <li><span>#</span>Route Aggregation</li>
+          <li><span>#</span>RFC 1918</li>
+          <li><span>#</span>NAPT / PAT</li>
+          <li><span>#</span>APIPA 169.254/16</li>
+          <li><span>#</span>IPv6 縮寫規則</li>
+          <li><span>#</span>SLAAC</li>
+          <li><span>#</span>VLSM</li>
+        </ul>
+      </div>
+
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day3.html">
+            <span>&larr; Day 3: TCP/IP 協定族</span>
+          </a>
+          <a href="index.html">
+            <span>課程首頁</span>
+            <span>&uarr;</span>
+          </a>
+          <a href="day5.html">
+            <span>Day 5: 路由原理與協定</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 04 / 16</p>
+    <p>下一課：<a href="day5.html" style="color:var(--accent);text-decoration:none;">路由原理與協定 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

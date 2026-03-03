@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 6 — ARP 與 ICMP | 網路通訊課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:     #1a1a1a;
+      --paper:   #f5f0e8;
+      --accent:  #c0392b;
+      --mid:     #7a6a5a;
+      --line:    rgba(26,26,26,0.12);
+      --code-bg: rgba(26,26,26,0.06);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.9;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: relative;
+      z-index: 10;
+      padding: 20px 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .topnav a:hover { color: var(--accent); }
+
+    .topnav .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topnav .sep { color: var(--line); font-size: 14px; }
+
+    .topnav .nav-group {
+      display: flex;
+      gap: 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: end;
+    }
+
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: var(--mid);
+      max-width: 560px;
+    }
+
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 6rem;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+      opacity: 0.08;
+      display: block;
+    }
+
+    /* ── TOC ── */
+    .toc-bar {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw;
+      border-bottom: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 14px;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      list-style: none;
+    }
+
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc-list li a:hover { color: var(--accent); }
+
+    .toc-list li::before {
+      content: attr(data-n) ". ";
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      align-items: start;
+    }
+
+    article {
+      padding: 64px 6vw 80px 8vw;
+      border-right: 1px solid var(--line);
+    }
+
+    /* ── Sections ── */
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 36px 0 12px;
+    }
+
+    .lesson-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--mid);
+      margin: 24px 0 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .lesson-section p {
+      margin-bottom: 16px;
+      font-size: 0.97rem;
+    }
+
+    .lesson-section p:last-child { margin-bottom: 0; }
+
+    strong { font-weight: 500; color: var(--ink); }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      color: var(--ink);
+    }
+
+    /* ── Boxes ── */
+    .highlight-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--accent);
+      background: rgba(192,57,43,0.05);
+    }
+
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+
+    .info-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--mid);
+      background: var(--code-bg);
+    }
+
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    /* ── Tables ── */
+    .def-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .def-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      line-height: 1.7;
+    }
+
+    .def-table tr:last-child td { border-bottom: none; }
+
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── ARP packet visual ── */
+    .packet-vis {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .packet-vis-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--paper);
+      text-transform: uppercase;
+      background: var(--ink);
+      padding: 10px 16px;
+    }
+
+    .packet-row {
+      display: grid;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .packet-row:last-child { border-bottom: none; }
+
+    .packet-field {
+      padding: 11px 14px;
+      border-right: 1px solid var(--line);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .packet-field:last-child { border-right: none; }
+
+    .packet-field .pf-name {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .packet-field .pf-val {
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+
+    .packet-field .pf-bits {
+      font-size: 0.65rem;
+      color: var(--mid);
+      margin-top: 2px;
+      display: block;
+    }
+
+    /* ── ICMP type cards ── */
+    .icmp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 24px 0;
+    }
+
+    .icmp-card {
+      padding: 16px 18px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      transition: background 0.15s;
+    }
+
+    .icmp-card:hover { background: rgba(26,26,26,0.03); }
+
+    .icmp-type {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 2px;
+    }
+
+    .icmp-code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--mid);
+      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+    }
+
+    .icmp-name {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .icmp-desc {
+      font-size: 0.8rem;
+      color: var(--mid);
+      line-height: 1.6;
+    }
+
+    /* ── Traceroute step ── */
+    .traceroute-steps {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .tr-header {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--paper);
+      text-transform: uppercase;
+      background: var(--ink);
+      padding: 10px 16px;
+    }
+
+    .tr-step {
+      display: grid;
+      grid-template-columns: 36px 160px 1fr 100px;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.15s;
+    }
+
+    .tr-step:last-child { border-bottom: none; }
+    .tr-step:hover { background: rgba(26,26,26,0.03); }
+
+    .tr-cell {
+      padding: 11px 14px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      border-right: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+    }
+
+    .tr-cell:last-child { border-right: none; }
+
+    .tr-cell.hop { color: var(--accent); font-weight: 500; justify-content: center; }
+    .tr-cell.ip  { color: var(--ink); }
+    .tr-cell.host{ color: var(--mid); font-size: 0.74rem; }
+    .tr-cell.rtt { color: var(--mid); justify-content: flex-end; }
+
+    /* ── Attack scenario ── */
+    .attack-block {
+      margin: 28px 0;
+      border: 1px solid rgba(192,57,43,0.3);
+      overflow: hidden;
+    }
+
+    .attack-header {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--paper);
+      background: var(--accent);
+      padding: 10px 16px;
+    }
+
+    .attack-body {
+      padding: 20px 24px;
+      background: rgba(192,57,43,0.04);
+    }
+
+    .attack-body p {
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .attack-body p:last-child { margin-bottom: 0; }
+
+    /* ── Wireshark output ── */
+    .wireshark-block {
+      margin: 28px 0;
+      background: #1a1a1a;
+      padding: 20px 24px;
+      border: 1px solid var(--line);
+    }
+
+    .wireshark-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(245,240,232,0.35);
+      margin-bottom: 14px;
+    }
+
+    .wireshark-block pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.76rem;
+      line-height: 1.8;
+      color: #c8bfb2;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .wireshark-block .ws-key   { color: #e8a87c; }
+    .wireshark-block .ws-val   { color: #8fbcbb; }
+    .wireshark-block .ws-num   { color: #b48ead; }
+    .wireshark-block .ws-proto { color: var(--accent); font-weight: 500; }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 48px 0;
+    }
+
+    /* ── Summary ── */
+    .summary-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .summary-box ul { list-style: none; padding: 0; }
+
+    .summary-box ul li {
+      font-size: 0.9rem;
+      color: rgba(245,240,232,0.8);
+      padding: 6px 0 6px 16px;
+      border-bottom: 1px solid rgba(245,240,232,0.08);
+      position: relative;
+    }
+
+    .summary-box ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      padding: 48px 28px;
+      position: sticky;
+      top: 0;
+    }
+
+    .aside-section { margin-bottom: 40px; }
+
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .keyword-list { list-style: none; padding: 0; }
+
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+      transition: color 0.2s;
+    }
+
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--line);
+      margin: 12px 0 20px;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 37.5%;
+      background: var(--accent);
+    }
+
+    .progress-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+
+      aside {
+        position: static;
+        border-top: 1px solid var(--line);
+        padding: 40px 8vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+
+      .tr-step { grid-template-columns: 32px 130px 1fr; }
+      .tr-cell.host { display: none; }
+
+      .icmp-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .icmp-grid { grid-template-columns: 1fr; }
+      .tr-step { grid-template-columns: 32px 1fr 80px; }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar  { animation-delay: 0.10s; }
+    article   { animation-delay: 0.15s; }
+    aside     { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ── -->
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 6</a>
+    </div>
+    <div class="nav-group">
+      <a href="day5.html">&larr; Day 5</a>
+      <a href="day7.html">Day 7 &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 02 &mdash; 網路層與傳輸層 &mdash; Day 06 / 16</p>
+      <h1>ARP 與 ICMP<br>網路的黏合劑與聽診器</h1>
+      <p class="hero-desc">
+        ARP 在 IP 與 MAC 之間架設橋樑，讓封包得以跨越最後一哩；
+        ICMP 則是網路工程師的診斷工具箱，從 ping 到 traceroute 都靠它。
+        理解這兩個輔助協定，才能真正讀懂網路中每一個訊號的意義。
+      </p>
+    </div>
+    <div class="hero-meta">
+      <span class="day-num">06</span>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">ARP 的存在意義</a></li>
+      <li data-n="2"><a href="#s2">ARP 封包結構</a></li>
+      <li data-n="3"><a href="#s3">ARP 完整運作流程</a></li>
+      <li data-n="4"><a href="#s4">Gratuitous ARP 與 Proxy ARP</a></li>
+      <li data-n="5"><a href="#s5">ARP 安全威脅</a></li>
+      <li data-n="6"><a href="#s6">IPv6 的 NDP 取代 ARP</a></li>
+      <li data-n="7"><a href="#s7">ICMP 協定結構</a></li>
+      <li data-n="8"><a href="#s8">ICMP 訊息類型全覽</a></li>
+      <li data-n="9"><a href="#s9">ping 的運作原理</a></li>
+      <li data-n="10"><a href="#s10">traceroute 的運作原理</a></li>
+      <li data-n="11"><a href="#s11">ICMP 在攻擊中的角色</a></li>
+      <li data-n="12"><a href="#s12">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main-wrap">
+    <article>
+
+      <!-- ══ Section 1 ══ -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>ARP 的存在意義</h2>
+
+        <p>
+          在 Day 3 我們學到封包旅程中有一個關鍵步驟：
+          路由器在轉送封包前必須用 ARP 取得下一跳的 MAC 位址。
+          但為什麼必須這樣做？IP 位址不夠用嗎？
+        </p>
+
+        <p>
+          根本原因在於網路架構的分層設計。
+          <strong>IP 位址（Layer 3）</strong>是邏輯位址，
+          用於跨越整個網際網路的端對端識別，全域唯一。
+          <strong>MAC 位址（Layer 2）</strong>是實體位址，
+          燒錄在網路卡上，只在同一個區域網路內有意義。
+        </p>
+
+        <p>
+          乙太網路交換器只懂 MAC 位址——它根本不看 IP。
+          當封包需要在同一個 LAN 內從 A 送到 B 時，
+          乙太網路訊框的目的地欄位填的是 MAC 位址，而不是 IP 位址。
+          問題是：你知道 B 的 IP（例如從 DNS 查詢到），
+          但不知道 B 的 MAC，這時就需要 ARP 來查詢。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">核心矛盾</p>
+          <p>
+            IP 提供全域定址（任何地方），
+            MAC 提供本地傳輸（同一個 LAN 內）。
+            兩者的分工讓網路架構既靈活又高效，
+            但也製造了一個間隙：
+            已知 IP 卻不知道 MAC 時怎麼辦？
+            <strong>ARP（Address Resolution Protocol）</strong>正是填補這個間隙的協定。
+          </p>
+        </div>
+
+        <p>
+          ARP 定義於 RFC 826（1982 年），是一個非常簡單但至今仍在廣泛使用的協定。
+          它屬於 TCP/IP 的網路存取層，或按 OSI 分類，
+          介於 Layer 2（資料鏈結層）與 Layer 3（網路層）之間的橋接協定。
+        </p>
+      </section>
+
+      <!-- ══ Section 2 ══ -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>ARP 封包結構</h2>
+
+        <p>
+          ARP 封包直接封裝在乙太網路訊框中，
+          EtherType 欄位值為 <code>0x0806</code>（不同於 IPv4 的 <code>0x0800</code>）。
+          封包結構固定為 28 bytes（IPv4 over Ethernet 情況下）。
+        </p>
+
+        <div class="packet-vis">
+          <div class="packet-vis-title">ARP 封包欄位（IPv4 over Ethernet，共 28 bytes）</div>
+
+          <div class="packet-row" style="grid-template-columns: 1fr 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Hardware Type（硬體類型）</span>
+              <span class="pf-val">0x0001（Ethernet）</span>
+              <span class="pf-bits">16 bits</span>
+            </div>
+            <div class="packet-field">
+              <span class="pf-name">Protocol Type（協定類型）</span>
+              <span class="pf-val">0x0800（IPv4）</span>
+              <span class="pf-bits">16 bits</span>
+            </div>
+          </div>
+
+          <div class="packet-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">HW Addr Len</span>
+              <span class="pf-val">6（bytes）</span>
+              <span class="pf-bits">8 bits</span>
+            </div>
+            <div class="packet-field">
+              <span class="pf-name">Proto Addr Len</span>
+              <span class="pf-val">4（bytes）</span>
+              <span class="pf-bits">8 bits</span>
+            </div>
+            <div class="packet-field" style="grid-column: span 2;">
+              <span class="pf-name">Operation（操作碼）</span>
+              <span class="pf-val">1 = ARP Request　2 = ARP Reply</span>
+              <span class="pf-bits">16 bits</span>
+            </div>
+          </div>
+
+          <div class="packet-row" style="grid-template-columns: 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Sender Hardware Address（傳送方 MAC）</span>
+              <span class="pf-val">例：AA:BB:CC:DD:EE:FF</span>
+              <span class="pf-bits">48 bits（6 bytes）</span>
+            </div>
+          </div>
+
+          <div class="packet-row" style="grid-template-columns: 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Sender Protocol Address（傳送方 IP）</span>
+              <span class="pf-val">例：192.168.1.10</span>
+              <span class="pf-bits">32 bits（4 bytes）</span>
+            </div>
+          </div>
+
+          <div class="packet-row" style="grid-template-columns: 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Target Hardware Address（目標 MAC）</span>
+              <span class="pf-val">Request 時填 00:00:00:00:00:00（未知）</span>
+              <span class="pf-bits">48 bits（6 bytes）</span>
+            </div>
+          </div>
+
+          <div class="packet-row" style="grid-template-columns: 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Target Protocol Address（目標 IP）</span>
+              <span class="pf-val">例：192.168.1.1（要查詢的 IP）</span>
+              <span class="pf-bits">32 bits（4 bytes）</span>
+            </div>
+          </div>
+        </div>
+
+        <p>
+          ARP 封包的設計非常通用：Hardware Type 欄位可以代表任何鏈路層技術，
+          Protocol Type 可以代表任何網路層協定。
+          理論上 ARP 可以用於 IPv4 over Token Ring、
+          IPv4 over FDDI 等各種組合，但實際上 99% 的使用場景都是 Ethernet over IPv4。
+        </p>
+      </section>
+
+      <!-- ══ Section 3 ══ -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>ARP 完整運作流程</h2>
+
+        <p>
+          假設主機 A（<code>192.168.1.10 / AA:AA:AA:AA:AA:AA</code>）
+          想要傳送資料給主機 B（<code>192.168.1.20</code>），
+          但不知道 B 的 MAC 位址。完整流程如下：
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">ARP 解析全流程（步驟一到六）</div>
+          <pre>
+主機 A                           主機 B（192.168.1.20）       其他主機 C、D、E
+192.168.1.10                     MAC: BB:BB:BB:BB:BB:BB        （各有不同 IP/MAC）
+MAC: AA:AA:AA:AA:AA:AA
+│                                        │                           │
+│  Step 1：查 ARP Cache                  │                           │
+│  cache: 192.168.1.20 → ？（沒有）      │                           │
+│                                        │                           │
+│  Step 2：建立 ARP Request              │                           │
+│  Src MAC: AA:AA:AA:AA:AA:AA            │                           │
+│  Src IP:  192.168.1.10                 │                           │
+│  Dst MAC: FF:FF:FF:FF:FF:FF（廣播）    │                           │
+│  Dst IP:  192.168.1.20                 │                           │
+│                                        │                           │
+│── ARP Request（廣播）─────────────────>│                          >│
+│   「192.168.1.20 是誰？告訴我你的 MAC」│     C、D、E 收到後靜默     │
+│                                        │                           │
+│                        Step 3：B 收到 ARP Request
+│                        B 確認：目標 IP = 192.168.1.20 = 自己！
+│                        順便把 A 的 IP→MAC 記入自己的 ARP Cache
+│                        建立 ARP Reply（單播）
+│                                        │
+│<── ARP Reply（單播）──────────────────│
+│    Src MAC: BB:BB:BB:BB:BB:BB          │
+│    Src IP:  192.168.1.20               │
+│    Dst MAC: AA:AA:AA:AA:AA:AA          │
+│    Dst IP:  192.168.1.10               │
+│    「我是 192.168.1.20，我的 MAC 是 BB:BB:BB:BB:BB:BB」
+│                                        │
+│  Step 4：A 更新 ARP Cache             │
+│  192.168.1.20 → BB:BB:BB:BB:BB:BB    │
+│                                        │
+│  Step 5：A 開始傳送資料                │
+│  乙太網路訊框 Dst MAC = BB:BB:BB:BB:BB:BB
+│──── 資料（IP Packet）─────────────────>│
+          </pre>
+        </div>
+
+        <h3>ARP Cache（ARP 快取）</h3>
+
+        <p>
+          每次 ARP 查詢都需要廣播，頻繁查詢會增加網路負擔。
+          因此作業系統會將查詢結果暫存在 <strong>ARP Cache</strong> 中，
+          下次傳送時直接查表，無需重新廣播。
+        </p>
+
+        <p>
+          ARP Cache 有<strong>老化（Aging）機制</strong>，
+          條目在一定時間後自動刪除（Windows 預設 2 分鐘，Linux 預設 60 秒），
+          以避免 IP 位址變更後使用舊的 MAC 位址導致通訊失敗。
+        </p>
+
+        <div class="wireshark-block">
+          <div class="wireshark-title">查看 ARP Cache 指令</div>
+          <pre>
+<span class="ws-proto"># Windows</span>
+<span class="ws-key">arp -a</span>
+  介面: 192.168.1.10 --- 0x4
+  網際網路網址          實體位址              類型
+  <span class="ws-val">192.168.1.1</span>          <span class="ws-num">aa-bb-cc-dd-ee-ff</span>     動態
+  <span class="ws-val">192.168.1.20</span>         <span class="ws-num">bb-bb-bb-bb-bb-bb</span>     動態
+  <span class="ws-val">224.0.0.22</span>           <span class="ws-num">01-00-5e-00-00-16</span>     靜態（多播）
+
+<span class="ws-proto"># Linux</span>
+<span class="ws-key">ip neigh show</span>
+<span class="ws-val">192.168.1.1</span>  dev eth0 lladdr <span class="ws-num">aa:bb:cc:dd:ee:ff</span>  REACHABLE
+<span class="ws-val">192.168.1.20</span> dev eth0 lladdr <span class="ws-num">bb:bb:bb:bb:bb:bb</span>  STALE
+
+<span class="ws-proto"># macOS</span>
+<span class="ws-key">arp -a</span>
+gateway (<span class="ws-val">192.168.1.1</span>) at <span class="ws-num">aa:bb:cc:dd:ee:ff</span>  on en0  [ethernet]
+? (<span class="ws-val">192.168.1.20</span>) at <span class="ws-num">bb:bb:bb:bb:bb:bb</span>  on en0  [ethernet]
+          </pre>
+        </div>
+
+        <h3>ARP 與跨路由器通訊</h3>
+
+        <p>
+          一個重要觀念：<strong>ARP 不會跨越路由器</strong>。
+          廣播封包在路由器這裡被攔截，不會轉發到其他子網路。
+          當主機 A 想要與不同子網路的主機 X 通訊時，
+          A 只需要用 ARP 查到<strong>預設閘道</strong>（路由器）的 MAC 位址，
+          然後把 IP Packet 封裝進目的 MAC = 路由器 MAC 的乙太網路訊框中送出。
+          路由器收到後，解封裝至 IP 層，再重新封裝並繼續轉發。
+          這就是為什麼「IP 位址端對端不變，MAC 位址每跳都換」。
+        </p>
+      </section>
+
+      <!-- ══ Section 4 ══ -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>Gratuitous ARP 與 Proxy ARP</h2>
+
+        <h3>Gratuitous ARP（免費 ARP）</h3>
+
+        <p>
+          <strong>Gratuitous ARP</strong> 是一種特殊的 ARP，
+          其中<strong>傳送方 IP = 目標 IP</strong>，
+          也就是主機向網路廣播「我的 IP 是 X，我的 MAC 是 Y」，
+          但不是在回應任何人的查詢。這個「主動公告」有三個主要用途：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>用途</th>
+              <th>說明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>IP 衝突偵測</td>
+              <td>主機開機時廣播自己的 IP，若收到回應表示有 IP 衝突</td>
+            </tr>
+            <tr>
+              <td>MAC 位址更新</td>
+              <td>網路卡更換後廣播新 MAC，讓 LAN 內所有設備更新 ARP Cache</td>
+            </tr>
+            <tr>
+              <td>高可用性切換</td>
+              <td>VRRP/HSRP 等備援協定在主機切換時，用 Gratuitous ARP 通知所有設備更新閘道 MAC</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Proxy ARP</h3>
+
+        <p>
+          <strong>Proxy ARP</strong> 讓路由器代表遠端主機回應 ARP 查詢。
+          當主機 A 用 ARP 查詢不在同一子網路的 IP B 時，
+          路由器識別出「B 在我能到達的另一側」，
+          便回應「B 的 MAC 就是我的 MAC」，
+          讓 A 把封包送給路由器，再由路由器轉發給 B。
+        </p>
+
+        <p>
+          Proxy ARP 常用於無法設定預設閘道的老舊設備或特殊網路架構，
+          但它會使設備誤以為所有 IP 都在同一個 LAN 中，
+          增加廣播流量，並造成路由行為不透明，現代網路設計中通常會停用。
+        </p>
+      </section>
+
+      <!-- ══ Section 5 ══ -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>ARP 安全威脅</h2>
+
+        <p>
+          ARP 最嚴重的設計缺陷是<strong>完全沒有認證機制</strong>。
+          任何設備都可以發送 ARP Reply，而接收方會無條件相信並更新 ARP Cache。
+          這個漏洞催生了多種攻擊手法。
+        </p>
+
+        <div class="attack-block">
+          <div class="attack-header">ARP Spoofing / ARP Poisoning（ARP 欺騙）</div>
+          <div class="attack-body">
+            <p>
+              攻擊者向主機 A 發送偽造的 ARP Reply：
+              「192.168.1.1（閘道）的 MAC 是 EE:EE:EE:EE:EE:EE（攻擊者的 MAC）」。
+              同時向閘道發送偽造的 ARP Reply：
+              「192.168.1.10（主機 A）的 MAC 是 EE:EE:EE:EE:EE:EE（攻擊者的 MAC）」。
+            </p>
+            <p>
+              結果：主機 A 到閘道的所有流量都流向攻擊者，
+              閘道到主機 A 的流量也流向攻擊者。
+              攻擊者轉發流量（讓雙方感覺一切正常），同時暗中監聽——
+              這就是<strong>中間人攻擊（Man-in-the-Middle Attack）</strong>。
+            </p>
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">ARP Spoofing 攻擊示意</div>
+          <pre>
+正常流量路徑：
+  主機 A ─────────────────────────────> 閘道 → 網際網路
+
+ARP Spoofing 後：
+  主機 A ──> 攻擊者（以為是閘道）──> 閘道 → 網際網路
+                    │
+                    └──── 監聽/竄改/截取所有明文流量
+
+偽造的 ARP Reply（攻擊者發送）：
+  → 向 A 宣告：閘道 192.168.1.1 的 MAC = EE:EE:EE:EE:EE:EE（攻擊者）
+  → 向閘道宣告：主機 A 192.168.1.10 的 MAC = EE:EE:EE:EE:EE:EE（攻擊者）
+          </pre>
+        </div>
+
+        <h3>防護措施</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>防護技術</th>
+              <th>說明</th>
+              <th>部署層次</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Dynamic ARP Inspection（DAI）</td>
+              <td>交換器驗證 ARP 封包的 IP/MAC 對應是否符合 DHCP Snooping 資料庫，拒絕可疑 ARP</td>
+              <td>Layer 2 交換器</td>
+            </tr>
+            <tr>
+              <td>靜態 ARP 條目</td>
+              <td>手動在重要設備（如閘道）建立靜態 ARP 綁定，不可被動態 ARP 覆蓋</td>
+              <td>主機端</td>
+            </tr>
+            <tr>
+              <td>加密傳輸（TLS/VPN）</td>
+              <td>即使遭到 ARP Spoofing，加密流量也無法被讀取或篡改</td>
+              <td>應用層</td>
+            </tr>
+            <tr>
+              <td>ARP 監控工具</td>
+              <td>使用 arpwatch、XArp 等工具監控 ARP Cache 異常變動並發出警報</td>
+              <td>監控層</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 6 ══ -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>IPv6 的 NDP 取代 ARP</h2>
+
+        <p>
+          IPv6 設計之初就意識到 ARP 的廣播效率低與安全缺陷問題，
+          因此以<strong>NDP（Neighbor Discovery Protocol，鄰居發現協定，RFC 4861）</strong>
+          取代 ARP 的所有功能，並整合進 ICMPv6 中（類型 133–137）。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>NDP 訊息</th>
+              <th>ICMPv6 類型</th>
+              <th>對應 IPv4 功能</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Router Solicitation（RS）</td>
+              <td>Type 133</td>
+              <td>主機開機時向路由器請求網路資訊（相當於 DHCP Discover 的部分功能）</td>
+            </tr>
+            <tr>
+              <td>Router Advertisement（RA）</td>
+              <td>Type 134</td>
+              <td>路由器定期廣播網路前綴、閘道資訊，用於 SLAAC 自動配置</td>
+            </tr>
+            <tr>
+              <td>Neighbor Solicitation（NS）</td>
+              <td>Type 135</td>
+              <td>等同 ARP Request，查詢 IPv6 位址對應的 MAC 位址</td>
+            </tr>
+            <tr>
+              <td>Neighbor Advertisement（NA）</td>
+              <td>Type 136</td>
+              <td>等同 ARP Reply，回應 MAC 位址；也用於 Gratuitous ARP 的場景</td>
+            </tr>
+            <tr>
+              <td>Redirect</td>
+              <td>Type 137</td>
+              <td>等同 ICMP Redirect，告知主機有更好的路由路徑</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          NDP 最大的改進是使用<strong>多播</strong>而非廣播。
+          NS 訊息發送到<strong>請求節點多播位址（Solicited-Node Multicast Address）</strong>，
+          由每個目標 IP 的後 24 位元衍生，格式為 <code>ff02::1:ffXX:XXXX</code>。
+          只有擁有該 IP 的設備會加入對應的多播群組，大幅減少不相關設備的處理負擔。
+        </p>
+
+        <div class="info-box">
+          <p class="box-label">SEcure Neighbor Discovery（SEND）</p>
+          <p>
+            RFC 3971 定義了 SEND 協定，透過加密數位簽章驗證 NDP 訊息的合法性，
+            防止 NDP Spoofing 攻擊（類似 ARP Spoofing）。
+            不過 SEND 部署複雜，實際採用率不高；
+            大多數環境仍依賴 DAI 的 IPv6 版本（ND Inspection）作為防護。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 7 ══ -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>ICMP 協定結構</h2>
+
+        <p>
+          <strong>ICMP（Internet Control Message Protocol）</strong>定義於 RFC 792（1981 年），
+          是 IP 協定的「控制訊息系統」。它不用於傳輸使用者資料，
+          而是用於回報<strong>錯誤狀況</strong>（封包無法到達、TTL 超時、路由不存在）
+          以及提供<strong>網路診斷</strong>功能（ping、traceroute）。
+        </p>
+
+        <p>
+          ICMP 封包直接封裝在 IP 封包中，IP Header 的 Protocol 欄位值為 <strong>1</strong>。
+          ICMPv6 則使用 Protocol 值 <strong>58</strong>，用於 IPv6 網路。
+        </p>
+
+        <div class="packet-vis">
+          <div class="packet-vis-title">ICMP 封包通用結構</div>
+          <div class="packet-row" style="grid-template-columns: 1fr 1fr 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Type（類型）</span>
+              <span class="pf-val">訊息大類，如 0=Echo Reply</span>
+              <span class="pf-bits">8 bits</span>
+            </div>
+            <div class="packet-field">
+              <span class="pf-name">Code（代碼）</span>
+              <span class="pf-val">細分類，如 Type 3 的原因</span>
+              <span class="pf-bits">8 bits</span>
+            </div>
+            <div class="packet-field">
+              <span class="pf-name">Checksum</span>
+              <span class="pf-val">覆蓋 ICMP Header + Data</span>
+              <span class="pf-bits">16 bits</span>
+            </div>
+          </div>
+          <div class="packet-row" style="grid-template-columns: 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Rest of Header（依 Type/Code 而異）</span>
+              <span class="pf-val">Echo：Identifier（16b）+ Sequence Number（16b）</span>
+              <span class="pf-bits">32 bits</span>
+            </div>
+          </div>
+          <div class="packet-row" style="grid-template-columns: 1fr;">
+            <div class="packet-field">
+              <span class="pf-name">Data（資料段，依 Type 而異）</span>
+              <span class="pf-val">錯誤訊息：含原始 IP Header + 前 8 bytes 資料；Echo：使用者填充資料</span>
+              <span class="pf-bits">variable</span>
+            </div>
+          </div>
+        </div>
+
+        <p>
+          ICMP 是<strong>無狀態</strong>的——它不建立連線，
+          每個 ICMP 訊息都是獨立的。ICMP 錯誤訊息只在收到有問題的封包時產生，
+          且只回傳給原始封包的傳送方，永遠不會觸發新的 ICMP 錯誤（防止 ICMP 風暴）。
+        </p>
+      </section>
+
+      <!-- ══ Section 8 ══ -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>ICMP 訊息類型全覽</h2>
+
+        <p>
+          ICMP 訊息分為<strong>錯誤訊息（Error Messages）</strong>
+          與<strong>查詢訊息（Query/Informational Messages）</strong>兩大類。
+          以下是最重要的類型：
+        </p>
+
+        <div class="icmp-grid">
+          <div class="icmp-card">
+            <div class="icmp-type">Type 0</div>
+            <div class="icmp-code">Code: 0</div>
+            <div class="icmp-name">Echo Reply</div>
+            <div class="icmp-desc">回應 Type 8 的 ping 請求，包含相同的 Identifier 與 Sequence Number</div>
+          </div>
+
+          <div class="icmp-card">
+            <div class="icmp-type">Type 3</div>
+            <div class="icmp-code">Code: 0–15</div>
+            <div class="icmp-name">Destination Unreachable</div>
+            <div class="icmp-desc">封包無法到達目的地。Code 0=網路不可達、1=主機不可達、3=連接埠不可達、4=需要分割但 DF 旗標設起</div>
+          </div>
+
+          <div class="icmp-card">
+            <div class="icmp-type">Type 5</div>
+            <div class="icmp-code">Code: 0–3</div>
+            <div class="icmp-name">Redirect</div>
+            <div class="icmp-desc">路由器通知傳送方有更好的路徑，請更新路由。Code 0=網路、1=主機、2=ToS+網路、3=ToS+主機</div>
+          </div>
+
+          <div class="icmp-card">
+            <div class="icmp-type">Type 8</div>
+            <div class="icmp-code">Code: 0</div>
+            <div class="icmp-name">Echo Request</div>
+            <div class="icmp-desc">ping 指令發出的請求封包。包含 Identifier（識別連線）與 Sequence Number（識別第幾個 ping）</div>
+          </div>
+
+          <div class="icmp-card">
+            <div class="icmp-type">Type 9</div>
+            <div class="icmp-code">Code: 0</div>
+            <div class="icmp-name">Router Advertisement</div>
+            <div class="icmp-desc">路由器廣播自己的存在與優先權（與 IRDP 協定相關，IPv4 的路由器發現）</div>
+          </div>
+
+          <div class="icmp-card">
+            <div class="icmp-type">Type 11</div>
+            <div class="icmp-code">Code: 0–1</div>
+            <div class="icmp-name">Time Exceeded</div>
+            <div class="icmp-desc">Code 0：TTL 超時（traceroute 的核心機制）。Code 1：分割封包重組超時</div>
+          </div>
+
+          <div class="icmp-card">
+            <div class="icmp-type">Type 12</div>
+            <div class="icmp-code">Code: 0–2</div>
+            <div class="icmp-name">Parameter Problem</div>
+            <div class="icmp-desc">IP Header 中發現非法欄位。Code 指向有問題欄位的位元組偏移量</div>
+          </div>
+
+          <div class="icmp-card">
+            <div class="icmp-type">Type 13/14</div>
+            <div class="icmp-code">Timestamp Request/Reply</div>
+            <div class="icmp-name">Timestamp</div>
+            <div class="icmp-desc">測量時間同步差異，但實際使用率極低，多數防火牆預設封鎖</div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">ICMP Type 3 Code 3 的實際意義</p>
+          <p>
+            當你連線到一個伺服器的某個 UDP 連接埠但該連接埠沒有程式在監聽時，
+            作業系統會回傳 ICMP Type 3 Code 3（Port Unreachable）。
+            這是 <code>nmap</code> 做 UDP 埠掃描的核心原理之一：
+            沒有回應可能是有服務在跑；收到 Type 3 Code 3 確認該埠沒有服務。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 9 ══ -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>ping 的運作原理</h2>
+
+        <p>
+          <code>ping</code> 是最基本、最常用的網路診斷工具，
+          利用 ICMP Echo Request（Type 8）與 Echo Reply（Type 0）測試：
+          目標主機是否可達、<strong>RTT（Round-Trip Time，往返延遲）</strong>是多少、
+          以及是否有封包遺失。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">ping 封包交換過程</div>
+          <pre>
+傳送方（你的電腦）                            目標主機（8.8.8.8）
+        │                                           │
+        │── ICMP Echo Request ─────────────────────>│
+        │   Type=8, Code=0                          │
+        │   Identifier=1234（識別此 ping 程序）      │
+        │   Sequence=1（第一個封包）                 │
+        │   Data: 填充位元組（用於計算 RTT）         │
+        │                              t1（送出時間） │
+        │                                           │
+        │<── ICMP Echo Reply ────────────────────────│
+        │   Type=0, Code=0                          │
+        │   Identifier=1234（與 Request 相同）       │
+        │   Sequence=1（對應第一個封包）             │
+        │                              t2（收到時間） │
+        │                                           │
+        RTT = t2 - t1
+        ICMP Sequence=1: 64 bytes from 8.8.8.8: icmp_seq=1 ttl=55 time=12.3 ms
+          </pre>
+        </div>
+
+        <h3>解讀 ping 的輸出</h3>
+
+        <div class="wireshark-block">
+          <div class="wireshark-title">ping 8.8.8.8 典型輸出解析</div>
+          <pre>
+PING <span class="ws-val">8.8.8.8</span> (<span class="ws-val">8.8.8.8</span>): <span class="ws-num">56</span> data bytes
+<span class="ws-num">64</span> bytes from <span class="ws-val">8.8.8.8</span>: icmp_seq=<span class="ws-num">0</span> ttl=<span class="ws-num">116</span> time=<span class="ws-num">12.381</span> ms
+<span class="ws-num">64</span> bytes from <span class="ws-val">8.8.8.8</span>: icmp_seq=<span class="ws-num">1</span> ttl=<span class="ws-num">116</span> time=<span class="ws-num">11.952</span> ms
+<span class="ws-num">64</span> bytes from <span class="ws-val">8.8.8.8</span>: icmp_seq=<span class="ws-num">2</span> ttl=<span class="ws-num">116</span> time=<span class="ws-num">12.104</span> ms
+
+--- <span class="ws-val">8.8.8.8</span> ping statistics ---
+<span class="ws-num">3</span> packets transmitted, <span class="ws-num">3</span> packets received, <span class="ws-num">0.0%</span> packet loss
+round-trip min/avg/max/stddev = <span class="ws-num">11.952</span>/<span class="ws-num">12.146</span>/<span class="ws-num">12.381</span>/<span class="ws-num">0.179</span> ms
+
+<span class="ws-key">解析：</span>
+  <span class="ws-key">64 bytes</span>    = Echo Reply 封包大小（56 data + 8 ICMP header）
+  <span class="ws-key">icmp_seq</span>    = 封包序號（用於偵測遺失與亂序）
+  <span class="ws-key">ttl=116</span>     = 回應封包到達時剩餘的 TTL 值（可推算路徑長度）
+  <span class="ws-key">time</span>        = RTT，從送出到收到回應的毫秒數
+  <span class="ws-key">stddev</span>      = 標準差，代表網路抖動（Jitter）大小
+          </pre>
+        </div>
+
+        <h3>常見 ping 故障診斷</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>現象</th>
+              <th>可能原因</th>
+              <th>下一步</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Request timeout</td>
+              <td>目標不可達、防火牆封鎖 ICMP、對方關閉 ping 回應</td>
+              <td>先 ping 閘道，確認 Layer 3 連線；再用 traceroute 定位斷點</td>
+            </tr>
+            <tr>
+              <td>Destination Host Unreachable</td>
+              <td>本機沒有到目標的路由，或閘道無法路由</td>
+              <td>確認路由表（<code>ip route</code>）與閘道設定</td>
+            </tr>
+            <tr>
+              <td>TTL expired in transit</td>
+              <td>TTL 耗盡（路由迴圈或路徑過長）</td>
+              <td>用 traceroute 觀察路由是否有迴圈</td>
+            </tr>
+            <tr>
+              <td>高 RTT 或大 stddev</td>
+              <td>網路壅塞、Wi-Fi 干擾、長距離傳輸</td>
+              <td>測試有線 vs 無線差異；用 mtr 持續觀察各跳延遲</td>
+            </tr>
+            <tr>
+              <td>封包遺失</td>
+              <td>鏈路品質差、交換器錯誤、壅塞丟包</td>
+              <td>加大測試次數（<code>ping -c 100</code>）；觀察遺失模式</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 10 ══ -->
+      <section class="lesson-section" id="s10">
+        <span class="section-num">Section 10</span>
+        <h2>traceroute 的運作原理</h2>
+
+        <p>
+          <code>traceroute</code>（Windows 上為 <code>tracert</code>）能顯示封包從你的電腦到目標主機
+          途中經過的<strong>每一個路由器（跳）</strong>及其延遲。
+          它的核心機制非常巧妙：利用 IP 的 TTL 欄位，讓每一跳路由器都「暴露自己」。
+        </p>
+
+        <h3>TTL 遞增技巧</h3>
+
+        <p>
+          traceroute 依序發送 TTL = 1, 2, 3, 4... 的探測封包。
+          每個封包在 TTL 歸零的那個路由器被丟棄，
+          並觸發<strong>ICMP Type 11 Time Exceeded</strong>回傳，
+          該回傳包含路由器的 IP 位址，由此得知第幾跳的路由器是誰。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">traceroute TTL 遞增機制（目標：8.8.8.8）</div>
+          <pre>
+你的電腦                 路由器 R1            路由器 R2          8.8.8.8
+    │                       │                    │                 │
+    │ TTL=1 → 封包 ─────────>│                    │                 │
+    │         R1 TTL=1 → 0  │                    │                 │
+    │<─── ICMP Time Exceeded（R1 的 IP）──────────│                 │
+    │                       │                    │                 │
+    │ TTL=2 → 封包 ─────────>│─── TTL=1 ──────────>│                 │
+    │                       │    R2 TTL=1 → 0    │                 │
+    │<─── ICMP Time Exceeded（R2 的 IP）──────────────────────────── │
+    │                       │                    │                 │
+    │ TTL=3 → 封包 ─────────>│─── TTL=2 ──────────>│── TTL=1 ────────>│
+    │                       │                    │  目標收到：回傳 │
+    │<─── Echo Reply 或 Port Unreachable（8.8.8.8）──────────────────│
+    │                       │                    │                 │
+  → traceroute 完成：已探知所有路徑上的路由器
+          </pre>
+        </div>
+
+        <p>
+          每個 TTL 值通常發送三個探測封包（預設），並顯示三次 RTT，
+          用於評估該跳的延遲穩定性。
+          <code>*</code> 表示該跳的路由器封鎖了 ICMP 或探測封包超時，
+          但這不代表封包實際無法通過，只是路由器選擇不回應。
+        </p>
+
+        <h4>真實 traceroute 輸出範例</h4>
+
+        <div class="traceroute-steps">
+          <div class="tr-header">traceroute to 8.8.8.8 (Google DNS)</div>
+          <div class="tr-step">
+            <div class="tr-cell hop">1</div>
+            <div class="tr-cell ip">192.168.1.1</div>
+            <div class="tr-cell host">home-router.local</div>
+            <div class="tr-cell rtt">1.2 ms</div>
+          </div>
+          <div class="tr-step">
+            <div class="tr-cell hop">2</div>
+            <div class="tr-cell ip">10.10.10.1</div>
+            <div class="tr-cell host">isp-gateway.net</div>
+            <div class="tr-cell rtt">8.4 ms</div>
+          </div>
+          <div class="tr-step">
+            <div class="tr-cell hop">3</div>
+            <div class="tr-cell ip">220.130.0.1</div>
+            <div class="tr-cell host">core-router-tw.isp.net</div>
+            <div class="tr-cell rtt">10.1 ms</div>
+          </div>
+          <div class="tr-step">
+            <div class="tr-cell hop">4</div>
+            <div class="tr-cell ip">*</div>
+            <div class="tr-cell host">（無回應，可能封鎖 ICMP）</div>
+            <div class="tr-cell rtt">* * *</div>
+          </div>
+          <div class="tr-step">
+            <div class="tr-cell hop">5</div>
+            <div class="tr-cell ip">72.14.197.142</div>
+            <div class="tr-cell host">google-peering.net</div>
+            <div class="tr-cell rtt">24.8 ms</div>
+          </div>
+          <div class="tr-step">
+            <div class="tr-cell hop">6</div>
+            <div class="tr-cell ip">8.8.8.8</div>
+            <div class="tr-cell host">dns.google</div>
+            <div class="tr-cell rtt">25.3 ms</div>
+          </div>
+        </div>
+
+        <h3>Windows tracert vs. Unix traceroute 的差異</h3>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>面向</th>
+              <th>Unix/Linux traceroute</th>
+              <th>Windows tracert</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>探測封包類型</td>
+              <td>預設使用 UDP（高連接埠，如 33434+）</td>
+              <td>使用 ICMP Echo Request</td>
+            </tr>
+            <tr>
+              <td>到達判斷</td>
+              <td>目標回傳 ICMP Port Unreachable（UDP 到達不存在的埠）</td>
+              <td>目標回傳 ICMP Echo Reply</td>
+            </tr>
+            <tr>
+              <td>防火牆影響</td>
+              <td>防火牆封鎖高 UDP 埠時會全程顯示 *</td>
+              <td>防火牆封鎖 ICMP 時同樣失效</td>
+            </tr>
+            <tr>
+              <td>選項</td>
+              <td>可用 <code>-I</code> 改用 ICMP、<code>-T</code> 改用 TCP</td>
+              <td>僅使用 ICMP</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">mtr：動態版 traceroute</p>
+          <p>
+            <code>mtr</code>（Matt's Traceroute）結合 ping 與 traceroute，
+            持續傳送探測封包並即時顯示每跳的丟包率與平均延遲。
+            比單次 traceroute 更能觀察間歇性網路問題。
+            Linux 安裝：<code>apt install mtr</code>；macOS：<code>brew install mtr</code>。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 11 ══ -->
+      <section class="lesson-section" id="s11">
+        <span class="section-num">Section 11</span>
+        <h2>ICMP 在攻擊中的角色</h2>
+
+        <p>
+          ICMP 的設計初衷是診斷，但攻擊者也找到了利用它的方式。
+          了解這些攻擊有助於理解為什麼許多防火牆預設限制 ICMP 流量。
+        </p>
+
+        <div class="attack-block">
+          <div class="attack-header">Ping of Death</div>
+          <div class="attack-body">
+            <p>
+              早期（1990 年代）攻擊手法：傳送超大（> 65,535 bytes）的 ICMP 封包，
+              利用 IP 分割機制讓封包在接收端重組時超出緩衝區，導致系統崩潰。
+              現代作業系統已修補此漏洞，但仍具歷史意義。
+            </p>
+          </div>
+        </div>
+
+        <div class="attack-block">
+          <div class="attack-header">ICMP Flood（Ping Flood）</div>
+          <div class="attack-body">
+            <p>
+              大量發送 ICMP Echo Request，讓目標 CPU 和頻寬忙於處理與回應，
+              造成拒絕服務（DoS）。高速的 ICMP Flood 可輕易讓低頻寬目標離線。
+              防禦方式：限制 ICMP 處理速率（rate limiting）或在邊界防火牆封鎖外部 ICMP。
+            </p>
+          </div>
+        </div>
+
+        <div class="attack-block">
+          <div class="attack-header">Smurf Attack</div>
+          <div class="attack-body">
+            <p>
+              攻擊者偽造受害者的 IP 位址作為來源，
+              向大型網路的廣播位址（如 <code>10.0.0.255</code>）發送 ICMP Echo Request。
+              網路內所有主機都回應 Echo Reply，但全部回傳給被偽造 IP 的受害者，
+              形成流量放大（Amplification）攻擊。
+              現代路由器預設不轉發廣播封包，此攻擊已幾乎消失。
+            </p>
+          </div>
+        </div>
+
+        <div class="attack-block">
+          <div class="attack-header">ICMP Redirect 攻擊</div>
+          <div class="attack-body">
+            <p>
+              攻擊者偽造 ICMP Redirect（Type 5）訊息，
+              誘導受害主機更新路由至攻擊者控制的設備，
+              實現流量劫持。現代作業系統預設忽略外部 ICMP Redirect 訊息，
+              但在容器環境或特殊核心設定下仍需注意。
+            </p>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <p class="box-label">封鎖 ICMP 的兩面性</p>
+          <p>
+            完全封鎖 ICMP 會讓網路排錯極為困難：
+            ping 失效、traceroute 不完整、MTU Path Discovery 依賴的
+            ICMP Type 3 Code 4（Fragmentation Needed）也會失效，
+            導致 TCP 連線的 MTU 問題難以偵測。
+            建議的策略是：允許有意義的 ICMP 類型（0、3、8、11），
+            在邊界對外部 ICMP 進行速率限制，而非完全封鎖。
+          </p>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- ══ Summary ══ -->
+      <section class="lesson-section" id="s12">
+        <div class="summary-box">
+          <div class="summary-label">Day 6 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>ARP 解決「知道 IP 但不知道 MAC」的問題，透過廣播 Request 與單播 Reply 完成</li>
+            <li>ARP Cache 快取結果並老化（60–120 秒），避免頻繁廣播</li>
+            <li>ARP Request 廣播不跨路由器；跨子網路通訊只需 ARP 查閘道 MAC</li>
+            <li>Gratuitous ARP 用於 IP 衝突偵測、MAC 更新通知、HA 切換</li>
+            <li>ARP 無認證機制，ARP Spoofing 可實現 MitM；DAI、靜態 ARP、TLS 是防護手段</li>
+            <li>IPv6 的 NDP 取代 ARP，使用多播而非廣播，整合進 ICMPv6（Type 135/136）</li>
+            <li>ICMP 封裝在 IP 中（Protocol=1），用 Type+Code 描述各種錯誤與查詢</li>
+            <li>ping 用 Type 8（Request）/ Type 0（Reply），測 RTT 與封包遺失</li>
+            <li>traceroute 利用 TTL 遞增，令每跳觸發 ICMP Type 11 Time Exceeded 暴露路由器 IP</li>
+            <li>Unix 用 UDP 探測、Windows 用 ICMP；mtr 提供持續動態監控</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <!-- ── Sidebar ── -->
+    <aside>
+
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">6 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>ARP（RFC 826）</li>
+          <li><span>#</span>ARP Request / Reply</li>
+          <li><span>#</span>ARP Cache / Aging</li>
+          <li><span>#</span>Gratuitous ARP</li>
+          <li><span>#</span>Proxy ARP</li>
+          <li><span>#</span>ARP Spoofing / MitM</li>
+          <li><span>#</span>Dynamic ARP Inspection</li>
+          <li><span>#</span>NDP（ICMPv6）</li>
+          <li><span>#</span>Solicited-Node Multicast</li>
+          <li><span>#</span>ICMP Type / Code</li>
+          <li><span>#</span>Echo Request/Reply</li>
+          <li><span>#</span>Time Exceeded（TTL）</li>
+          <li><span>#</span>Destination Unreachable</li>
+          <li><span>#</span>ping / RTT</li>
+          <li><span>#</span>traceroute / TTL trick</li>
+          <li><span>#</span>mtr</li>
+          <li><span>#</span>ICMP Flood / Smurf</li>
+        </ul>
+      </div>
+
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day5.html">
+            <span>&larr; Day 5: 路由原理與協定</span>
+          </a>
+          <a href="index.html">
+            <span>課程首頁</span>
+            <span>&uarr;</span>
+          </a>
+          <a href="day7.html">
+            <span>Day 7: TCP 傳輸控制協定</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ── Footer ── */-->
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 06 / 16</p>
+    <p>下一課：<a href="day7.html" style="color:var(--accent);text-decoration:none;">TCP 傳輸控制協定 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

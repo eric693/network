@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 8 — UDP 與多播技術 | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a1a1a; --paper: #f5f0e8; --accent: #c0392b;
+      --mid: #7a6a5a; --line: rgba(26,26,26,0.12); --code-bg: rgba(26,26,26,0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--paper); color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif; font-weight: 300;
+      line-height: 1.9; min-height: 100vh;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+    .topnav {
+      position: relative; z-index: 10; padding: 20px 8vw;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: 0.18em; color: var(--mid); text-decoration: none;
+      text-transform: uppercase; transition: color 0.2s;
+    }
+    .topnav a:hover { color: var(--accent); }
+    .topnav .breadcrumb { display: flex; align-items: center; gap: 8px; }
+    .topnav .sep { color: var(--line); font-size: 14px; }
+    .topnav .nav-group { display: flex; gap: 24px; }
+    .hero {
+      position: relative; z-index: 1; padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: end;
+    }
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: 0.22em; color: var(--accent); text-transform: uppercase; margin-bottom: 18px;
+    }
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif; font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700; line-height: 1.25; letter-spacing: -0.02em;
+    }
+    .hero-desc { margin-top: 20px; font-size: 1rem; color: var(--mid); max-width: 560px; }
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace; font-size: 6rem;
+      font-weight: 500; line-height: 1; color: var(--ink); opacity: 0.08; display: block;
+    }
+    .toc-bar {
+      position: relative; z-index: 1; padding: 24px 8vw;
+      border-bottom: 1px solid var(--line); background: rgba(26,26,26,0.03);
+    }
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 14px;
+    }
+    .toc-list { display: flex; flex-wrap: wrap; gap: 8px 24px; list-style: none; }
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+      color: var(--mid); text-decoration: none; transition: color 0.2s;
+    }
+    .toc-list li a:hover { color: var(--accent); }
+    .toc-list li::before { content: attr(data-n) ". "; color: var(--accent); font-size: 10px; }
+    .main-wrap {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 260px; align-items: start;
+    }
+    article { padding: 64px 6vw 80px 8vw; border-right: 1px solid var(--line); }
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase;
+      display: block; margin-bottom: 10px;
+    }
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif; font-size: 1.75rem; font-weight: 600;
+      line-height: 1.3; margin-bottom: 24px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif; font-size: 1.15rem;
+      font-weight: 600; margin: 36px 0 12px;
+    }
+    .lesson-section h4 {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;
+      font-weight: 500; color: var(--mid); margin: 24px 0 10px; letter-spacing: 0.05em;
+    }
+    .lesson-section p { margin-bottom: 16px; font-size: 0.97rem; }
+    .lesson-section p:last-child { margin-bottom: 0; }
+    strong { font-weight: 500; color: var(--ink); }
+    code {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.85em;
+      background: var(--code-bg); padding: 2px 6px; color: var(--ink);
+    }
+    .highlight-box {
+      margin: 28px 0; padding: 20px 24px;
+      border-left: 3px solid var(--accent); background: rgba(192,57,43,0.05);
+    }
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px;
+    }
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+    .info-box {
+      margin: 28px 0; padding: 20px 24px;
+      border-left: 3px solid var(--mid); background: var(--code-bg);
+    }
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 8px;
+    }
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+    .def-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.9rem; }
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid);
+      text-align: left; padding: 10px 16px;
+      background: var(--code-bg); border-bottom: 1px solid var(--line);
+    }
+    .def-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+    .def-table tr:last-child td { border-bottom: none; }
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;
+      font-weight: 500; color: var(--accent); white-space: nowrap;
+    }
+    .diagram {
+      margin: 28px 0; background: var(--code-bg);
+      border: 1px solid var(--line); padding: 28px 24px;
+    }
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px;
+    }
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem;
+      line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre;
+    }
+
+    /* UDP header */
+    .udp-header { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .udp-header-title {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; color: var(--paper);
+      text-transform: uppercase; background: var(--ink); padding: 10px 16px;
+    }
+    .udp-row { display: grid; border-bottom: 1px solid var(--line); }
+    .udp-row:last-child { border-bottom: none; }
+    .udp-field { padding: 14px 16px; border-right: 1px solid var(--line); font-family: 'IBM Plex Mono', monospace; }
+    .udp-field:last-child { border-right: none; }
+    .udp-field .uf-name {
+      font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); display: block; margin-bottom: 4px;
+    }
+    .udp-field .uf-val { font-size: 0.85rem; color: var(--ink); }
+    .udp-field .uf-bits { font-size: 0.62rem; color: var(--mid); display: block; margin-top: 3px; }
+
+    /* Compare */
+    .compare-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0; border: 1px solid var(--line); margin: 28px 0; overflow: hidden;
+    }
+    .compare-card { padding: 22px 20px; border-right: 1px solid var(--line); }
+    .compare-card:last-child { border-right: none; }
+    .compare-card-title {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem;
+      font-weight: 500; color: var(--paper); background: var(--ink);
+      margin: -22px -20px 16px; padding: 12px 20px;
+    }
+    .compare-attr { display: flex; gap: 10px; margin-bottom: 9px; align-items: baseline; }
+    .compare-attr .ck {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+      color: var(--mid); flex-shrink: 0; width: 60px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .compare-attr .cv { font-size: 0.85rem; color: var(--ink); }
+
+    /* Multicast addr grid */
+    .mcast-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr));
+      gap: 0; border: 1px solid var(--line); margin: 24px 0;
+    }
+    .mcast-item {
+      padding: 14px 16px; border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line); transition: background 0.15s;
+    }
+    .mcast-item:hover { background: rgba(26,26,26,0.03); }
+    .mcast-addr {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
+      font-weight: 500; color: var(--accent); margin-bottom: 3px;
+    }
+    .mcast-name { font-size: 0.8rem; font-weight: 500; color: var(--ink); margin-bottom: 3px; }
+    .mcast-desc { font-size: 0.76rem; color: var(--mid); line-height: 1.6; }
+
+    /* Use-case cards */
+    .usecase-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+      gap: 0; border: 1px solid var(--line); margin: 24px 0;
+    }
+    .usecase-card {
+      padding: 18px 16px; border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line); transition: background 0.15s;
+    }
+    .usecase-card:hover { background: rgba(26,26,26,0.03); }
+    .usecase-name {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
+      font-weight: 500; color: var(--accent); margin-bottom: 4px;
+    }
+    .usecase-proto {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
+      color: var(--mid); margin-bottom: 8px;
+    }
+    .usecase-why { font-size: 0.8rem; color: var(--ink); line-height: 1.6; }
+
+    /* QUIC comparison table */
+    .quic-block { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .quic-header {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--paper); background: var(--ink); padding: 10px 16px;
+    }
+    .quic-row { display: grid; grid-template-columns: 170px 1fr 1fr; border-bottom: 1px solid var(--line); }
+    .quic-row:last-child { border-bottom: none; }
+    .quic-row:not(:first-child):hover { background: rgba(26,26,26,0.03); }
+    .quic-cell { padding: 11px 14px; font-size: 0.85rem; border-right: 1px solid var(--line); line-height: 1.6; }
+    .quic-cell:last-child { border-right: none; }
+    .quic-cell.label { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid); font-weight: 500; }
+    .quic-cell.head { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--ink); font-weight: 500; background: var(--code-bg); }
+    .quic-cell.good { color: #2d6a4f; }
+    .quic-cell.bad  { color: var(--accent); }
+
+    .divider { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
+    .summary-box { margin-top: 48px; padding: 28px 32px; background: var(--ink); color: var(--paper); }
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 0.25em; color: rgba(245,240,232,0.5);
+      text-transform: uppercase; margin-bottom: 16px;
+    }
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif; font-size: 1.1rem;
+      font-weight: 600; color: var(--paper); margin-bottom: 16px;
+    }
+    .summary-box ul { list-style: none; padding: 0; }
+    .summary-box ul li {
+      font-size: 0.9rem; color: rgba(245,240,232,0.8);
+      padding: 6px 0 6px 16px; border-bottom: 1px solid rgba(245,240,232,0.08);
+      position: relative;
+    }
+    .summary-box ul li::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-size: 0.8rem; }
+    aside { padding: 48px 28px; position: sticky; top: 0; }
+    .aside-section { margin-bottom: 40px; }
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em;
+      color: var(--mid); text-transform: uppercase; margin-bottom: 14px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--line);
+    }
+    .keyword-list { list-style: none; padding: 0; }
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid);
+      padding: 5px 0; border-bottom: 1px solid var(--line); transition: color 0.2s;
+    }
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+    .progress-bar { height: 3px; background: var(--line); margin: 12px 0 20px; position: relative; }
+    .progress-bar::after {
+      content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 50%; background: var(--accent);
+    }
+    .progress-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mid); letter-spacing: 0.1em; }
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid);
+      text-decoration: none; padding: 8px 12px; border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s; display: flex; justify-content: space-between; align-items: center;
+    }
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+    footer {
+      position: relative; z-index: 1; padding: 32px 8vw; border-top: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    footer p { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); letter-spacing: 0.1em; }
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+      aside { position: static; border-top: 1px solid var(--line); padding: 40px 8vw; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .compare-card { border-right: none; border-bottom: 1px solid var(--line); }
+      .compare-card:last-child { border-bottom: none; }
+      .quic-row { grid-template-columns: 120px 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .quic-row { grid-template-columns: 1fr; }
+      .quic-cell { border-right: none; }
+      .mcast-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar { animation-delay: 0.10s; }
+    article { animation-delay: 0.15s; }
+    aside { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 8</a>
+    </div>
+    <div class="nav-group">
+      <a href="day7.html">&larr; Day 7</a>
+      <a href="day9.html">Day 9 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 02 &mdash; 網路層與傳輸層 &mdash; Day 08 / 16</p>
+      <h1>UDP 與多播技術<br>為速度而生的輕量傳輸</h1>
+      <p class="hero-desc">
+        並非所有應用都需要 TCP 的可靠性保證——有時，速度與低延遲比完整性更重要。
+        UDP 以極簡設計換取極低開銷，是 DNS、影音串流、線上遊戲的基石。
+        多播技術則讓一份資料同時高效送達多個接收者，是 IPTV 與路由協定的核心。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">08</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">UDP 的設計哲學</a></li>
+      <li data-n="2"><a href="#s2">UDP 標頭結構</a></li>
+      <li data-n="3"><a href="#s3">TCP vs UDP 深度比較</a></li>
+      <li data-n="4"><a href="#s4">UDP 應用場景剖析</a></li>
+      <li data-n="5"><a href="#s5">QUIC：UDP 上的現代傳輸層</a></li>
+      <li data-n="6"><a href="#s6">單播、廣播、多播比較</a></li>
+      <li data-n="7"><a href="#s7">IPv4 多播位址</a></li>
+      <li data-n="8"><a href="#s8">IGMP：多播群組管理</a></li>
+      <li data-n="9"><a href="#s9">多播路由協定</a></li>
+      <li data-n="10"><a href="#s10">UDP 安全考量</a></li>
+      <li data-n="11"><a href="#s11">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <!-- S1 -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>UDP 的設計哲學</h2>
+        <p>
+          <strong>UDP（User Datagram Protocol）</strong>定義於 RFC 768（1980 年），
+          整份規格文件只有 3 頁。它的核心哲學是
+          <strong>「只做必要的事，其他都交給應用層」</strong>：
+          透過連接埠號實現多工、提供可選的 Checksum，其餘的可靠性、
+          排序、流量控制、壅塞控制全部捨棄。
+        </p>
+        <table class="def-table">
+          <thead><tr><th>優勢</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>極低延遲</td><td>無需三向交握，第一個封包就是資料，對 DNS 等毫秒級操作至關重要</td></tr>
+            <tr><td>極低開銷</td><td>Header 僅 8 bytes（TCP 是 20 bytes），大量小封包的傳輸效率顯著更高</td></tr>
+            <tr><td>支援廣播 / 多播</td><td>TCP 是連線導向的一對一協定，不支援一對多；UDP 天然支援廣播與多播</td></tr>
+            <tr><td>無壅塞控制限制</td><td>應用程式可自訂傳送速率，適合固定碼率（CBR）的媒體串流</td></tr>
+            <tr><td>無狀態</td><td>伺服器無需維護連線狀態，可輕鬆擴展至數百萬並發（如 DNS、DHCP）</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box">
+          <p class="box-label">UDP 不等於「不可靠」</p>
+          <p>UDP 本身不提供可靠性，但<strong>應用程式可以在 UDP 之上自行實作所需的可靠性機制</strong>，只包含自己需要的部分，而不是 TCP 的全套機制。QUIC 在 UDP 上實作了選擇性重傳卻保留 0-RTT 握手；遊戲引擎可能只實作「最新狀態覆蓋舊狀態」的低延遲模式。這種彈性是 UDP 超越 TCP 限制的核心價值。</p>
+        </div>
+      </section>
+
+      <!-- S2 -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>UDP 標頭結構</h2>
+        <p>UDP 標頭固定 <strong>8 bytes</strong>，四個欄位各 16 bits，是傳輸層協定中最精簡的結構。</p>
+        <div class="udp-header">
+          <div class="udp-header-title">UDP Header（固定 8 bytes = 4 × 16 bits）</div>
+          <div class="udp-row" style="grid-template-columns:1fr 1fr;">
+            <div class="udp-field">
+              <span class="uf-name">Source Port（來源連接埠）</span>
+              <span class="uf-val">選填；若不需要回應可設為 0</span>
+              <span class="uf-bits">16 bits（0–65535）</span>
+            </div>
+            <div class="udp-field">
+              <span class="uf-name">Destination Port（目的連接埠）</span>
+              <span class="uf-val">必填；識別目的服務（如 53 = DNS）</span>
+              <span class="uf-bits">16 bits（0–65535）</span>
+            </div>
+          </div>
+          <div class="udp-row" style="grid-template-columns:1fr 1fr;">
+            <div class="udp-field">
+              <span class="uf-name">Length（長度）</span>
+              <span class="uf-val">UDP Header + Data 總長度（bytes），最小值為 8</span>
+              <span class="uf-bits">16 bits（最大 65,535 bytes）</span>
+            </div>
+            <div class="udp-field">
+              <span class="uf-name">Checksum（校驗和）</span>
+              <span class="uf-val">IPv4 中選填；IPv6 中強制。設為 0 表示不使用</span>
+              <span class="uf-bits">16 bits</span>
+            </div>
+          </div>
+          <div class="udp-row" style="grid-template-columns:1fr;">
+            <div class="udp-field">
+              <span class="uf-name">Data（資料 Payload）</span>
+              <span class="uf-val">應用層資料，保留訊息邊界（不同於 TCP 的位元組串流）</span>
+              <span class="uf-bits">0–65,507 bytes（65,535 − 8 UDP Header − 20 IP Header）</span>
+            </div>
+          </div>
+        </div>
+        <p>
+          UDP 的 Checksum 在 IPv4 中是選填的（設為 0 代表不使用），
+          在 IPv6 中是強制的（因 IPv6 Header 本身無 Checksum）。
+          即便停用，底層乙太網路的 FCS 仍會偵測傳輸錯誤，
+          因此在可靠的有線網路中停用能輕微提升效能。
+        </p>
+      </section>
+
+      <!-- S3 -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>TCP vs UDP 深度比較</h2>
+        <div class="compare-grid">
+          <div class="compare-card">
+            <div class="compare-card-title">TCP — 傳輸控制協定</div>
+            <div class="compare-attr"><span class="ck">連線</span><span class="cv">連線導向，三向交握（1 RTT 開銷）</span></div>
+            <div class="compare-attr"><span class="ck">可靠性</span><span class="cv">保證交付：ACK + 逾時重傳</span></div>
+            <div class="compare-attr"><span class="ck">順序</span><span class="cv">序號確保資料按序交付</span></div>
+            <div class="compare-attr"><span class="ck">流量控制</span><span class="cv">rwnd 接收視窗防止接收方溢出</span></div>
+            <div class="compare-attr"><span class="ck">壅塞控制</span><span class="cv">cwnd，Slow Start / CUBIC / BBR</span></div>
+            <div class="compare-attr"><span class="ck">Header</span><span class="cv">20–60 bytes（含選項）</span></div>
+            <div class="compare-attr"><span class="ck">傳輸模式</span><span class="cv">位元組串流（無訊息邊界）</span></div>
+            <div class="compare-attr"><span class="ck">廣播/多播</span><span class="cv">不支援</span></div>
+            <div class="compare-attr"><span class="ck">適用</span><span class="cv">HTTP/S、SSH、FTP、電子郵件</span></div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-card-title">UDP — 使用者資料報協定</div>
+            <div class="compare-attr"><span class="ck">連線</span><span class="cv">無連線，直接傳送（0 RTT 開銷）</span></div>
+            <div class="compare-attr"><span class="ck">可靠性</span><span class="cv">不保證，由應用層決定是否實作</span></div>
+            <div class="compare-attr"><span class="ck">順序</span><span class="cv">不保證，封包可能亂序抵達</span></div>
+            <div class="compare-attr"><span class="ck">流量控制</span><span class="cv">無，傳送速率完全由應用控制</span></div>
+            <div class="compare-attr"><span class="ck">壅塞控制</span><span class="cv">無，可能對網路造成衝擊</span></div>
+            <div class="compare-attr"><span class="ck">Header</span><span class="cv">固定 8 bytes</span></div>
+            <div class="compare-attr"><span class="ck">傳輸模式</span><span class="cv">資料報（保留訊息邊界）</span></div>
+            <div class="compare-attr"><span class="ck">廣播/多播</span><span class="cv">支援</span></div>
+            <div class="compare-attr"><span class="ck">適用</span><span class="cv">DNS、DHCP、VoIP、遊戲、QUIC</span></div>
+          </div>
+        </div>
+        <h3>「訊息邊界」的關鍵差異</h3>
+        <p>
+          TCP 是<strong>位元組串流</strong>：發送 <code>send("Hello")</code> 再 <code>send("World")</code>，
+          接收方可能讀到 <code>"HelloWorld"</code> 或分多次接收，邊界消失，需應用層自訂分隔（如 HTTP 的 Content-Length）。
+        </p>
+        <p>
+          UDP 是<strong>資料報</strong>：每次 <code>sendto()</code> 對應一次 <code>recvfrom()</code>，訊息邊界完整保留。
+          但若資料報超過路徑 MTU，IP 層分割後任一分片遺失就丟棄整個資料報，
+          所以 UDP 應用通常控制訊息 ≤ 1472 bytes（Ethernet MTU 1500 − IP 20 − UDP 8）。
+        </p>
+      </section>
+
+      <!-- S4 -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>UDP 應用場景剖析</h2>
+        <div class="usecase-grid">
+          <div class="usecase-card">
+            <div class="usecase-name">DNS</div>
+            <div class="usecase-proto">UDP Port 53</div>
+            <div class="usecase-why">查詢與回應各一封包，1 RTT 完成。TCP 握手開銷是查詢本身的數倍。區域傳輸用 TCP</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">DHCP</div>
+            <div class="usecase-proto">UDP Port 67/68</div>
+            <div class="usecase-why">客戶端尚無 IP，無法建立 TCP 連線。需廣播（255.255.255.255）發現伺服器</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">VoIP / 語音</div>
+            <div class="usecase-proto">RTP over UDP</div>
+            <div class="usecase-why">語音可容忍少量丟包，但不能容忍重傳延遲。&gt;150ms 延遲影響通話品質</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">視訊串流</div>
+            <div class="usecase-proto">RTP/RTCP over UDP</div>
+            <div class="usecase-why">即時串流容忍少量畫面損壞。緩衝直播（HLS）反而用 HTTP/TCP</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">線上遊戲</div>
+            <div class="usecase-proto">自訂協定 over UDP</div>
+            <div class="usecase-why">玩家位置更新 20–60Hz，新狀態覆蓋舊狀態，重傳過時資料沒有意義</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">SNMP</div>
+            <div class="usecase-proto">UDP Port 161/162</div>
+            <div class="usecase-why">管理封包小、請求/回應簡單，無狀態特性適合大規模輪詢</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">TFTP</div>
+            <div class="usecase-proto">UDP Port 69</div>
+            <div class="usecase-why">PXE 無碟開機用。極簡設計，在 UDP 上自實作停等確認機制</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">NTP</div>
+            <div class="usecase-proto">UDP Port 123</div>
+            <div class="usecase-why">時間封包僅 48 bytes；連線建立延遲會干擾時間測量精準度</div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-name">QUIC / HTTP/3</div>
+            <div class="usecase-proto">UDP Port 443</div>
+            <div class="usecase-why">UDP 上自建傳輸層，規避 TCP HOL Blocking，整合 TLS 1.3，實現 0-RTT 重連</div>
+          </div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-title">DNS 查詢：UDP vs TCP 的速度差異</div>
+          <pre>
+若 DNS 用 TCP（假設情境）：
+  Client              DNS Server
+    │── SYN ─────────>│   第 1 RTT：TCP 握手
+    │<── SYN-ACK ──────│
+    │── ACK+Query ────>│   第 2 RTT：實際查詢
+    │<── Reply+FIN ────│
+  至少 2 RTT 才收到答案
+
+DNS 實際用 UDP：
+  Client              DNS Server
+    │── Query ─────────>│   第 1 RTT：直接查詢
+    │<── Reply ──────────│
+  1 RTT，快一倍以上，且封包 &lt; 512 bytes，永遠不需要分割</pre>
+        </div>
+      </section>
+
+      <!-- S5 -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>QUIC：UDP 上的現代傳輸層</h2>
+        <p>
+          QUIC（RFC 9000）最初由 Google 開發，現為 HTTP/3 的傳輸層基礎。
+          它展示了「在 UDP 上自建傳輸層」能達到的極致，
+          解決了 TCP 長久以來無法在不更動作業系統核心的情況下改善的問題。
+        </p>
+        <div class="quic-block">
+          <div class="quic-header">QUIC vs TCP + TLS 1.3 關鍵差異</div>
+          <div class="quic-row">
+            <div class="quic-cell label">面向</div>
+            <div class="quic-cell head">TCP + TLS 1.3</div>
+            <div class="quic-cell head">QUIC（UDP 基礎）</div>
+          </div>
+          <div class="quic-row">
+            <div class="quic-cell label">連線建立</div>
+            <div class="quic-cell bad">1 RTT TCP + 1 RTT TLS = 2 RTT</div>
+            <div class="quic-cell good">1 RTT 初次；0-RTT 再次連線</div>
+          </div>
+          <div class="quic-row">
+            <div class="quic-cell label">HOL Blocking</div>
+            <div class="quic-cell bad">有：單一 TCP 連線任一封包遺失阻塞所有串流</div>
+            <div class="quic-cell good">無：多串流（Stream）各自獨立，互不阻塞</div>
+          </div>
+          <div class="quic-row">
+            <div class="quic-cell label">連線遷移</div>
+            <div class="quic-cell bad">換網路（Wi-Fi → 4G）須重建 TCP 連線</div>
+            <div class="quic-cell good">Connection ID 機制，換 IP/Port 仍保持連線</div>
+          </div>
+          <div class="quic-row">
+            <div class="quic-cell label">加密範圍</div>
+            <div class="quic-cell bad">只加密 Payload；TCP Header 明文可被操縱</div>
+            <div class="quic-cell good">內建 TLS 1.3，Header 也加密</div>
+          </div>
+          <div class="quic-row">
+            <div class="quic-cell label">壅塞控制</div>
+            <div class="quic-cell bad">受 OS 核心限制，難以客製化</div>
+            <div class="quic-cell good">使用者空間實作，可插拔演算法</div>
+          </div>
+        </div>
+        <div class="info-box">
+          <p class="box-label">0-RTT 的安全考量</p>
+          <p>0-RTT 允許在握手完成前傳送資料，但有<strong>重播攻擊（Replay Attack）</strong>的風險：攻擊者可截取並重複傳送 0-RTT 資料。因此 0-RTT 只適合冪等操作（如 HTTP GET），非冪等操作（如 HTTP POST 付款）應使用 1-RTT。</p>
+        </div>
+      </section>
+
+      <!-- S6 -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>單播、廣播、多播的比較</h2>
+        <div class="diagram">
+          <div class="diagram-title">三種傳遞模式示意</div>
+          <pre>
+單播（Unicast）：一對一
+  傳送方 ──────────────────────────> 接收方 A
+
+廣播（Broadcast）：一對所有（同子網路）
+  傳送方 ──> A（含不需要的主機）
+         ──> B（含不需要的主機）
+         ──> C（含不需要的主機）
+
+多播（Multicast）：一對有訂閱的主機
+  傳送方 ──> A（已訂閱）
+         ──> C（已訂閱）
+         B、D 未訂閱，不收到任何封包
+
+任播（Anycast）：一對最近的一個
+  傳送方 ──> 最近的伺服器節點（BGP 路由選擇）</pre>
+        </div>
+        <table class="def-table">
+          <thead><tr><th>特性</th><th>單播</th><th>廣播</th><th>多播</th></tr></thead>
+          <tbody>
+            <tr><td>接收者</td><td>一個特定主機</td><td>同子網路所有主機</td><td>訂閱特定群組的主機</td></tr>
+            <tr><td>傳輸層</td><td>TCP 或 UDP</td><td>僅 UDP</td><td>僅 UDP</td></tr>
+            <tr><td>跨路由器</td><td>是</td><td>否（路由器不轉發廣播）</td><td>是（需多播路由協定）</td></tr>
+            <tr><td>頻寬效率</td><td>N 接收者需 N 份流量</td><td>1 份但所有人被打擾</td><td>1 份，只有需要的人收</td></tr>
+            <tr><td>典型場景</td><td>絕大多數應用</td><td>DHCP、ARP、NetBIOS</td><td>IPTV、路由協定、金融行情</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S7 -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>IPv4 多播位址</h2>
+        <p>
+          IPv4 多播使用 <strong>Class D 位址：<code>224.0.0.0</code> 至 <code>239.255.255.255</code></strong>（二進位前四位 <code>1110</code>）。
+        </p>
+        <table class="def-table">
+          <thead><tr><th>範圍</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>224.0.0.0/24</code></td><td>本地鏈路（Link-local）：TTL=1，路由器不轉發，用於路由協定鄰居發現</td></tr>
+            <tr><td><code>224.0.1.0 – 238.x.x.x</code></td><td>全球多播：可跨網際網路路由（需 ISP 支援）</td></tr>
+            <tr><td><code>239.0.0.0/8</code></td><td>管理性範圍（Administratively Scoped）：類似私有位址，用於組織內部多播</td></tr>
+          </tbody>
+        </table>
+        <h4>常用多播位址</h4>
+        <div class="mcast-grid">
+          <div class="mcast-item">
+            <div class="mcast-addr">224.0.0.1</div>
+            <div class="mcast-name">All Hosts</div>
+            <div class="mcast-desc">同子網路所有啟用多播的主機</div>
+          </div>
+          <div class="mcast-item">
+            <div class="mcast-addr">224.0.0.2</div>
+            <div class="mcast-name">All Routers</div>
+            <div class="mcast-desc">同子網路所有路由器</div>
+          </div>
+          <div class="mcast-item">
+            <div class="mcast-addr">224.0.0.5</div>
+            <div class="mcast-name">OSPF All Routers</div>
+            <div class="mcast-desc">OSPF Hello 封包目標，所有 OSPF 路由器接收</div>
+          </div>
+          <div class="mcast-item">
+            <div class="mcast-addr">224.0.0.6</div>
+            <div class="mcast-name">OSPF DR/BDR</div>
+            <div class="mcast-desc">廣播網路上 DR/BDR 接收 LSU 更新</div>
+          </div>
+          <div class="mcast-item">
+            <div class="mcast-addr">224.0.0.9</div>
+            <div class="mcast-name">RIPv2 Routers</div>
+            <div class="mcast-desc">RIPv2 路由更新目標（取代 v1 廣播）</div>
+          </div>
+          <div class="mcast-item">
+            <div class="mcast-addr">224.0.0.18</div>
+            <div class="mcast-name">VRRP</div>
+            <div class="mcast-desc">虛擬路由器備援協定（VRRP）心跳封包</div>
+          </div>
+          <div class="mcast-item">
+            <div class="mcast-addr">224.0.0.22</div>
+            <div class="mcast-name">IGMPv3</div>
+            <div class="mcast-desc">IGMPv3 成員報告目標；路由器收集訂閱資訊</div>
+          </div>
+          <div class="mcast-item">
+            <div class="mcast-addr">239.x.x.x</div>
+            <div class="mcast-name">管理性範圍</div>
+            <div class="mcast-desc">企業內部 IPTV、廣播，不向外路由</div>
+          </div>
+        </div>
+        <h3>多播 MAC 位址映射</h3>
+        <p>
+          乙太網路上的多播 IP 映射到 MAC 位址規則：
+          前綴固定為 <code>01:00:5e</code>，後 23 bits 取自多播 IP 後 23 bits。
+          因捨棄一個位元，會有 32:1 的映射衝突（如 224.0.0.5 與 225.0.0.5 對應同一 MAC），
+          需 IGMP Snooping 在交換器層面消除不必要的轉發。
+        </p>
+        <div class="diagram">
+          <div class="diagram-title">224.0.0.5（OSPF All Routers）→ MAC 映射</div>
+          <pre>
+多播 IP：  224.0.0.5
+二進位：  1110 0000.0000 0000.0000 0000.0000 0101
+                         取後 23 bits（丟棄第 25 bit）
+                              ↓
+多播 MAC：01:00:5e : 00 : 00 : 05
+          固定前綴    後三組 = IP 後 23 bits</pre>
+        </div>
+      </section>
+
+      <!-- S8 -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>IGMP：多播群組管理協定</h2>
+        <p>
+          <strong>IGMP（Internet Group Management Protocol）</strong>是主機與路由器之間的多播訂閱機制。
+          主機透過 IGMP 加入/離開多播群組，路由器根據此資訊決定是否轉發多播流量到該子網路。
+          IGMP 直接封裝在 IP 中（Protocol = 2）。
+        </p>
+        <table class="def-table">
+          <thead><tr><th>版本</th><th>RFC</th><th>主要特性</th></tr></thead>
+          <tbody>
+            <tr><td>IGMPv1</td><td>RFC 1112（1989）</td><td>基本加入機制；無主動離開，等路由器逾時；定期 General Query</td></tr>
+            <tr><td>IGMPv2</td><td>RFC 2236（1997）</td><td>新增主動 Leave Group，縮短離開到停播的延遲；Group-Specific Query</td></tr>
+            <tr><td>IGMPv3</td><td>RFC 3376（2002）</td><td>Source-Specific Multicast（SSM）：指定只接收特定來源的多播流</td></tr>
+          </tbody>
+        </table>
+        <div class="diagram">
+          <div class="diagram-title">IGMPv2 加入與離開群組流程</div>
+          <pre>
+主機 A（訂閱 224.1.2.3 IPTV）            路由器
+    │                                      │
+    │── IGMP Membership Report ────────────>│  「我要加入 224.1.2.3」
+    │                                      │  路由器記錄並開始轉發
+    │
+    │<── IGMP General Query（定期）─────────│  「誰還在線上？」
+    │── IGMP Membership Report ────────────>│  （隨機延遲回應，防止爆炸）
+    │
+    │── IGMP Leave Group ─────────────────>│  「我要離開了」→ 224.0.0.2
+    │<── Group-Specific Query ──────────────│  「還有其他訂閱者嗎？」
+    │  （無人回應）
+    │                                      │  路由器停止轉發 224.1.2.3 到此介面</pre>
+        </div>
+        <h3>IGMP Snooping</h3>
+        <p>
+          交換器（Layer 2）預設把多播訊框發給所有介面，造成未訂閱主機收到大量流量。
+          <strong>IGMP Snooping</strong> 讓交換器偷聽 IGMP 訊息，
+          學習哪些介面有訂閱者，只把多播轉發到相關介面，
+          是現代企業交換器的標準功能。
+        </p>
+      </section>
+
+      <!-- S9 -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>多播路由協定</h2>
+        <p>
+          IGMP 只管理主機與直連路由器的訂閱關係；
+          讓多播跨越多個路由器需要<strong>多播路由協定</strong>，
+          構建從來源到所有訂閱者的<strong>分發樹</strong>。
+        </p>
+        <table class="def-table">
+          <thead><tr><th>協定</th><th>特性</th><th>適用場景</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>PIM-SM（Sparse Mode）</td>
+              <td>以集合點（RP）為核心建立共享樹（Shared Tree），再優化為最短路徑樹（SPT）</td>
+              <td>最廣泛使用；訂閱者分散的大型網路</td>
+            </tr>
+            <tr>
+              <td>PIM-DM（Dense Mode）</td>
+              <td>先洪泛到所有路由器，再剪枝不需要的分支</td>
+              <td>訂閱者密集的小型網路；大型網路效率差</td>
+            </tr>
+            <tr>
+              <td>PIM-SSM（Source Specific）</td>
+              <td>接收者指定來源 IP，不需要 RP，直接建立最短路徑樹</td>
+              <td>IPTV、金融行情等單一來源多接收者場景</td>
+            </tr>
+            <tr>
+              <td>DVMRP</td>
+              <td>距離向量多播路由（已逐漸淘汰）</td>
+              <td>早期網際網路 MBone 多播骨幹</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="info-box">
+          <p class="box-label">為何公共網際網路多播普及率低？</p>
+          <p>ISP 不願在骨幹路由器維護多播狀態（開銷高）、商業模式不清晰、CDN 的普及讓用單播模擬多播的成本已大幅下降。實際 IPTV 多播通常限制在 ISP 的 MPLS 骨幹內，不跨越公共網際網路。</p>
+        </div>
+      </section>
+
+      <!-- S10 -->
+      <section class="lesson-section" id="s10">
+        <span class="section-num">Section 10</span>
+        <h2>UDP 安全考量</h2>
+        <p>UDP 的無連線與無狀態特性帶來比 TCP 更大的安全風險，最嚴重的是<strong>放大攻擊（Amplification Attack）</strong>。</p>
+        <h3>UDP 放大攻擊</h3>
+        <p>攻擊者偽造受害者 IP 作為來源，向 UDP 服務發送小請求，服務回傳比請求大得多的回應給受害者，形成流量倍增的 DDoS。</p>
+        <table class="def-table">
+          <thead><tr><th>攻擊類型</th><th>放大倍數</th><th>原理</th></tr></thead>
+          <tbody>
+            <tr><td>DNS 放大</td><td>28–54×</td><td>查詢 ANY 紀錄，回應比查詢大數十倍</td></tr>
+            <tr><td>NTP 放大（monlist）</td><td>約 556×</td><td>NTP monlist 回傳最近 600 個客戶端清單</td></tr>
+            <tr><td>SSDP 放大</td><td>30–40×</td><td>家用 UPnP 設備的 SSDP 回應遠大於探測封包</td></tr>
+            <tr><td>Memcached 放大</td><td>高達 51,000×</td><td>2018 年 GitHub 的 1.35 Tbps DDoS 源自此攻擊</td></tr>
+          </tbody>
+        </table>
+        <h3>防護措施</h3>
+        <table class="def-table">
+          <thead><tr><th>措施</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>BCP 38 Anti-Spoofing</td><td>ISP 在邊界過濾來源 IP 非其客戶網段的封包，從根本上消除來源偽造</td></tr>
+            <tr><td>最小化暴露面</td><td>防火牆只開放必要 UDP 服務埠，停用不必要服務（如 NTP monlist）</td></tr>
+            <tr><td>速率限制（RRL）</td><td>對入站 UDP 做速率限制；DNS Response Rate Limiting 防 DNS 放大</td></tr>
+            <tr><td>DTLS 加密</td><td>Datagram TLS（RFC 6347）為 UDP 提供加密與認證，用於 WebRTC、QUIC</td></tr>
+            <tr><td>來源驗證</td><td>應用層 HMAC 驗證；DNS 啟用 DNSSEC 防回應偽造</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box">
+          <p class="box-label">完全封鎖 UDP 的代價</p>
+          <p>有些防火牆政策選擇封鎖所有 UDP 流量，但這會讓 DNS、DHCP、NTP、QUIC/HTTP/3 全部失效，是過度限制的做法。正確策略是<strong>精準的服務白名單 + 速率限制</strong>，而非一刀切封鎖。</p>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Summary -->
+      <section class="lesson-section" id="s11">
+        <div class="summary-box">
+          <div class="summary-label">Day 8 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>UDP 僅 8 bytes Header，無連線、無重傳、無排序——以速度換可靠性</li>
+            <li>UDP 保留訊息邊界（Datagram）；TCP 是位元組串流，邊界消失</li>
+            <li>IPv4 的 UDP Checksum 選填；IPv6 中強制（IPv6 Header 無 Checksum）</li>
+            <li>DNS、DHCP、VoIP、遊戲、SNMP、NTP 等選擇 UDP，各因低延遲或廣播需求</li>
+            <li>QUIC 在 UDP 上自建傳輸層，解決 TCP 的 HOL Blocking 和多 RTT 握手問題</li>
+            <li>0-RTT 可能有重播攻擊風險，只應用於冪等操作（如 HTTP GET）</li>
+            <li>單播 vs 廣播 vs 多播：多播只送給有訂閱者的介面，頻寬效率最高</li>
+            <li>IPv4 多播 Class D（224.0.0.0/4）；224.0.0.0/24 為本地鏈路，路由器不轉發</li>
+            <li>IGMP 管理主機與路由器的訂閱關係；IGMP Snooping 讓交換器智慧轉發多播</li>
+            <li>UDP 放大攻擊利用 IP 偽造 + 大回應放大流量；BCP 38 Anti-Spoofing 是根本防護</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">8 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>UDP（RFC 768）</li>
+          <li><span>#</span>8-byte Header</li>
+          <li><span>#</span>Datagram vs Byte Stream</li>
+          <li><span>#</span>訊息邊界保留</li>
+          <li><span>#</span>QUIC / HTTP/3</li>
+          <li><span>#</span>0-RTT / HOL Blocking</li>
+          <li><span>#</span>Connection ID</li>
+          <li><span>#</span>Unicast / Broadcast</li>
+          <li><span>#</span>Multicast / Anycast</li>
+          <li><span>#</span>Class D（224.0.0.0/4）</li>
+          <li><span>#</span>IGMP v1/v2/v3</li>
+          <li><span>#</span>IGMP Snooping</li>
+          <li><span>#</span>PIM-SM / PIM-SSM</li>
+          <li><span>#</span>Rendezvous Point（RP）</li>
+          <li><span>#</span>UDP Amplification</li>
+          <li><span>#</span>BCP 38 Anti-Spoofing</li>
+          <li><span>#</span>DTLS</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day7.html"><span>&larr; Day 7: TCP 傳輸控制協定</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day9.html"><span>Day 9: DNS 網域名稱系統</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 08 / 16</p>
+    <p>下一課：<a href="day9.html" style="color:var(--accent);text-decoration:none;">DNS 網域名稱系統 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

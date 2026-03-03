@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 3 — TCP/IP 協定族 | 網路通訊課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:     #1a1a1a;
+      --paper:   #f5f0e8;
+      --accent:  #c0392b;
+      --mid:     #7a6a5a;
+      --line:    rgba(26,26,26,0.12);
+      --code-bg: rgba(26,26,26,0.06);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.9;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: relative;
+      z-index: 10;
+      padding: 20px 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .topnav a:hover { color: var(--accent); }
+
+    .topnav .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topnav .sep { color: var(--line); font-size: 14px; }
+
+    .topnav .nav-group {
+      display: flex;
+      gap: 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: end;
+    }
+
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: var(--mid);
+      max-width: 560px;
+    }
+
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 6rem;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+      opacity: 0.08;
+      display: block;
+    }
+
+    /* ── TOC ── */
+    .toc-bar {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw;
+      border-bottom: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 14px;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      list-style: none;
+    }
+
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc-list li a:hover { color: var(--accent); }
+
+    .toc-list li::before {
+      content: attr(data-n) ". ";
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      align-items: start;
+    }
+
+    /* ── Article ── */
+    article {
+      padding: 64px 6vw 80px 8vw;
+      border-right: 1px solid var(--line);
+    }
+
+    /* ── Sections ── */
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 36px 0 12px;
+    }
+
+    .lesson-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--mid);
+      margin: 24px 0 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .lesson-section p {
+      margin-bottom: 16px;
+      font-size: 0.97rem;
+    }
+
+    .lesson-section p:last-child { margin-bottom: 0; }
+
+    strong { font-weight: 500; color: var(--ink); }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      color: var(--ink);
+    }
+
+    /* ── Highlight / Info boxes ── */
+    .highlight-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--accent);
+      background: rgba(192,57,43,0.05);
+    }
+
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+
+    .info-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--mid);
+      background: var(--code-bg);
+    }
+
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    /* ── Tables ── */
+    .def-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .def-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      line-height: 1.7;
+    }
+
+    .def-table tr:last-child td { border-bottom: none; }
+
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.75;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── TCP/IP Layer Stack ── */
+    .tcpip-stack {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .tcpip-stack-header {
+      display: grid;
+      grid-template-columns: 52px 1fr 1fr 1fr;
+      background: var(--ink);
+    }
+
+    .tcpip-stack-header span {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      color: rgba(245,240,232,0.55);
+    }
+
+    .tcpip-layer {
+      display: grid;
+      grid-template-columns: 52px 1fr 1fr 1fr;
+      align-items: stretch;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.2s;
+    }
+
+    .tcpip-layer:last-child { border-bottom: none; }
+    .tcpip-layer:hover { background: rgba(26,26,26,0.04); }
+
+    .tcpip-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--paper);
+      padding: 18px 0;
+    }
+
+    .tcpip-layer[data-l="app"]     .tcpip-num { background: var(--accent); }
+    .tcpip-layer[data-l="trans"]   .tcpip-num { background: #8b4513; }
+    .tcpip-layer[data-l="inet"]    .tcpip-num { background: var(--mid); }
+    .tcpip-layer[data-l="access"]  .tcpip-num { background: #3a3a3a; }
+
+    .tcpip-name {
+      display: flex;
+      align-items: center;
+      padding: 14px 14px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-right: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .tcpip-role {
+      padding: 14px 16px;
+      font-size: 0.84rem;
+      border-right: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .tcpip-protos {
+      padding: 14px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.74rem;
+      color: var(--mid);
+      line-height: 1.8;
+    }
+
+    /* ── Header field diagram ── */
+    .header-field {
+      margin: 28px 0;
+    }
+
+    .header-field-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .header-row {
+      display: flex;
+      border: 1px solid var(--line);
+      margin-bottom: -1px;
+      flex-wrap: wrap;
+    }
+
+    .header-cell {
+      border-right: 1px solid var(--line);
+      padding: 10px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--ink);
+      flex: 1;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .header-cell:last-child { border-right: none; }
+
+    .header-cell .field-name {
+      font-size: 0.65rem;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 2px;
+      letter-spacing: 0.05em;
+    }
+
+    .header-cell .field-bits {
+      font-size: 0.62rem;
+      color: var(--mid);
+    }
+
+    .header-cell.wide { flex: 2; }
+    .header-cell.full { flex: 100; }
+
+    /* ── Protocol comparison grid ── */
+    .proto-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 28px 0;
+    }
+
+    .proto-card {
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .proto-card-header {
+      padding: 14px 18px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 500;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .proto-card-body {
+      padding: 16px 18px;
+    }
+
+    .proto-card-body p {
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+      color: var(--mid);
+    }
+
+    .proto-card-body p:last-child { margin-bottom: 0; }
+
+    .proto-card-body strong {
+      color: var(--ink);
+    }
+
+    /* ── Port table ── */
+    .port-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0;
+      border: 1px solid var(--line);
+      margin: 24px 0;
+    }
+
+    .port-item {
+      padding: 12px 16px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .port-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--accent);
+      flex-shrink: 0;
+      min-width: 50px;
+    }
+
+    .port-name {
+      font-size: 0.82rem;
+      color: var(--mid);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 48px 0;
+    }
+
+    /* ── Summary box ── */
+    .summary-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .summary-box ul { list-style: none; padding: 0; }
+
+    .summary-box ul li {
+      font-size: 0.9rem;
+      color: rgba(245,240,232,0.8);
+      padding: 6px 0 6px 16px;
+      border-bottom: 1px solid rgba(245,240,232,0.08);
+      position: relative;
+    }
+
+    .summary-box ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      padding: 48px 28px;
+      position: sticky;
+      top: 0;
+    }
+
+    .aside-section { margin-bottom: 40px; }
+
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .keyword-list { list-style: none; padding: 0; }
+
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+      transition: color 0.2s;
+    }
+
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--line);
+      margin: 12px 0 20px;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 18.75%;
+      background: var(--accent);
+    }
+
+    .progress-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+
+      aside {
+        position: static;
+        border-top: 1px solid var(--line);
+        padding: 40px 8vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      article {
+        padding: 48px 8vw 64px;
+        border-right: none;
+      }
+
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+
+      .tcpip-stack-header,
+      .tcpip-layer { grid-template-columns: 44px 1fr 1fr; }
+
+      .tcpip-protos { display: none; }
+
+      .proto-compare { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .port-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .toc-bar, article, aside {
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .toc-bar  { animation-delay: 0.10s; }
+    article   { animation-delay: 0.15s; }
+    aside     { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ── -->
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 3</a>
+    </div>
+    <div class="nav-group">
+      <a href="day2.html">&larr; Day 2</a>
+      <a href="day4.html">Day 4 &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 01 &mdash; 網路基礎概念 &mdash; Day 03 / 16</p>
+      <h1>TCP/IP 協定族<br>網際網路的真正引擎</h1>
+      <p class="hero-desc">
+        OSI 是理論框架，TCP/IP 是實際驅動網際網路運作的協定族。
+        理解它的四層架構、各層核心協定以及封包在真實網路中如何流動，
+        是後續所有課程的共同基礎。
+      </p>
+    </div>
+    <div class="hero-meta">
+      <span class="day-num">03</span>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">TCP/IP 的起源與設計哲學</a></li>
+      <li data-n="2"><a href="#s2">四層架構總覽</a></li>
+      <li data-n="3"><a href="#s3">網路存取層</a></li>
+      <li data-n="4"><a href="#s4">網際網路層與 IP</a></li>
+      <li data-n="5"><a href="#s5">傳輸層：TCP 與 UDP</a></li>
+      <li data-n="6"><a href="#s6">應用層協定概覽</a></li>
+      <li data-n="7"><a href="#s7">連接埠號碼</a></li>
+      <li data-n="8"><a href="#s8">封包在網際網路中的旅程</a></li>
+      <li data-n="9"><a href="#s9">TCP/IP vs. OSI 深度對照</a></li>
+      <li data-n="10"><a href="#s10">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main-wrap">
+    <article>
+
+      <!-- ══ Section 1 ══ -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>TCP/IP 的起源與設計哲學</h2>
+
+        <p>
+          TCP/IP 並非由委員會在白板上設計出來的完美理論，
+          而是在 ARPANET 的實際工程需求中演化而成。
+          1973 年，Vint Cerf 與 Bob Kahn 著手解決一個核心問題：
+          如何讓多個使用<strong>不同技術</strong>的網路（電話線、衛星、封包無線電）
+          無縫互連？
+        </p>
+
+        <p>
+          他們的答案是一套革命性的設計哲學，體現在幾個核心原則中：
+        </p>
+
+        <p>
+          <strong>端對端原則（End-to-End Principle）</strong>：複雜的邏輯應置於網路邊緣
+          （終端主機），網路核心只做最簡單的事——轉送封包。路由器不需要理解
+          應用程式在做什麼，它只管把封包送到下一跳。這讓網路極度靈活：
+          任何新應用都能在不修改網路基礎設施的情況下部署。
+        </p>
+
+        <p>
+          <strong>盡力傳送（Best Effort Delivery）</strong>：IP 層不保證封包一定送達、
+          不保證順序、不保證不重複。它只「盡力」嘗試。可靠性的保障交給上層（TCP）負責。
+          這個設計犧牲了保證性，換來了極高的彈性與效率。
+        </p>
+
+        <p>
+          <strong>無狀態（Stateless）</strong>：路由器不記憶任何連線狀態，
+          每個封包都是獨立的。這讓路由器能以極高速度處理封包，
+          也讓網路在局部故障時能自我修復——失效節點的封包會自動繞路。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">歷史轉折點</p>
+          <p>
+            1983 年 1 月 1 日，ARPANET 全面切換至 TCP/IP，這天被稱為
+            「旗幟日（Flag Day）」。這是網際網路歷史上最重要的單一事件之一，
+            標誌著現代網際網路的正式誕生。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 2 ══ -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>四層架構總覽</h2>
+
+        <p>
+          TCP/IP 協定族採用四層架構，比 OSI 的七層更為簡潔務實。
+          每一層對應一組協定，各司其職卻緊密協作。
+        </p>
+
+        <div class="tcpip-stack">
+          <div class="tcpip-stack-header">
+            <span>#</span>
+            <span>層名</span>
+            <span>職責摘要</span>
+            <span>主要協定</span>
+          </div>
+
+          <div class="tcpip-layer" data-l="app">
+            <div class="tcpip-num">4</div>
+            <div class="tcpip-name">應用層<br>Application</div>
+            <div class="tcpip-role">
+              定義應用程式之間通訊的資料格式與互動規則，直接為使用者提供網路服務
+            </div>
+            <div class="tcpip-protos">
+              HTTP / HTTPS<br>
+              FTP / SFTP<br>
+              SMTP / IMAP / POP3<br>
+              DNS / DHCP<br>
+              SSH / Telnet<br>
+              SNMP / NTP
+            </div>
+          </div>
+
+          <div class="tcpip-layer" data-l="trans">
+            <div class="tcpip-num">3</div>
+            <div class="tcpip-name">傳輸層<br>Transport</div>
+            <div class="tcpip-role">
+              提供端對端的資料傳輸服務，透過連接埠號區分同一主機上的不同應用程式
+            </div>
+            <div class="tcpip-protos">
+              TCP<br>
+              UDP<br>
+              SCTP<br>
+              QUIC (HTTP/3)
+            </div>
+          </div>
+
+          <div class="tcpip-layer" data-l="inet">
+            <div class="tcpip-num">2</div>
+            <div class="tcpip-name">網際網路層<br>Internet</div>
+            <div class="tcpip-role">
+              處理封包在不同網路間的路由與轉送，使用 IP 位址進行邏輯定址
+            </div>
+            <div class="tcpip-protos">
+              IPv4 / IPv6<br>
+              ICMP / ICMPv6<br>
+              IGMP<br>
+              IPsec
+            </div>
+          </div>
+
+          <div class="tcpip-layer" data-l="access">
+            <div class="tcpip-num">1</div>
+            <div class="tcpip-name">網路存取層<br>Network Access</div>
+            <div class="tcpip-role">
+              負責在同一實體網路區段內傳送資料，包含實體訊號與硬體位址定址
+            </div>
+            <div class="tcpip-protos">
+              Ethernet (802.3)<br>
+              Wi-Fi (802.11)<br>
+              ARP<br>
+              PPP / DSL
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">為何只有四層？</p>
+          <p>
+            TCP/IP 將 OSI 的 Layer 5（會話層）和 Layer 6（表現層）合併進應用層，
+            因為實務上這兩層的功能往往由應用程式自行處理（如 TLS 加密、JSON 格式化），
+            沒有必要在協定層面強制分離。這種務實主義是 TCP/IP 得以廣泛採用的原因之一。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 3 ══ -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>網路存取層（Network Access Layer）</h2>
+
+        <p>
+          網路存取層對應 OSI 的 Layer 1（實體層）與 Layer 2（資料鏈結層）。
+          它負責在<strong>同一實體網路區段</strong>內，將封包包裝成訊框（Frame）
+          並透過物理介質送出。這一層與具體的硬體技術緊密耦合。
+        </p>
+
+        <h3>乙太網路（Ethernet, IEEE 802.3）</h3>
+
+        <p>
+          乙太網路是目前最主流的有線 LAN 技術。它使用
+          <strong>CSMA/CD（Carrier Sense Multiple Access with Collision Detection）</strong>
+          機制管理共享媒介的存取：傳送前先「聽」通道是否空閒（Carrier Sense），
+          若碰到碰撞（Collision Detection）則退避隨機時間後重試。
+          不過現代的全雙工交換式乙太網路已幾乎消除碰撞問題。
+        </p>
+
+        <p>
+          乙太網路訊框結構包含：<strong>前置碼（Preamble）</strong>8 bytes 用於同步、
+          <strong>目的 MAC</strong> 6 bytes、<strong>來源 MAC</strong> 6 bytes、
+          <strong>類型/長度（EtherType）</strong> 2 bytes（如 <code>0x0800</code> 代表 IPv4、
+          <code>0x86DD</code> 代表 IPv6）、<strong>資料</strong> 46–1500 bytes、
+          <strong>FCS（幀校驗序列）</strong> 4 bytes 用於錯誤偵測。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">Ethernet II 訊框結構</div>
+          <pre>
+ 0        6        12       14                          14+Data  14+Data+4
+ ├────────┼────────┼────────┼────────────────────────────┼────────┤
+ │Dst MAC │Src MAC │EtherType│         Data / Payload     │  FCS   │
+ │ 6 byte │ 6 byte │ 2 byte  │       46 ~ 1500 bytes      │ 4 byte │
+ └────────┴────────┴────────┴────────────────────────────┴────────┘
+  AA:BB:CC DD:EE:FF  0x0800         IP Packet...           CRC32
+          </pre>
+        </div>
+
+        <h3>ARP：橋接 Layer 2 與 Layer 3</h3>
+
+        <p>
+          <strong>ARP（Address Resolution Protocol）</strong>解決一個關鍵問題：
+          已知目的 IP 位址，如何找到對應的 MAC 位址？
+          傳送方會在區域網路廣播一個 ARP Request：
+          「誰是 192.168.1.1？請告訴我你的 MAC 位址。」
+          擁有該 IP 的設備回應 ARP Reply，傳送方將結果快取在 ARP Cache 中。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">ARP 解析流程</div>
+          <pre>
+主機 A (192.168.1.10)         主機 B (192.168.1.1)
+        │                              │
+        │── ARP Request（廣播）────────>│  "誰有 192.168.1.1？"
+        │   Dst MAC: FF:FF:FF:FF:FF:FF  │
+        │                              │
+        │<── ARP Reply（單播）──────────│  "我是！我的 MAC = AA:BB:CC:DD:EE:FF"
+        │                              │
+  ARP Cache 更新：192.168.1.1 → AA:BB:CC:DD:EE:FF
+          </pre>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">ARP 欺騙（ARP Spoofing）</p>
+          <p>
+            ARP 沒有認證機制，攻擊者可以發送偽造的 ARP Reply，
+            將閘道器的 IP 對應到自己的 MAC，
+            使區域網路內的流量都經過攻擊者的機器——這就是 ARP 欺騙攻擊（Man-in-the-Middle）。
+            Day 13 的網路安全課程會進一步討論防護措施。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 4 ══ -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>網際網路層與 IP 協定</h2>
+
+        <p>
+          網際網路層是 TCP/IP 協定族的核心，<strong>IP（Internet Protocol）</strong>
+          是這一層最重要的協定。IP 的職責是：給每個封包標記來源與目的的<strong>邏輯位址（IP 位址）</strong>，
+          並讓路由器根據這個位址決定封包的傳遞路徑。
+        </p>
+
+        <h3>IPv4 標頭結構</h3>
+
+        <p>
+          IPv4 標頭最小 20 bytes（無選項時），包含路由所需的所有資訊。
+          理解標頭各欄位，是理解路由、分割、TTL 等機制的前提。
+        </p>
+
+        <div class="header-field">
+          <div class="header-field-title">IPv4 Header（每列 32 bits）</div>
+          <div class="header-row">
+            <div class="header-cell">
+              <span class="field-name">Version</span>
+              <span class="field-bits">4 bits</span>
+            </div>
+            <div class="header-cell">
+              <span class="field-name">IHL</span>
+              <span class="field-bits">4 bits</span>
+            </div>
+            <div class="header-cell">
+              <span class="field-name">DSCP</span>
+              <span class="field-bits">6 bits</span>
+            </div>
+            <div class="header-cell">
+              <span class="field-name">ECN</span>
+              <span class="field-bits">2 bits</span>
+            </div>
+            <div class="header-cell wide">
+              <span class="field-name">Total Length</span>
+              <span class="field-bits">16 bits</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-cell wide">
+              <span class="field-name">Identification</span>
+              <span class="field-bits">16 bits</span>
+            </div>
+            <div class="header-cell">
+              <span class="field-name">Flags</span>
+              <span class="field-bits">3 bits</span>
+            </div>
+            <div class="header-cell wide">
+              <span class="field-name">Fragment Offset</span>
+              <span class="field-bits">13 bits</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-cell">
+              <span class="field-name">TTL</span>
+              <span class="field-bits">8 bits</span>
+            </div>
+            <div class="header-cell">
+              <span class="field-name">Protocol</span>
+              <span class="field-bits">8 bits</span>
+            </div>
+            <div class="header-cell wide">
+              <span class="field-name">Header Checksum</span>
+              <span class="field-bits">16 bits</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-cell full">
+              <span class="field-name">Source IP Address</span>
+              <span class="field-bits">32 bits</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-cell full">
+              <span class="field-name">Destination IP Address</span>
+              <span class="field-bits">32 bits</span>
+            </div>
+          </div>
+          <div class="header-row">
+            <div class="header-cell full">
+              <span class="field-name">Options (若有) + Padding</span>
+              <span class="field-bits">variable</span>
+            </div>
+          </div>
+        </div>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>欄位</th>
+              <th>大小</th>
+              <th>說明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Version</td>
+              <td>4 bits</td>
+              <td>IPv4 = 4，IPv6 = 6</td>
+            </tr>
+            <tr>
+              <td>IHL</td>
+              <td>4 bits</td>
+              <td>Header 長度，單位為 4 bytes；無選項時值為 5（= 20 bytes）</td>
+            </tr>
+            <tr>
+              <td>TTL</td>
+              <td>8 bits</td>
+              <td>每經過一個路由器遞減 1，歸零時丟棄封包，防止無限迴圈。Windows 預設 128，Linux 預設 64</td>
+            </tr>
+            <tr>
+              <td>Protocol</td>
+              <td>8 bits</td>
+              <td>上層協定代碼：TCP = 6，UDP = 17，ICMP = 1，OSPF = 89</td>
+            </tr>
+            <tr>
+              <td>Src / Dst IP</td>
+              <td>各 32 bits</td>
+              <td>來源與目的 IPv4 位址，是路由決策的依據</td>
+            </tr>
+            <tr>
+              <td>Flags / Fragment Offset</td>
+              <td>3 + 13 bits</td>
+              <td>控制封包分割（Fragmentation）。DF（Don't Fragment）旗標設起時路由器不得分割此封包</td>
+            </tr>
+            <tr>
+              <td>Checksum</td>
+              <td>16 bits</td>
+              <td>只校驗 IP Header（不含 Payload）。每跳都要重新計算，因 TTL 每跳遞減</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>IPv4 vs. IPv6 的主要差異</h3>
+
+        <p>
+          IPv4 使用 32 位元位址，提供約 43 億個位址，已於 2011 年分配耗盡（IANA 層級）。
+          IPv6 使用 128 位元位址，理論容量為 3.4 × 10³⁸ 個，幾乎是無限的。
+          除了位址空間，IPv6 還帶來其他改進：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>特性</th>
+              <th>IPv4</th>
+              <th>IPv6</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>位址長度</td>
+              <td>32 bits（4 bytes）</td>
+              <td>128 bits（16 bytes）</td>
+            </tr>
+            <tr>
+              <td>表示方式</td>
+              <td>點十進位：<code>192.168.1.1</code></td>
+              <td>冒號十六進位：<code>2001:db8::1</code></td>
+            </tr>
+            <tr>
+              <td>Header 大小</td>
+              <td>20–60 bytes（可變）</td>
+              <td>固定 40 bytes（擴展標頭另計）</td>
+            </tr>
+            <tr>
+              <td>Header Checksum</td>
+              <td>有（每跳計算）</td>
+              <td>無（由 Layer 2 / 4 負責）</td>
+            </tr>
+            <tr>
+              <td>分割（Fragmentation）</td>
+              <td>路由器可分割</td>
+              <td>只有來源主機可分割（路由器不分割）</td>
+            </tr>
+            <tr>
+              <td>廣播</td>
+              <td>支援廣播位址</td>
+              <td>無廣播，改用多播（Multicast）</td>
+            </tr>
+            <tr>
+              <td>NAT</td>
+              <td>幾乎必須使用</td>
+              <td>設計上不需要 NAT</td>
+            </tr>
+            <tr>
+              <td>IPsec</td>
+              <td>選用</td>
+              <td>設計內建（雖非強制）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>ICMP：網路的診斷工具</h3>
+
+        <p>
+          <strong>ICMP（Internet Control Message Protocol）</strong>
+          是 IP 的「輔助協定」，用於傳遞錯誤訊息與診斷資訊。
+          它沒有連接埠概念，直接封裝在 IP 封包中（Protocol = 1）。
+        </p>
+
+        <p>
+          <code>ping</code> 指令使用 ICMP Echo Request（Type 8）與
+          Echo Reply（Type 0）來測試可達性與 RTT（往返時間）。
+          <code>traceroute</code> 則利用逐步增加 TTL 值，
+          讓每跳路由器回傳 ICMP Time Exceeded（Type 11）訊息，
+          以此探測封包路徑上的每一個中繼節點。
+        </p>
+      </section>
+
+      <!-- ══ Section 5 ══ -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>傳輸層：TCP 與 UDP</h2>
+
+        <p>
+          傳輸層在 IP 提供的「盡力傳送」基礎上，提供兩種截然不同的服務。
+          選擇 TCP 還是 UDP，是每個網路應用設計的核心決策。
+        </p>
+
+        <div class="proto-compare">
+          <div class="proto-card">
+            <div class="proto-card-header">TCP — 傳輸控制協定</div>
+            <div class="proto-card-body">
+              <p><strong>連線導向：</strong>傳輸前需三向交握建立連線</p>
+              <p><strong>可靠傳輸：</strong>每個 Segment 都需 ACK 確認，逾時重傳</p>
+              <p><strong>有序傳遞：</strong>序號（Sequence Number）確保資料按順序組裝</p>
+              <p><strong>流量控制：</strong>滑動視窗防止接收方被淹沒</p>
+              <p><strong>壅塞控制：</strong>偵測網路壅塞時主動降速</p>
+              <p><strong>適用：</strong>HTTP、FTP、SSH、電子郵件（正確性比速度重要）</p>
+            </div>
+          </div>
+
+          <div class="proto-card">
+            <div class="proto-card-header">UDP — 使用者資料報協定</div>
+            <div class="proto-card-body">
+              <p><strong>無連線：</strong>直接傳送，不需建立連線</p>
+              <p><strong>不可靠：</strong>不確認、不重傳、不保證順序</p>
+              <p><strong>低延遲：</strong>無握手開銷，適合即時應用</p>
+              <p><strong>輕量：</strong>Header 只有 8 bytes（TCP 是 20 bytes）</p>
+              <p><strong>可廣播：</strong>支援廣播與多播傳輸</p>
+              <p><strong>適用：</strong>DNS、視訊串流、線上遊戲、VoIP、DHCP</p>
+            </div>
+          </div>
+        </div>
+
+        <h3>TCP 三向交握（Three-Way Handshake）</h3>
+
+        <p>
+          TCP 連線的建立需要三個步驟，確保雙方都準備好且序號已同步：
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">TCP 連線建立與終止</div>
+          <pre>
+    Client                          Server
+      │                                │
+      │─── SYN（seq=x）───────────────>│  客戶端：我想建立連線，我的序號是 x
+      │                                │
+      │<── SYN-ACK（seq=y, ack=x+1）──│  伺服器：收到！我的序號是 y，期待你的 x+1
+      │                                │
+      │─── ACK（ack=y+1）─────────────>│  客戶端：確認！期待你的 y+1
+      │                                │
+      │         ← 資料傳輸 →          │
+      │                                │
+      │─── FIN ───────────────────────>│  關閉：客戶端不再傳送
+      │<── ACK ────────────────────────│
+      │<── FIN ────────────────────────│  伺服器也準備關閉
+      │─── ACK ───────────────────────>│
+      │                                │  連線完全關閉（四向揮手）
+          </pre>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">SYN Flood 攻擊</p>
+          <p>
+            攻擊者大量發送 SYN 封包但不完成三向交握，
+            使伺服器的半連線佇列（SYN Queue）塞滿而無法接受正常連線。
+            這是最常見的 DoS 攻擊手法之一，防禦方式包含 SYN Cookie 技術。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 6 ══ -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>應用層協定概覽</h2>
+
+        <p>
+          應用層協定定義了應用程式之間交換訊息的格式與規則。
+          以下是最核心的幾個應用層協定，後續課程會逐一深入。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>協定</th>
+              <th>傳輸層</th>
+              <th>Port</th>
+              <th>功能</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>HTTP</td>
+              <td>TCP</td>
+              <td>80</td>
+              <td>超文字傳輸，Web 應用的基礎協定（Day 10 深入）</td>
+            </tr>
+            <tr>
+              <td>HTTPS</td>
+              <td>TCP + TLS</td>
+              <td>443</td>
+              <td>加密的 HTTP，保護傳輸中的資料隱私與完整性</td>
+            </tr>
+            <tr>
+              <td>DNS</td>
+              <td>UDP（查詢）/ TCP（區域傳輸）</td>
+              <td>53</td>
+              <td>網域名稱轉換為 IP 位址（Day 9 深入）</td>
+            </tr>
+            <tr>
+              <td>DHCP</td>
+              <td>UDP</td>
+              <td>67/68</td>
+              <td>自動為主機分配 IP 位址與網路設定（Day 12 深入）</td>
+            </tr>
+            <tr>
+              <td>SSH</td>
+              <td>TCP</td>
+              <td>22</td>
+              <td>加密的遠端登入與指令執行，取代不安全的 Telnet</td>
+            </tr>
+            <tr>
+              <td>FTP</td>
+              <td>TCP</td>
+              <td>20/21</td>
+              <td>檔案傳輸；21 為控制連線，20 為資料連線（主動模式）</td>
+            </tr>
+            <tr>
+              <td>SMTP</td>
+              <td>TCP</td>
+              <td>25/587</td>
+              <td>電子郵件傳送協定（Day 11 深入）</td>
+            </tr>
+            <tr>
+              <td>IMAP</td>
+              <td>TCP</td>
+              <td>143/993</td>
+              <td>電子郵件接收，支援在伺服器端管理郵件夾</td>
+            </tr>
+            <tr>
+              <td>SNMP</td>
+              <td>UDP</td>
+              <td>161/162</td>
+              <td>網路設備監控與管理，收集路由器/交換器的狀態資料</td>
+            </tr>
+            <tr>
+              <td>NTP</td>
+              <td>UDP</td>
+              <td>123</td>
+              <td>網路時間同步，讓所有設備的時鐘保持一致</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ══ Section 7 ══ -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>連接埠號碼（Port Numbers）</h2>
+
+        <p>
+          <strong>連接埠（Port）</strong>是傳輸層的多工機制。
+          一台主機上可能同時執行 Web 伺服器、SSH 伺服器、資料庫等多個服務，
+          IP 位址只能識別主機，連接埠號碼才能識別主機上的特定服務或應用程式。
+          連接埠是 16 位元整數，範圍 0–65535。
+        </p>
+
+        <p>
+          IANA 將連接埠號碼分為三個範圍：
+          <strong>Well-Known Ports（0–1023）</strong>由 IANA 統一分配給標準服務，
+          在 Unix 系統上通常需要 root 權限才能監聽；
+          <strong>Registered Ports（1024–49151）</strong>供特定應用程式登記使用；
+          <strong>Dynamic / Ephemeral Ports（49152–65535）</strong>由作業系統臨時分配給用戶端連線。
+        </p>
+
+        <h4>常用 Well-Known Ports</h4>
+
+        <div class="port-grid">
+          <div class="port-item">
+            <span class="port-num">20/21</span>
+            <span class="port-name">FTP</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">22</span>
+            <span class="port-name">SSH</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">23</span>
+            <span class="port-name">Telnet</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">25</span>
+            <span class="port-name">SMTP</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">53</span>
+            <span class="port-name">DNS</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">67/68</span>
+            <span class="port-name">DHCP</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">80</span>
+            <span class="port-name">HTTP</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">110</span>
+            <span class="port-name">POP3</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">123</span>
+            <span class="port-name">NTP</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">143</span>
+            <span class="port-name">IMAP</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">161/162</span>
+            <span class="port-name">SNMP</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">443</span>
+            <span class="port-name">HTTPS</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">587</span>
+            <span class="port-name">SMTP (TLS)</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">993</span>
+            <span class="port-name">IMAPS</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">3306</span>
+            <span class="port-name">MySQL</span>
+          </div>
+          <div class="port-item">
+            <span class="port-num">5432</span>
+            <span class="port-name">PostgreSQL</span>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <p class="box-label">Socket 的概念</p>
+          <p>
+            一個 TCP 連線由四元組唯一識別：
+            <strong>（來源 IP, 來源 Port, 目的 IP, 目的 Port）</strong>。
+            這個四元組稱為 <strong>Socket Pair</strong>。
+            同一台伺服器的 443 port 可以同時服務數萬個連線，
+            因為每個連線的來源 IP 或來源 Port 都不同，四元組各自唯一。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 8 ══ -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>封包在網際網路中的完整旅程</h2>
+
+        <p>
+          把前幾節的知識整合，讓我們追蹤一個 HTTP 請求從你的瀏覽器
+          到 Web 伺服器的完整路徑，觀察每一層如何協作。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">一個 HTTP GET 請求的完整封裝與傳遞流程</div>
+          <pre>
+你的電腦（192.168.1.10）                        Web 伺服器（93.184.216.34）
+━━━━━━━━━━━━━━━━━━━━━━━━━━                      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[應用層]  瀏覽器產生 HTTP GET /index.html
+          ↓
+[傳輸層]  加上 TCP Header
+          Src Port: 54321（臨時）
+          Dst Port: 80（HTTP）
+          Seq: 1001
+          ↓
+[網路層]  加上 IP Header
+          Src IP: 192.168.1.10（你的 IP）
+          Dst IP: 93.184.216.34（伺服器 IP）
+          TTL: 64
+          ↓
+[網路存取層] 加上 Ethernet Header
+          Src MAC: 你的 NIC MAC
+          Dst MAC: 閘道器的 MAC（透過 ARP 取得）
+          ↓
+[實體層]  轉為電訊號，送上網線
+
+──── 閘道器（你家路由器）────────────────────────────────────────────
+
+  接收訊框 → 解封裝到 IP 層
+  查詢路由表 → 下一跳：ISP 路由器 1.2.3.4
+  重新封裝：更新 Dst MAC = ISP 路由器的 MAC
+  TTL: 64 → 63
+  送出
+
+──── 中途路由器（重複上述，TTL 每跳 -1）─────────────────────────────
+
+──── 伺服器端 ───────────────────────────────────────────────────────
+
+[實體層]  接收電訊號
+          ↓
+[網路存取層] 讀取 Ethernet Frame，確認 Dst MAC = 自己的 MAC
+          ↓
+[網路層]  讀取 IP Header，確認 Dst IP = 93.184.216.34（是我！）
+          ↓
+[傳輸層]  讀取 TCP Header，Dst Port = 80 → 交給 HTTP 服務程序
+          確認 Seq，發送 ACK
+          ↓
+[應用層]  HTTP 伺服器處理請求，回傳 200 OK + HTML
+          </pre>
+        </div>
+
+        <p>
+          注意一個關鍵細節：在整個傳輸過程中，
+          <strong>IP 位址（Src/Dst IP）始終不變</strong>，是端對端的全程標識；
+          但<strong>MAC 位址（Src/Dst MAC）在每一跳都會更換</strong>，
+          只在相鄰的兩個設備之間有意義。
+          這正是 IP（全域邏輯位址）與 MAC（本地實體位址）分工的精髓。
+        </p>
+      </section>
+
+      <!-- ══ Section 9 ══ -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>TCP/IP vs. OSI 深度對照</h2>
+
+        <p>
+          理解兩個模型的對應關係，能讓你在討論協定時靈活切換框架。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">模型對照與協定定位</div>
+          <pre>
+ OSI Layer  OSI 名稱         TCP/IP 層          代表協定
+ ─────────────────────────────────────────────────────────
+    7       Application   ┐
+    6       Presentation  ├─ Application       HTTP, HTTPS, FTP, DNS,
+    5       Session       ┘                    SMTP, SSH, SNMP, NTP
+ ─────────────────────────────────────────────────────────
+    4       Transport     ─── Transport        TCP, UDP, SCTP, QUIC
+ ─────────────────────────────────────────────────────────
+    3       Network       ─── Internet         IPv4, IPv6, ICMP, IGMP
+ ─────────────────────────────────────────────────────────
+    2       Data Link     ┐
+    1       Physical      ├─ Network Access    Ethernet, Wi-Fi, ARP,
+                          ┘                    PPP, DSL, 光纖
+          </pre>
+        </div>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>面向</th>
+              <th>OSI 模型</th>
+              <th>TCP/IP 協定族</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>性質</td>
+              <td>參考模型，理論框架</td>
+              <td>實作協定族，實際運行</td>
+            </tr>
+            <tr>
+              <td>層數</td>
+              <td>7 層</td>
+              <td>4 層</td>
+            </tr>
+            <tr>
+              <td>發展背景</td>
+              <td>ISO 委員會制定，先有模型後有協定</td>
+              <td>ARPANET 實戰演化，先有協定後有模型</td>
+            </tr>
+            <tr>
+              <td>彈性</td>
+              <td>嚴格分層，各層功能明確</td>
+              <td>層次較模糊，實作可跨層</td>
+            </tr>
+            <tr>
+              <td>實際使用</td>
+              <td>教學、排錯框架、協定設計參考</td>
+              <td>網際網路的實際通訊基礎</td>
+            </tr>
+            <tr>
+              <td>代表文件</td>
+              <td>ISO 7498</td>
+              <td>RFC 791（IP）、RFC 793（TCP）</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- ══ Summary ══ -->
+      <section class="lesson-section" id="s10">
+        <div class="summary-box">
+          <div class="summary-label">Day 3 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>TCP/IP 的三大設計哲學：端對端原則、盡力傳送、無狀態路由</li>
+            <li>TCP/IP 四層：Network Access → Internet → Transport → Application</li>
+            <li>ARP 在同一 LAN 內將 IP 解析為 MAC 位址，無認證機制易受欺騙</li>
+            <li>IPv4 Header 含 TTL（防迴圈）、Protocol（辨識上層）、Checksum（只驗 Header）</li>
+            <li>IPv6：128 位元位址、固定 40 bytes Header、無廣播、無需 NAT</li>
+            <li>TCP 可靠有序（三向交握、ACK 確認）；UDP 輕量快速（無連線、無確認）</li>
+            <li>連接埠 0–1023 為 Well-Known，65535 以下為動態；四元組唯一識別一條連線</li>
+            <li>封包旅程：IP 位址全程不變；MAC 位址每跳更換，兩者分工明確</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <!-- ── Sidebar ── -->
+    <aside>
+
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">3 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>TCP/IP</li>
+          <li><span>#</span>End-to-End Principle</li>
+          <li><span>#</span>Best Effort Delivery</li>
+          <li><span>#</span>ARP</li>
+          <li><span>#</span>IPv4 / IPv6</li>
+          <li><span>#</span>TTL</li>
+          <li><span>#</span>ICMP</li>
+          <li><span>#</span>TCP Three-Way Handshake</li>
+          <li><span>#</span>UDP</li>
+          <li><span>#</span>Well-Known Port</li>
+          <li><span>#</span>Socket Pair</li>
+          <li><span>#</span>Ephemeral Port</li>
+          <li><span>#</span>Fragmentation</li>
+          <li><span>#</span>RFC 791 / RFC 793</li>
+        </ul>
+      </div>
+
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day2.html">
+            <span>&larr; Day 2: OSI 七層模型</span>
+          </a>
+          <a href="index.html">
+            <span>課程首頁</span>
+            <span>&uarr;</span>
+          </a>
+          <a href="day4.html">
+            <span>Day 4: IP 位址與子網路</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 03 / 16</p>
+    <p>下一課：<a href="day4.html" style="color:var(--accent);text-decoration:none;">IP 位址與子網路 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

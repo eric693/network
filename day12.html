@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 12 — 網路診斷與監控 | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a1a1a; --paper: #f5f0e8; --accent: #c0392b;
+      --mid: #7a6a5a; --line: rgba(26,26,26,0.12); --code-bg: rgba(26,26,26,0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background-color: var(--paper); color: var(--ink); font-family: 'Noto Sans TC', sans-serif; font-weight: 300; line-height: 1.9; min-height: 100vh; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+
+    .topnav { position: relative; z-index: 10; padding: 20px 8vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
+    .topnav a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--mid); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+    .topnav a:hover { color: var(--accent); }
+    .topnav .breadcrumb { display: flex; align-items: center; gap: 8px; }
+    .topnav .sep { color: var(--line); font-size: 14px; }
+    .topnav .nav-group { display: flex; gap: 24px; }
+
+    .hero { position: relative; z-index: 1; padding: 64px 8vw 56px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: end; }
+    .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.22em; color: var(--accent); text-transform: uppercase; margin-bottom: 18px; }
+    .hero h1 { font-family: 'Noto Serif TC', serif; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
+    .hero-desc { margin-top: 20px; font-size: 1rem; color: var(--mid); max-width: 560px; }
+    .hero-meta .day-num { font-family: 'IBM Plex Mono', monospace; font-size: 6rem; font-weight: 500; line-height: 1; color: var(--ink); opacity: 0.08; display: block; }
+
+    .toc-bar { position: relative; z-index: 1; padding: 24px 8vw; border-bottom: 1px solid var(--line); background: rgba(26,26,26,0.03); }
+    .toc-bar h2 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 14px; }
+    .toc-list { display: flex; flex-wrap: wrap; gap: 8px 24px; list-style: none; }
+    .toc-list li a { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--mid); text-decoration: none; transition: color 0.2s; }
+    .toc-list li a:hover { color: var(--accent); }
+    .toc-list li::before { content: attr(data-n) ". "; color: var(--accent); font-size: 10px; }
+
+    .main-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 260px; align-items: start; }
+    article { padding: 64px 6vw 80px 8vw; border-right: 1px solid var(--line); }
+
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+    .section-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 10px; }
+    .lesson-section h2 { font-family: 'Noto Serif TC', serif; font-size: 1.75rem; font-weight: 600; line-height: 1.3; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .lesson-section h3 { font-family: 'Noto Serif TC', serif; font-size: 1.15rem; font-weight: 600; margin: 36px 0 12px; }
+    .lesson-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--mid); margin: 24px 0 10px; letter-spacing: 0.05em; }
+    .lesson-section p { margin-bottom: 16px; font-size: 0.97rem; }
+    .lesson-section p:last-child { margin-bottom: 0; }
+    strong { font-weight: 500; color: var(--ink); }
+    code { font-family: 'IBM Plex Mono', monospace; font-size: 0.85em; background: var(--code-bg); padding: 2px 6px; color: var(--ink); }
+
+    .highlight-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--accent); background: rgba(192,57,43,0.05); }
+    .highlight-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+    .info-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--mid); background: var(--code-bg); }
+    .info-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 8px; }
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    .def-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.9rem; }
+    .def-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); text-align: left; padding: 10px 16px; background: var(--code-bg); border-bottom: 1px solid var(--line); }
+    .def-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+    .def-table tr:last-child td { border-bottom: none; }
+    .def-table td:first-child { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+    .diagram { margin: 28px 0; background: var(--code-bg); border: 1px solid var(--line); padding: 28px 24px; }
+    .diagram-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px; }
+    .diagram pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* tool reference cards */
+    .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 0; border: 1px solid var(--line); margin: 24px 0; }
+    .tool-card { padding: 18px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background 0.15s; }
+    .tool-card:hover { background: rgba(26,26,26,0.03); }
+    .tool-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; font-weight: 500; color: var(--accent); margin-bottom: 3px; }
+    .tool-layer { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--mid); margin-bottom: 8px; letter-spacing: 0.06em; }
+    .tool-desc { font-size: 0.82rem; color: var(--ink); line-height: 1.6; }
+    .tool-cmd { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--mid); margin-top: 6px; }
+
+    /* command output block */
+    .cmd-block { margin: 24px 0; border: 1px solid var(--line); overflow: hidden; }
+    .cmd-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .cmd-header .cmd-os { font-size: 0.68rem; opacity: 0.6; }
+    .cmd-body { padding: 20px 22px; background: rgba(26,26,26,0.04); }
+    .cmd-body pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre; }
+    .cmd-body .prompt { color: var(--accent); }
+    .cmd-body .comment { color: var(--mid); }
+
+    /* metric cards */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 0; border: 1px solid var(--line); margin: 24px 0; }
+    .metric-card { padding: 18px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .metric-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--accent); margin-bottom: 4px; }
+    .metric-unit { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--mid); margin-bottom: 8px; }
+    .metric-desc { font-size: 0.82rem; color: var(--ink); line-height: 1.55; }
+
+    /* protocol stack for monitoring */
+    .monitor-stack { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .ms-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .ms-row { display: grid; grid-template-columns: 130px 1fr 1fr; border-bottom: 1px solid var(--line); }
+    .ms-row:last-child { border-bottom: none; }
+    .ms-row:not(:first-child):hover { background: rgba(26,26,26,0.03); }
+    .ms-cell { padding: 11px 14px; font-size: 0.85rem; border-right: 1px solid var(--line); line-height: 1.6; }
+    .ms-cell:last-child { border-right: none; }
+    .ms-cell.label { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--accent); font-weight: 500; }
+    .ms-cell.head { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid); font-weight: 500; background: var(--code-bg); }
+
+    .divider { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
+    .summary-box { margin-top: 48px; padding: 28px 32px; background: var(--ink); color: var(--paper); }
+    .summary-box .summary-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.25em; color: rgba(245,240,232,0.5); text-transform: uppercase; margin-bottom: 16px; }
+    .summary-box h3 { font-family: 'Noto Serif TC', serif; font-size: 1.1rem; font-weight: 600; color: var(--paper); margin-bottom: 16px; }
+    .summary-box ul { list-style: none; padding: 0; }
+    .summary-box ul li { font-size: 0.9rem; color: rgba(245,240,232,0.8); padding: 6px 0 6px 16px; border-bottom: 1px solid rgba(245,240,232,0.08); position: relative; }
+    .summary-box ul li::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-size: 0.8rem; }
+
+    aside { padding: 48px 28px; position: sticky; top: 0; }
+    .aside-section { margin-bottom: 40px; }
+    .aside-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .keyword-list { list-style: none; padding: 0; }
+    .keyword-list li { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid); padding: 5px 0; border-bottom: 1px solid var(--line); transition: color 0.2s; }
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+    .progress-bar { height: 3px; background: var(--line); margin: 12px 0 20px; position: relative; }
+    .progress-bar::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 75%; background: var(--accent); }
+    .progress-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mid); letter-spacing: 0.1em; }
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+    .nav-links a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); transition: border-color 0.2s, color 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+    footer { position: relative; z-index: 1; padding: 32px 8vw; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    footer p { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); letter-spacing: 0.1em; }
+
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+      aside { position: static; border-top: 1px solid var(--line); padding: 40px 8vw; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; } .hero-meta { display: none; }
+      .ms-row { grid-template-columns: 110px 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .ms-row { grid-template-columns: 1fr; }
+      .ms-cell { border-right: none; }
+      .tool-grid { grid-template-columns: 1fr; }
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar { animation-delay: 0.10s; } article { animation-delay: 0.15s; } aside { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 12</a>
+    </div>
+    <div class="nav-group">
+      <a href="day11.html">&larr; Day 11</a>
+      <a href="day13.html">Day 13 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 04 &mdash; 實務與工具 &mdash; Day 12 / 16</p>
+      <h1>網路診斷與監控<br>讓問題無所遁形的工具箱</h1>
+      <p class="hero-desc">
+        網路出了問題，你會從哪裡開始？系統性的診斷需要正確的工具與方法論，
+        而不是盲目地「重開機試試看」。本課帶你掌握從 <code>ping</code> 到 Wireshark、
+        從 SNMP 到現代可觀測性（Observability）的完整工具鏈，
+        讓每一次故障排除都有跡可循。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">12</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">系統性診斷方法論</a></li>
+      <li data-n="2"><a href="#s2">基礎診斷指令全覽</a></li>
+      <li data-n="3"><a href="#s3">封包分析：Wireshark 實戰</a></li>
+      <li data-n="4"><a href="#s4">網路效能指標</a></li>
+      <li data-n="5"><a href="#s5">SNMP 與網路設備監控</a></li>
+      <li data-n="6"><a href="#s6">NetFlow 與流量分析</a></li>
+      <li data-n="7"><a href="#s7">日誌管理與 SIEM</a></li>
+      <li data-n="8"><a href="#s8">現代可觀測性：Metrics、Logs、Traces</a></li>
+      <li data-n="9"><a href="#s9">常見故障場景排查指南</a></li>
+      <li data-n="10"><a href="#s10">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <!-- S1 -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>系統性診斷方法論</h2>
+        <p>
+          遇到網路問題時，最常見的錯誤是跳過分析直接嘗試解決方案，
+          結果花了一小時「試」各種方法卻沒有進展。
+          系統性診斷的核心思想是：<strong>先定位問題在哪一層、哪個環節，再針對性修復</strong>。
+        </p>
+
+        <h3>OSI 分層診斷法（由下往上）</h3>
+        <div class="diagram">
+          <div class="diagram-title">分層排查流程：「能上網嗎？」的完整診斷路徑</div>
+          <pre>
+  L1 — 實體層
+    ├── 網路線插好了嗎？燈號是否正常？
+    ├── Wi-Fi 訊號強度是否足夠？（iwconfig / Airport Utility）
+    └── 確認：實體連線正常
+         ↓
+  L2 — 資料鏈路層
+    ├── ip link show — 介面是否 UP？
+    ├── 是否有 IP 位址？（ip addr 或 ipconfig）
+    └── ARP 表是否有閘道的 MAC？（arp -a 或 ip neigh）
+         ↓
+  L3 — 網路層
+    ├── ping 閘道（如 192.168.1.1）— 能到閘道嗎？
+    ├── ping 8.8.8.8 — 能到網際網路 IP 嗎？
+    ├── traceroute 8.8.8.8 — 封包在哪一跳卡住？
+    └── ip route show — 路由表是否正確？
+         ↓
+  L4 — 傳輸層
+    ├── telnet host 443 / nc -zv host 443 — 連接埠是否開放？
+    ├── ss -tnp — 有沒有建立連線？
+    └── netstat -s — 是否有大量 TCP 重傳？
+         ↓
+  L7 — 應用層
+    ├── curl -v https://example.com — HTTP/TLS 是否正常？
+    ├── dig example.com — DNS 是否正確解析？
+    └── 查看應用程式日誌 — 有無應用層錯誤訊息？</pre>
+        </div>
+
+        <h3>二分法（Binary Search）診斷</h3>
+        <p>
+          面對複雜的路徑問題（如 A 到 Z 之間某跳出問題），
+          不要從頭逐一測試，而是先測試中間點。
+          若中間點通，問題在後半段；若不通，問題在前半段。
+          持續二分直到定位到具體故障點，效率遠高於線性搜尋。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">診斷黃金法則</p>
+          <p>
+            在開始任何排查之前，先問自己三個問題：
+            <strong>（1）這個問題什麼時候開始的？</strong>（確認是突然發生還是漸進惡化）
+            <strong>（2）這段時間有什麼變更？</strong>（更新、設定修改、新設備上線）
+            <strong>（3）影響範圍是什麼？</strong>（只有你的機器？特定 VLAN？所有用戶？）
+            這三個問題往往能在 5 分鐘內大幅縮小故障範圍。
+          </p>
+        </div>
+      </section>
+
+      <!-- S2 -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>基礎診斷指令全覽</h2>
+
+        <div class="tool-grid">
+          <div class="tool-card">
+            <div class="tool-name">ping</div>
+            <div class="tool-layer">L3 — ICMP Echo</div>
+            <div class="tool-desc">測試主機可達性與 RTT。可指定封包大小（<code>-s</code>）、次數（<code>-c</code>）、TTL（<code>-t</code>）。</div>
+            <div class="tool-cmd">ping -c 10 -s 1400 8.8.8.8</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">traceroute / tracert</div>
+            <div class="tool-layer">L3 — TTL 遞增探測</div>
+            <div class="tool-desc">顯示封包路徑上每一跳的路由器與延遲。Linux 預設 UDP，Windows 用 ICMP。</div>
+            <div class="tool-cmd">traceroute -n 8.8.8.8 &nbsp;|&nbsp; tracert 8.8.8.8</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">mtr</div>
+            <div class="tool-layer">L3 — 持續追蹤</div>
+            <div class="tool-desc">結合 ping 和 traceroute，持續更新每跳的封包遺失率與延遲，是排查間歇性路由問題的最佳工具。</div>
+            <div class="tool-cmd">mtr --report -n 8.8.8.8</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">dig / nslookup</div>
+            <div class="tool-layer">L7 — DNS 查詢</div>
+            <div class="tool-desc">查詢 DNS 記錄。<code>+trace</code> 選項從根伺服器開始完整追蹤解析路徑，診斷 DNS 傳播問題。</div>
+            <div class="tool-cmd">dig +trace @8.8.8.8 www.example.com A</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">curl</div>
+            <div class="tool-layer">L7 — HTTP/TLS 測試</div>
+            <div class="tool-desc">測試 HTTP/HTTPS 連線。<code>-v</code> 顯示完整握手過程，<code>-w</code> 輸出各階段計時，<code>-k</code> 忽略憑證錯誤。</div>
+            <div class="tool-cmd">curl -v -w "\nTime: %{time_total}s\n" https://example.com</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">ss / netstat</div>
+            <div class="tool-layer">L4 — 連線狀態</div>
+            <div class="tool-desc">顯示 TCP/UDP socket 狀態。<code>ss</code> 是現代替代品，速度更快。<code>-tnp</code> 顯示 TCP 連線與對應進程。</div>
+            <div class="tool-cmd">ss -tnp &nbsp;|&nbsp; ss -lnup（監聽的 UDP）</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">ip / ifconfig</div>
+            <div class="tool-layer">L2/L3 — 介面與路由</div>
+            <div class="tool-desc">查看介面狀態、IP 位址、路由表、ARP 鄰居表。<code>ip</code> 是 <code>ifconfig</code>/<code>route</code> 的現代替代品。</div>
+            <div class="tool-cmd">ip addr show &nbsp;|&nbsp; ip route show &nbsp;|&nbsp; ip neigh</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">nmap</div>
+            <div class="tool-layer">L3/L4 — 掃描探測</div>
+            <div class="tool-desc">主機探測、埠掃描、服務版本偵測、OS 識別。<code>-sV</code> 偵測服務版本，<code>-sC</code> 執行預設腳本。</div>
+            <div class="tool-cmd">nmap -sV -p 1-1000 192.168.1.0/24</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">tcpdump</div>
+            <div class="tool-layer">L2–L7 — 封包擷取</div>
+            <div class="tool-desc">命令列封包擷取工具。可用 BPF 過濾器精確指定擷取條件，輸出可供 Wireshark 分析。</div>
+            <div class="tool-cmd">tcpdump -i eth0 -w cap.pcap 'host 8.8.8.8'</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">iperf3</div>
+            <div class="tool-layer">L4 — 頻寬測試</div>
+            <div class="tool-desc">精確測量兩點之間的 TCP/UDP 吞吐量、抖動（Jitter）和封包遺失率。需在兩端同時執行。</div>
+            <div class="tool-cmd">iperf3 -s（伺服端）&nbsp;|&nbsp; iperf3 -c &lt;IP&gt;（客戶端）</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">openssl s_client</div>
+            <div class="tool-layer">L7 — TLS 診斷</div>
+            <div class="tool-desc">建立 TLS 連線並顯示完整憑證鏈資訊。診斷憑證過期、SNI 問題、TLS 版本協商等。</div>
+            <div class="tool-cmd">openssl s_client -connect example.com:443 -servername example.com</div>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">ethtool</div>
+            <div class="tool-layer">L1/L2 — 實體層診斷</div>
+            <div class="tool-desc">查看網卡速度、雙工模式、連線狀態。可診斷實體層協商問題（如 1Gbps 被協商成 100Mbps）。</div>
+            <div class="tool-cmd">ethtool eth0 &nbsp;|&nbsp; ethtool -S eth0（統計）</div>
+          </div>
+        </div>
+
+        <div class="cmd-block">
+          <div class="cmd-header">curl 計時分解：每個階段耗時多少？<span class="cmd-os">Linux / macOS</span></div>
+          <div class="cmd-body">
+            <pre><span class="prompt">$</span> curl -w "
+DNS 解析:      %{time_namelookup}s
+TCP 連線:      %{time_connect}s
+TLS 握手:      %{time_appconnect}s
+等待第一 Byte: %{time_starttransfer}s
+總計:          %{time_total}s
+" -o /dev/null -s https://www.example.com
+
+<span class="comment"># 典型輸出：</span>
+DNS 解析:      0.012s
+TCP 連線:      0.045s
+TLS 握手:      0.098s
+等待第一 Byte: 0.142s
+總計:          0.185s
+
+<span class="comment"># 分析：TLS 握手從 TCP 連線後的 0.045s 到 0.098s，耗時 53ms（一次 RTT）
+# 這是 TLS 1.3 的正常值；若超過 200ms，需檢查 OCSP 裁決或 DNS 解析</span></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- S3 -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>封包分析：Wireshark 實戰</h2>
+        <p>
+          <strong>Wireshark</strong> 是業界標準的 GUI 封包分析工具，
+          能夠擷取、解碼、過濾和分析所有網路協定的封包。
+          掌握 Wireshark 的顯示過濾器和統計功能，
+          是進階網路診斷和安全分析的核心能力。
+        </p>
+
+        <h3>BPF 擷取過濾器 vs 顯示過濾器</h3>
+        <table class="def-table">
+          <thead><tr><th>類型</th><th>語法</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>擷取過濾器（Capture Filter）</td>
+              <td>BPF 語法</td>
+              <td>在擷取時就過濾，減少 pcap 檔案大小。<code>host 8.8.8.8</code>、<code>port 443</code>、<code>tcp and not port 22</code></td>
+            </tr>
+            <tr>
+              <td>顯示過濾器（Display Filter）</td>
+              <td>Wireshark 語法</td>
+              <td>擷取後在介面過濾顯示，功能更強大。<code>http.request</code>、<code>tcp.flags.syn == 1</code>、<code>dns.qry.name contains "google"</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="cmd-block">
+          <div class="cmd-header">常用 Wireshark 顯示過濾器備忘錄<span class="cmd-os">Wireshark Display Filter</span></div>
+          <div class="cmd-body">
+            <pre><span class="comment"># HTTP/HTTPS</span>
+http.request.method == "POST"
+http.response.code == 200
+ssl.handshake.type == 1        <span class="comment"># Client Hello</span>
+tls.record.content_type == 21  <span class="comment"># TLS Alert（憑證錯誤等）</span>
+
+<span class="comment"># TCP 問題診斷</span>
+tcp.analysis.retransmission    <span class="comment"># 所有重傳封包</span>
+tcp.analysis.zero_window       <span class="comment"># 零視窗（接收方緩衝區滿）</span>
+tcp.analysis.duplicate_ack     <span class="comment"># 重複 ACK（潛在丟包）</span>
+tcp.flags.reset == 1           <span class="comment"># RST 封包（連線異常重置）</span>
+
+<span class="comment"># DNS</span>
+dns.flags.response == 1 and dns.flags.rcode != 0  <span class="comment"># DNS 錯誤回應</span>
+dns.qry.type == 28             <span class="comment"># AAAA（IPv6 查詢）</span>
+
+<span class="comment"># 進階過濾</span>
+ip.addr == 192.168.1.0/24      <span class="comment"># 某個子網路的所有流量</span>
+frame.time_delta > 1           <span class="comment"># 相鄰封包時間差超過 1 秒</span>
+tcp.stream eq 5                <span class="comment"># 只顯示第 5 條 TCP 串流</span></pre>
+          </div>
+        </div>
+
+        <h3>Wireshark 實用功能</h3>
+        <table class="def-table">
+          <thead><tr><th>功能</th><th>位置</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>Follow TCP Stream</td><td>右鍵選單</td><td>重建整條 TCP 連線的應用層內容（如完整 HTTP 請求/回應），一鍵查看明文對話</td></tr>
+            <tr><td>Statistics → I/O Graph</td><td>Statistics 選單</td><td>視覺化流量隨時間的變化，識別流量突增或週期性模式</td></tr>
+            <tr><td>Statistics → TCP Stream Graphs</td><td>Statistics 選單</td><td>RTT 圖、吞吐量圖、視窗大小圖，直觀診斷 TCP 效能問題</td></tr>
+            <tr><td>Statistics → Conversations</td><td>Statistics 選單</td><td>列出所有通訊對端及其流量統計，快速找出最大流量來源</td></tr>
+            <tr><td>Expert Information</td><td>Analyze → Expert Info</td><td>Wireshark 自動標示的問題：重傳、零視窗、連線重置等異常</td></tr>
+            <tr><td>Decryption（TLS 解密）</td><td>Preferences → RSA Keys 或 SSLKEYLOGFILE</td><td>若有 Session Key 日誌（Firefox/Chrome 支援），可解密 TLS 流量查看明文</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S4 -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>網路效能指標</h2>
+        <p>
+          量化網路效能需要幾個核心指標，
+          理解它們的定義與相互關係，
+          才能正確解讀監控數據並找出真正的瓶頸。
+        </p>
+
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-name">頻寬（Bandwidth）</div>
+            <div class="metric-unit">bps / Mbps / Gbps</div>
+            <div class="metric-desc">連線的最大資料傳輸速率（理論上限）。1Gbps 乙太網路的頻寬是 1,000 Mbps。注意頻寬 ≠ 速度。</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-name">吞吐量（Throughput）</div>
+            <div class="metric-unit">bps（實際值）</div>
+            <div class="metric-desc">實際達到的資料傳輸速率，通常低於頻寬（受協定開銷、丟包、壅塞控制影響）。iperf3 測量的就是吞吐量。</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-name">延遲（Latency / RTT）</div>
+            <div class="metric-unit">ms</div>
+            <div class="metric-desc">封包從 A 到 B 再回來的時間（往返）。由傳播延遲、處理延遲、排隊延遲組成。ping 測量 RTT。</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-name">抖動（Jitter）</div>
+            <div class="metric-unit">ms</div>
+            <div class="metric-desc">延遲的變異量（不穩定性）。對 VoIP 和視訊會議影響極大，抖動 &gt;30ms 通話品質明顯下降。</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-name">封包遺失率（Packet Loss）</div>
+            <div class="metric-unit">%</div>
+            <div class="metric-desc">遺失封包佔總傳送封包的比例。1% 的丟包對 TCP 吞吐量可能造成超過 50% 的下降（壅塞控制降速）。</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-name">BDP（頻寬-延遲積）</div>
+            <div class="metric-unit">bytes</div>
+            <div class="metric-desc">BDP = Bandwidth × RTT。代表「飛行中」的最大資料量，決定 TCP 視窗的最優大小。高 BDP 網路需要 Window Scale 選項。</div>
+          </div>
+        </div>
+
+        <h3>頻寬 vs 延遲：誰是真正的瓶頸？</h3>
+        <div class="diagram">
+          <div class="diagram-title">不同應用對頻寬與延遲的敏感度</div>
+          <pre>
+  高頻寬需求 ↑
+              │  大型檔案下載   4K 影片串流
+              │  (頻寬敏感，    (頻寬 + 緩衝
+              │   延遲可接受)    延遲較不敏感)
+              │
+              │  HTTP 網頁載入  即時遊戲
+              │  (兩者都重要，  VoIP / 視訊會議
+              │   TLS 握手延遲  (低延遲最關鍵，
+              │   是主要瓶頸)    頻寬需求低)
+              │
+  低頻寬需求  └─────────────────────────────→ 高延遲敏感
+              低延遲敏感           高延遲敏感
+
+  規律：
+    互動式應用（遊戲、VoIP）：延遲 > 頻寬
+    大量傳輸（備份、影片）：頻寬 > 延遲
+    Web 應用：兩者都重要，但首字節時間（TTFB）通常是關鍵</pre>
+        </div>
+      </section>
+
+      <!-- S5 -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>SNMP 與網路設備監控</h2>
+        <p>
+          <strong>SNMP（Simple Network Management Protocol）</strong>
+          是監控路由器、交換器、UPS 等網路設備的標準協定，
+          使用 UDP Port 161（查詢）和 162（Trap 通知）。
+          大多數網路設備都支援 SNMP，它是傳統 NOC（Network Operations Center）的基礎。
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>版本</th><th>安全性</th><th>認證方式</th></tr></thead>
+          <tbody>
+            <tr><td>SNMPv1</td><td>極低</td><td>Community String（明文），如 "public"、"private"。已不建議使用</td></tr>
+            <tr><td>SNMPv2c</td><td>低</td><td>仍用明文 Community String，但效能更好。目前最常見，但有安全風險</td></tr>
+            <tr><td>SNMPv3</td><td>高</td><td>使用者認證（MD5/SHA）+ 資料加密（DES/AES）。企業環境應強制使用</td></tr>
+          </tbody>
+        </table>
+
+        <h3>MIB 與 OID：SNMP 的資料結構</h3>
+        <p>
+          SNMP 透過<strong>OID（Object Identifier）</strong>存取設備上的特定資料，
+          例如 <code>1.3.6.1.2.1.2.2.1.10.1</code> 代表介面 1 的接收位元組數。
+          <strong>MIB（Management Information Base）</strong>是 OID 的定義字典，
+          將數字 OID 映射到人類可讀的名稱（如 <code>ifInOctets</code>）。
+        </p>
+
+        <div class="cmd-block">
+          <div class="cmd-header">SNMP 常用指令<span class="cmd-os">Linux / net-snmp</span></div>
+          <div class="cmd-body">
+            <pre><span class="comment"># 查詢設備系統描述</span>
+<span class="prompt">$</span> snmpget -v2c -c public 192.168.1.1 sysDescr.0
+
+<span class="comment"># 遍歷介面統計（Walk）</span>
+<span class="prompt">$</span> snmpwalk -v2c -c public 192.168.1.1 ifTable
+
+<span class="comment"># 常用 OID</span>
+sysDescr.0      <span class="comment"># 系統描述</span>
+ifInOctets      <span class="comment"># 介面接收位元組數</span>
+ifOutOctets     <span class="comment"># 介面傳送位元組數</span>
+ifInErrors      <span class="comment"># 介面接收錯誤數</span>
+cpuUser         <span class="comment"># CPU 使用率（廠商自訂 OID）</span>
+
+<span class="comment"># 接收 SNMP Trap（設備主動通知）</span>
+<span class="prompt">$</span> snmptrapd -f -Lo <span class="comment"># 前台接收並列印</span></pre>
+          </div>
+        </div>
+
+        <h3>現代網路監控工具生態</h3>
+        <table class="def-table">
+          <thead><tr><th>工具</th><th>類型</th><th>特點</th></tr></thead>
+          <tbody>
+            <tr><td>Prometheus + Grafana</td><td>開源，拉取式（Pull-based）</td><td>指標時間序列資料庫 + 視覺化。SNMP Exporter 橋接 SNMP 到 Prometheus。現代雲原生監控標準</td></tr>
+            <tr><td>Zabbix</td><td>開源，推送/拉取兩用</td><td>成熟的企業監控平台，內建 SNMP、IPMI、JMX 支援，自帶 Web UI 和告警</td></tr>
+            <tr><td>LibreNMS</td><td>開源</td><td>自動發現並監控網路設備，支援數百種廠商設備，自動繪製拓撲圖</td></tr>
+            <tr><td>PRTG</td><td>商業（基本版免費）</td><td>Windows 平台，設定簡單，適合中小型網路</td></tr>
+            <tr><td>Datadog / New Relic</td><td>SaaS</td><td>雲端監控平台，整合 APM、日誌、基礎設施監控，適合雲原生應用</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S6 -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>NetFlow 與流量分析</h2>
+        <p>
+          SNMP 只能告訴你「介面的流量是多少」，但無法告訴你「是誰在佔用頻寬」。
+          <strong>NetFlow</strong>（Cisco，RFC 3954）和其開放標準 <strong>IPFIX</strong>（RFC 7011）
+          提供<strong>流量紀錄（Flow Records）</strong>——記錄每一條網路流（五元組：來源 IP/Port、目的 IP/Port、Protocol）的封包數和位元組數。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">NetFlow 架構：資料如何從設備到分析平台</div>
+          <pre>
+  ┌──────────────────────────────────────────────────────┐
+  │  路由器 / 交換器（Flow Exporter）                     │
+  │  偵測流量 → 聚合成 Flow Records → 定期（如 60 秒）     │
+  │  匯出到 Collector                                     │
+  └────────────────────┬─────────────────────────────────┘
+                       │ UDP（通常 Port 2055 或 9995）
+                       ↓
+  ┌──────────────────────────────────────────────────────┐
+  │  NetFlow Collector（如 ntopng、Elastiflow、Scrutinizer）│
+  │  接收、儲存、索引 Flow Records                        │
+  └────────────────────┬─────────────────────────────────┘
+                       │
+                       ↓
+  ┌──────────────────────────────────────────────────────┐
+  │  分析 / 視覺化介面                                    │
+  │  Top Talkers（最大流量來源）                          │
+  │  Top Destinations（最多連線目的地）                    │
+  │  Protocol Distribution（協定分布）                    │
+  │  異常流量偵測（如突然的大量 UDP → 可能是 DDoS）        │
+  └──────────────────────────────────────────────────────┘</pre>
+        </div>
+
+        <p>
+          NetFlow 是容量規劃（Capacity Planning）和安全事件調查的強大工具：
+          它可以在事後重建「某個 IP 在某段時間的所有對外連線」，
+          即使沒有完整的封包擷取記錄也能追蹤攻擊源頭。
+          相比完整封包擷取，NetFlow 的儲存空間需求約為流量的 0.5%，
+          更適合長期保留。
+        </p>
+      </section>
+
+      <!-- S7 -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>日誌管理與 SIEM</h2>
+
+        <h3>集中式日誌管理</h3>
+        <p>
+          每台設備都有日誌，但分散在各自的本地儲存中，
+          既難以搜尋跨設備的事件，又有被攻擊者篡改的風險。
+          <strong>集中式日誌管理</strong>將所有設備的日誌即時傳送到中央平台。
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>協定 / 工具</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>Syslog（UDP/TCP 514）</td><td>Unix/Linux 系統和網路設備的標準日誌協定（RFC 5424）。<code>rsyslog</code>/<code>syslog-ng</code> 可轉發到中央伺服器</td></tr>
+            <tr><td>Windows Event Log</td><td>Windows 系統日誌，可透過 WinRM 或 Elastic Agent 轉發到集中平台</td></tr>
+            <tr><td>ELK Stack</td><td>Elasticsearch（儲存搜尋）+ Logstash（解析轉換）+ Kibana（視覺化），開源的日誌分析平台</td></tr>
+            <tr><td>Loki + Grafana</td><td>Grafana Labs 的輕量級日誌聚合方案，不索引日誌內容，儲存成本低</td></tr>
+          </tbody>
+        </table>
+
+        <h3>SIEM：安全事件關聯分析</h3>
+        <p>
+          <strong>SIEM（Security Information and Event Management）</strong>
+          在集中日誌的基礎上增加<strong>關聯分析（Correlation）</strong>能力：
+          將來自防火牆、IDS、VPN、應用程式的事件關聯起來，
+          偵測單一事件看不出來的攻擊模式。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">SIEM 關聯規則範例</div>
+          <pre>
+  規則：偵測帳號暴力破解後成功登入
+  ─────────────────────────────────────────────────────
+  條件 1：同一 IP 在 5 分鐘內觸發 ≥ 10 次登入失敗
+  AND
+  條件 2：同一 IP 在隨後 1 分鐘內有一次登入成功
+
+  → 觸發告警：高嚴重性「帳號暴力破解後成功入侵」
+  → 自動動作：鎖定帳號 + 封鎖來源 IP + 通知 SOC
+
+  ─────────────────────────────────────────────────────
+  規則：偵測可能的 APT 橫向移動
+  ─────────────────────────────────────────────────────
+  條件：同一帳號在 30 分鐘內登入 ≥ 5 台不同主機
+  AND 這些主機不在同一 VLAN
+  AND 時間是非工作時間（22:00–06:00）
+
+  → 觸發告警：中嚴重性「異常橫向移動跡象」</pre>
+        </div>
+
+        <p>
+          主流 SIEM 平台包含：<strong>Splunk</strong>（業界標準，功能強大但昂貴）、
+          <strong>Microsoft Sentinel</strong>（Azure 雲端 SIEM，整合 M365 生態）、
+          <strong>IBM QRadar</strong>（企業級）、
+          <strong>Elastic SIEM</strong>（基於 ELK，開源選項）。
+        </p>
+      </section>
+
+      <!-- S8 -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>現代可觀測性：Metrics、Logs、Traces</h2>
+        <p>
+          傳統監控回答「系統是否正常」（Is it up?），
+          而<strong>可觀測性（Observability）</strong>回答「系統為什麼不正常」（Why is it broken?）。
+          現代分散式系統的複雜度讓傳統監控不再足夠，
+          可觀測性建立在三個支柱上：
+        </p>
+
+        <div class="monitor-stack">
+          <div class="ms-header">可觀測性三支柱</div>
+          <div class="ms-row">
+            <div class="ms-cell head">支柱</div>
+            <div class="ms-cell head">定義與特性</div>
+            <div class="ms-cell head">主要工具</div>
+          </div>
+          <div class="ms-row">
+            <div class="ms-cell label">Metrics（指標）</div>
+            <div class="ms-cell">時間序列的數值資料，如 CPU 使用率、HTTP 錯誤率、P99 延遲。聚合儲存，查詢效率高，適合儀表板與告警。代表：Prometheus 的 Counter、Gauge、Histogram</div>
+            <div class="ms-cell">Prometheus、Datadog、InfluxDB、CloudWatch</div>
+          </div>
+          <div class="ms-row">
+            <div class="ms-cell label">Logs（日誌）</div>
+            <div class="ms-cell">帶時間戳的非結構化或半結構化文字事件，提供最豐富的上下文資訊。儲存成本高，但保留了完整的事件細節，適合事後調查</div>
+            <div class="ms-cell">ELK Stack、Loki、Splunk、CloudWatch Logs</div>
+          </div>
+          <div class="ms-row">
+            <div class="ms-cell label">Traces（鏈路追蹤）</div>
+            <div class="ms-cell">一個請求在分散式系統中跨多個服務的完整執行路徑。每個 Trace 由多個 Span 組成，每個 Span 代表一個服務操作，含耗時、父子關係。OpenTelemetry 是標準</div>
+            <div class="ms-cell">Jaeger、Zipkin、Tempo、Datadog APM</div>
+          </div>
+        </div>
+
+        <h3>SLI、SLO、SLA：效能承諾的語言</h3>
+        <table class="def-table">
+          <thead><tr><th>縮寫</th><th>全名</th><th>說明</th><th>範例</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>SLI</td>
+              <td>Service Level Indicator</td>
+              <td>衡量服務品質的具體指標（測量值）</td>
+              <td>過去 5 分鐘的 HTTP 成功率、P99 延遲</td>
+            </tr>
+            <tr>
+              <td>SLO</td>
+              <td>Service Level Objective</td>
+              <td>SLI 的目標值（內部承諾）</td>
+              <td>HTTP 成功率 ≥ 99.9%；P99 延遲 ≤ 200ms</td>
+            </tr>
+            <tr>
+              <td>SLA</td>
+              <td>Service Level Agreement</td>
+              <td>對外承諾的服務等級（違約有懲罰）</td>
+              <td>月可用性 ≥ 99.9%（每月允許停機 43.8 分鐘）</td>
+            </tr>
+            <tr>
+              <td>Error Budget</td>
+              <td>錯誤預算</td>
+              <td>SLO 允許「失敗」的額度，用於衡量風險與發布速度</td>
+              <td>99.9% SLO 剩餘 0.1%（每月 43.8 分鐘）的錯誤預算</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">可用性的九九法則</p>
+          <p>
+            99%（兩個九）= 每年停機 87.6 小時；
+            99.9%（三個九）= 每年停機 8.76 小時；
+            99.99%（四個九）= 每年停機 52.6 分鐘；
+            99.999%（五個九）= 每年停機 5.26 分鐘。
+            每增加一個「九」，工程複雜度和成本通常呈指數增加。
+          </p>
+        </div>
+      </section>
+
+      <!-- S9 -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>常見故障場景排查指南</h2>
+
+        <h3>場景一：「能 ping 通但網頁打不開」</h3>
+        <div class="cmd-block">
+          <div class="cmd-header">排查步驟<span class="cmd-os">Linux / macOS</span></div>
+          <div class="cmd-body">
+            <pre><span class="comment"># 1. 確認 DNS 解析是否正常</span>
+<span class="prompt">$</span> dig www.google.com A
+<span class="comment"># 若無回應或 SERVFAIL → DNS 問題</span>
+
+<span class="comment"># 2. 用 IP 直接測試</span>
+<span class="prompt">$</span> curl -v http://142.250.74.68/ -H "Host: www.google.com"
+<span class="comment"># 若 IP 可通但域名不通 → 確認是 DNS 問題</span>
+
+<span class="comment"># 3. 測試 TCP 連線（Port 80/443）</span>
+<span class="prompt">$</span> nc -zv www.google.com 443
+<span class="comment"># Connection refused → 防火牆阻擋或服務未啟動</span>
+
+<span class="comment"># 4. 完整 HTTP 測試含計時</span>
+<span class="prompt">$</span> curl -vso /dev/null https://www.google.com 2>&1 | head -50
+<span class="comment"># 觀察是哪個階段失敗：DNS / TCP / TLS / HTTP</span></pre>
+          </div>
+        </div>
+
+        <h3>場景二：「網路突然變慢」</h3>
+        <div class="cmd-block">
+          <div class="cmd-header">排查步驟<span class="cmd-os">Linux</span></div>
+          <div class="cmd-body">
+            <pre><span class="comment"># 1. 確認是整體慢還是特定目的地慢</span>
+<span class="prompt">$</span> mtr --report -c 100 8.8.8.8
+<span class="comment"># 觀察哪一跳開始出現高延遲或丟包</span>
+
+<span class="comment"># 2. 確認本地頻寬是否飽和</span>
+<span class="prompt">$</span> iftop -n                     <span class="comment"># 即時查看介面流量 Top</span>
+<span class="prompt">$</span> nethogs                      <span class="comment"># 按進程查看頻寬使用</span>
+
+<span class="comment"># 3. 確認是否有大量 TCP 重傳</span>
+<span class="prompt">$</span> netstat -s | grep retransmit
+<span class="comment"># RetransSegs 數字快速增長 → 丟包造成重傳</span>
+
+<span class="comment"># 4. 確認網卡錯誤統計</span>
+<span class="prompt">$</span> ethtool -S eth0 | grep -i error
+<span class="comment"># rx_errors / tx_errors 增長 → 實體層問題</span></pre>
+          </div>
+        </div>
+
+        <h3>場景三：「TLS 憑證相關錯誤」</h3>
+        <div class="cmd-block">
+          <div class="cmd-header">排查步驟<span class="cmd-os">Linux / macOS</span></div>
+          <div class="cmd-body">
+            <pre><span class="comment"># 查看完整憑證鏈資訊</span>
+<span class="prompt">$</span> openssl s_client -connect example.com:443 -servername example.com
+
+<span class="comment"># 常見問題診斷：</span>
+<span class="comment"># 1. 憑證已過期（Verify return code: 10 - certificate has expired）</span>
+<span class="prompt">$</span> openssl s_client -connect example.com:443 2>/dev/null | openssl x509 -noout -dates
+
+<span class="comment"># 2. 主機名稱不符（ERR_CERT_COMMON_NAME_INVALID）</span>
+<span class="prompt">$</span> openssl s_client -connect example.com:443 2>/dev/null | openssl x509 -noout -text | grep -A1 "Subject Alternative Name"
+
+<span class="comment"># 3. 憑證鏈不完整（中間 CA 未配置）</span>
+<span class="comment"># 輸出的 verify error: num=20（unable to get local issuer certificate）</span>
+
+<span class="comment"># 4. 確認 TLS 版本與密碼套件</span>
+<span class="prompt">$</span> nmap --script ssl-enum-ciphers -p 443 example.com</pre>
+          </div>
+        </div>
+
+        <h3>場景四：「特定客戶端無法連線」</h3>
+        <p>
+          當問題只影響部分客戶端時，排查重點在於找出差異：
+          <strong>IP 位址 / 子網路</strong>（路由或 ACL 問題）、
+          <strong>DNS 解析結果不同</strong>（GeoDNS 或快取）、
+          <strong>MTU 差異</strong>（VPN 客戶端的有效 MTU 更小）、
+          <strong>TLS 版本或密碼套件支援</strong>（舊設備不支援 TLS 1.3）、
+          <strong>IPv4 vs IPv6</strong>（雙棧環境的路由問題）。
+          對比正常客戶端和問題客戶端的差異是最快的定位方法。
+        </p>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Summary -->
+      <section class="lesson-section" id="s10">
+        <div class="summary-box">
+          <div class="summary-label">Day 12 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>系統性診斷：OSI 分層由下往上逐層確認，先定位問題在哪層再修復</li>
+            <li>診斷三問：「什麼時候開始？有什麼變更？影響範圍？」</li>
+            <li>核心工具鏈：ping/traceroute/mtr（L3）、ss（L4）、dig/curl（L7）、tcpdump/Wireshark（全層）</li>
+            <li>curl -w 可拆解 DNS/TCP/TLS/TTFB 各階段耗時，精確定位 HTTPS 慢在哪裡</li>
+            <li>Wireshark Display Filter：tcp.analysis.retransmission、tcp.flags.reset 等快速定位問題</li>
+            <li>六個效能指標：頻寬、吞吐量、延遲（RTT）、抖動、封包遺失率、BDP</li>
+            <li>SNMPv3 是唯一安全版本；SNMP + Prometheus/Grafana 是現代監控組合</li>
+            <li>NetFlow/IPFIX 記錄流量五元組，用於找出「誰在佔用頻寬」和事後安全調查</li>
+            <li>SIEM 關聯多來源事件，偵測單事件無法識別的攻擊模式（如暴力破解後成功登入）</li>
+            <li>可觀測性三支柱：Metrics（趨勢告警）、Logs（事後調查）、Traces（分散式鏈路追蹤）</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">12 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>OSI 分層診斷法</li>
+          <li><span>#</span>ping / traceroute / mtr</li>
+          <li><span>#</span>dig +trace</li>
+          <li><span>#</span>curl -w（計時分解）</li>
+          <li><span>#</span>ss / netstat</li>
+          <li><span>#</span>tcpdump / BPF 過濾器</li>
+          <li><span>#</span>Wireshark 顯示過濾器</li>
+          <li><span>#</span>iperf3 / ethtool</li>
+          <li><span>#</span>頻寬 / 吞吐量 / 延遲</li>
+          <li><span>#</span>抖動 / BDP</li>
+          <li><span>#</span>SNMP v1/v2c/v3</li>
+          <li><span>#</span>OID / MIB</li>
+          <li><span>#</span>NetFlow / IPFIX</li>
+          <li><span>#</span>ELK / Prometheus / Grafana</li>
+          <li><span>#</span>SIEM / 關聯規則</li>
+          <li><span>#</span>Metrics / Logs / Traces</li>
+          <li><span>#</span>SLI / SLO / SLA</li>
+          <li><span>#</span>Error Budget</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day11.html"><span>&larr; Day 11: 網路安全基礎</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day13.html"><span>Day 13: SDN 與網路虛擬化</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 12 / 16</p>
+    <p>下一課：<a href="day13.html" style="color:var(--accent);text-decoration:none;">SDN 與網路虛擬化 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

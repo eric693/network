@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 14 — 雲端網路架構 | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink:#1a1a1a;--paper:#f5f0e8;--accent:#c0392b;--mid:#7a6a5a;--line:rgba(26,26,26,0.12);--code-bg:rgba(26,26,26,0.06); }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{background-color:var(--paper);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:300;line-height:1.9;min-height:100vh;}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;}
+    .topnav{position:relative;z-index:10;padding:20px 8vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);}
+    .topnav a{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;color:var(--mid);text-decoration:none;text-transform:uppercase;transition:color .2s;}
+    .topnav a:hover{color:var(--accent);}
+    .topnav .breadcrumb{display:flex;align-items:center;gap:8px;}
+    .topnav .sep{color:var(--line);font-size:14px;}
+    .topnav .nav-group{display:flex;gap:24px;}
+    .hero{position:relative;z-index:1;padding:64px 8vw 56px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:48px;align-items:end;}
+    .hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;margin-bottom:18px;}
+    .hero h1{font-family:'Noto Serif TC',serif;font-size:clamp(2rem,4.5vw,3.4rem);font-weight:700;line-height:1.25;letter-spacing:-.02em;}
+    .hero-desc{margin-top:20px;font-size:1rem;color:var(--mid);max-width:560px;}
+    .hero-meta .day-num{font-family:'IBM Plex Mono',monospace;font-size:6rem;font-weight:500;line-height:1;color:var(--ink);opacity:.08;display:block;}
+    .toc-bar{position:relative;z-index:1;padding:24px 8vw;border-bottom:1px solid var(--line);background:rgba(26,26,26,.03);}
+    .toc-bar h2{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mid);margin-bottom:14px;}
+    .toc-list{display:flex;flex-wrap:wrap;gap:8px 24px;list-style:none;}
+    .toc-list li a{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mid);text-decoration:none;transition:color .2s;}
+    .toc-list li a:hover{color:var(--accent);}
+    .toc-list li::before{content:attr(data-n) ". ";color:var(--accent);font-size:10px;}
+    .main-wrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr 260px;align-items:start;}
+    article{padding:64px 6vw 80px 8vw;border-right:1px solid var(--line);}
+    .lesson-section{margin-bottom:72px;}
+    .lesson-section:last-child{margin-bottom:0;}
+    .section-num{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:10px;}
+    .lesson-section h2{font-family:'Noto Serif TC',serif;font-size:1.75rem;font-weight:600;line-height:1.3;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--line);}
+    .lesson-section h3{font-family:'Noto Serif TC',serif;font-size:1.15rem;font-weight:600;margin:36px 0 12px;}
+    .lesson-section p{margin-bottom:16px;font-size:.97rem;}
+    .lesson-section p:last-child{margin-bottom:0;}
+    strong{font-weight:500;color:var(--ink);}
+    code{font-family:'IBM Plex Mono',monospace;font-size:.85em;background:var(--code-bg);padding:2px 6px;color:var(--ink);}
+    .highlight-box{margin:28px 0;padding:20px 24px;border-left:3px solid var(--accent);background:rgba(192,57,43,.05);}
+    .highlight-box .box-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;margin-bottom:8px;}
+    .highlight-box p{margin:0;font-size:.92rem;}
+    .info-box{margin:28px 0;padding:20px 24px;border-left:3px solid var(--mid);background:var(--code-bg);}
+    .info-box .box-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--mid);text-transform:uppercase;margin-bottom:8px;}
+    .info-box p{margin:0;font-size:.92rem;color:var(--mid);}
+    .def-table{width:100%;border-collapse:collapse;margin:24px 0;font-size:.9rem;}
+    .def-table th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--mid);text-align:left;padding:10px 16px;background:var(--code-bg);border-bottom:1px solid var(--line);}
+    .def-table td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.7;}
+    .def-table tr:last-child td{border-bottom:none;}
+    .def-table td:first-child{font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:500;color:var(--accent);white-space:nowrap;}
+    .diagram{margin:28px 0;background:var(--code-bg);border:1px solid var(--line);padding:28px 24px;}
+    .diagram-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--mid);text-transform:uppercase;margin-bottom:20px;}
+    .diagram pre{font-family:'IBM Plex Mono',monospace;font-size:.78rem;line-height:1.75;color:var(--ink);overflow-x:auto;white-space:pre;}
+    .provider-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);margin:28px 0;}
+    .pv-card{padding:20px 18px;border-right:1px solid var(--line);}
+    .pv-card:last-child{border-right:none;}
+    .pv-name{font-family:'IBM Plex Mono',monospace;font-size:.9rem;font-weight:500;color:var(--paper);background:var(--ink);margin:-20px -18px 16px;padding:10px 18px;}
+    .pv-row{display:flex;gap:8px;margin-bottom:8px;align-items:baseline;}
+    .pv-k{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--mid);flex-shrink:0;width:56px;text-transform:uppercase;}
+    .pv-v{font-size:.82rem;color:var(--ink);line-height:1.5;}
+    .svc-strip{margin:28px 0;border:1px solid var(--line);}
+    .svc-row{display:grid;grid-template-columns:120px 1fr 1fr;border-bottom:1px solid var(--line);}
+    .svc-row:last-child{border-bottom:none;}
+    .svc-row:not(:first-child):hover{background:rgba(26,26,26,.03);}
+    .svc-label{font-family:'IBM Plex Mono',monospace;font-size:.8rem;font-weight:500;color:var(--accent);padding:12px 14px;border-right:1px solid var(--line);display:flex;align-items:center;}
+    .svc-cell{padding:12px 14px;font-size:.85rem;line-height:1.6;border-right:1px solid var(--line);}
+    .svc-cell:last-child{border-right:none;}
+    .svc-cell.head{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--mid);background:var(--code-bg);}
+    .divider{border:none;border-top:1px solid var(--line);margin:48px 0;}
+    .summary-box{margin-top:48px;padding:28px 32px;background:var(--ink);color:var(--paper);}
+    .summary-box .summary-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.25em;color:rgba(245,240,232,.5);text-transform:uppercase;margin-bottom:16px;}
+    .summary-box h3{font-family:'Noto Serif TC',serif;font-size:1.1rem;font-weight:600;color:var(--paper);margin-bottom:16px;}
+    .summary-box ul{list-style:none;padding:0;}
+    .summary-box ul li{font-size:.9rem;color:rgba(245,240,232,.8);padding:6px 0 6px 16px;border-bottom:1px solid rgba(245,240,232,.08);position:relative;}
+    .summary-box ul li::before{content:'—';position:absolute;left:0;color:var(--accent);font-size:.8rem;}
+    aside{padding:48px 28px;position:sticky;top:0;}
+    .aside-section{margin-bottom:40px;}
+    .aside-section h4{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--mid);text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+    .keyword-list{list-style:none;padding:0;}
+    .keyword-list li{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--mid);padding:5px 0;border-bottom:1px solid var(--line);transition:color .2s;}
+    .keyword-list li:hover{color:var(--accent);}
+    .keyword-list li span{color:var(--accent);margin-right:6px;}
+    .progress-bar{height:3px;background:var(--line);margin:12px 0 20px;position:relative;}
+    .progress-bar::after{content:'';position:absolute;left:0;top:0;height:100%;width:87.5%;background:var(--accent);}
+    .progress-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mid);letter-spacing:.1em;}
+    .nav-links{display:flex;flex-direction:column;gap:8px;}
+    .nav-links a{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mid);text-decoration:none;padding:8px 12px;border:1px solid var(--line);transition:border-color .2s,color .2s;display:flex;justify-content:space-between;align-items:center;}
+    .nav-links a:hover{border-color:var(--accent);color:var(--accent);}
+    footer{position:relative;z-index:1;padding:32px 8vw;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+    footer p{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mid);letter-spacing:.1em;}
+    @media(max-width:900px){
+      .main-wrap{grid-template-columns:1fr;}
+      aside{position:static;border-top:1px solid var(--line);padding:40px 8vw;display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+      article{padding:48px 8vw 64px;border-right:none;}
+      .hero{grid-template-columns:1fr;}.hero-meta{display:none;}
+      .provider-grid{grid-template-columns:1fr;}
+      .pv-card{border-right:none;border-bottom:1px solid var(--line);}
+      .pv-card:last-child{border-bottom:none;}
+      .svc-row{grid-template-columns:90px 1fr 1fr;}
+    }
+    @media(max-width:600px){aside{grid-template-columns:1fr;}.svc-row{grid-template-columns:1fr;}.svc-label,.svc-cell{border-right:none;}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .hero,.toc-bar,article,aside{animation:fadeUp .5s ease both;}
+    .toc-bar{animation-delay:.10s;}article{animation-delay:.15s;}aside{animation-delay:.20s;}
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a><span class="sep">/</span><a href="#">Day 14</a>
+    </div>
+    <div class="nav-group">
+      <a href="day13.html">&larr; Day 13</a>
+      <a href="day15.html">Day 15 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 04 &mdash; 實務與工具 &mdash; Day 14 / 16</p>
+      <h1>雲端網路架構<br>在別人的電腦上建造自己的網路</h1>
+      <p class="hero-desc">
+        雲端平台抽象掉了實體基礎設施，但網路的核心概念從未改變——
+        改變的是如何透過 API 和控制台快速構建出等效的架構。
+        本課以 AWS 為主軸對照 Azure 和 GCP，帶你理解 VPC、子網路、
+        安全群組、負載均衡、CDN 和混合雲連線的設計邏輯。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">14</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">雲端網路的基本模型</a></li>
+      <li data-n="2"><a href="#s2">VPC：虛擬私有雲</a></li>
+      <li data-n="3"><a href="#s3">子網路、路由表與閘道</a></li>
+      <li data-n="4"><a href="#s4">安全群組與網路 ACL</a></li>
+      <li data-n="5"><a href="#s5">雲端負載均衡</a></li>
+      <li data-n="6"><a href="#s6">CDN 與邊緣網路</a></li>
+      <li data-n="7"><a href="#s7">混合雲連線：VPN 與 Direct Connect</a></li>
+      <li data-n="8"><a href="#s8">多雲與 VPC Peering</a></li>
+      <li data-n="9"><a href="#s9">雲端網路成本與優化</a></li>
+      <li data-n="10"><a href="#s10">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>雲端網路的基本模型</h2>
+        <p>雲端供應商的資料中心分佈在全球多個<strong>區域（Region）</strong>，每個 Region 由多個<strong>可用區（Availability Zone，AZ）</strong>組成。這個物理分層直接對應到網路架構設計的高可用策略。</p>
+        <div class="diagram">
+          <div class="diagram-title">Region / AZ / 資料中心三層物理架構</div>
+          <pre>
+  Region：ap-northeast-1（東京）
+  ┌──────────────────────────────────────────────────────────────┐
+  │  AZ-A（1a）            AZ-B（1b）           AZ-C（1c）        │
+  │  ┌────────────────┐   ┌────────────────┐   ┌──────────────┐ │
+  │  │ DC 1a-1, 1a-2  │   │ DC 1b-1, 1b-2  │   │ DC 1c-1      │ │
+  │  └────────────────┘   └────────────────┘   └──────────────┘ │
+  │        ↕ AZ 間低延遲高頻寬私有光纖互連（&lt; 1ms）               │
+  └──────────────────────────────────────────────────────────────┘
+       ↕ 跨 Region 骨幹私有網路
+  Region：ap-southeast-1（新加坡）
+
+  設計原則：
+  • 高可用：至少跨兩個 AZ 部署（電力/冷卻/網路各自獨立）
+  • 災難復原：跨 Region（延遲約 70ms 東京到新加坡）
+  • 效能優先：單一 AZ（最低延遲，但無冗餘）</pre>
+        </div>
+
+        <div class="provider-grid">
+          <div class="pv-card">
+            <div class="pv-name">AWS（Amazon Web Services）</div>
+            <div class="pv-row"><span class="pv-k">VPC</span><span class="pv-v">Virtual Private Cloud（Regional）</span></div>
+            <div class="pv-row"><span class="pv-k">防火牆</span><span class="pv-v">Security Group + NACL</span></div>
+            <div class="pv-row"><span class="pv-k">負載均衡</span><span class="pv-v">ALB / NLB / GLB</span></div>
+            <div class="pv-row"><span class="pv-k">CDN</span><span class="pv-v">CloudFront（600+ PoP）</span></div>
+            <div class="pv-row"><span class="pv-k">專線</span><span class="pv-v">Direct Connect</span></div>
+            <div class="pv-row"><span class="pv-k">多VPC</span><span class="pv-v">Transit Gateway</span></div>
+          </div>
+          <div class="pv-card">
+            <div class="pv-name">Azure（Microsoft）</div>
+            <div class="pv-row"><span class="pv-k">VPC</span><span class="pv-v">Virtual Network / VNet（Regional）</span></div>
+            <div class="pv-row"><span class="pv-k">防火牆</span><span class="pv-v">NSG + Azure Firewall</span></div>
+            <div class="pv-row"><span class="pv-k">負載均衡</span><span class="pv-v">Application Gateway / Load Balancer</span></div>
+            <div class="pv-row"><span class="pv-k">CDN</span><span class="pv-v">Azure Front Door / CDN</span></div>
+            <div class="pv-row"><span class="pv-k">專線</span><span class="pv-v">ExpressRoute</span></div>
+            <div class="pv-row"><span class="pv-k">多VNet</span><span class="pv-v">Virtual WAN / VNet Peering</span></div>
+          </div>
+          <div class="pv-card">
+            <div class="pv-name">GCP（Google Cloud）</div>
+            <div class="pv-row"><span class="pv-k">VPC</span><span class="pv-v">VPC（<strong>全球 Global</strong>）</span></div>
+            <div class="pv-row"><span class="pv-k">防火牆</span><span class="pv-v">VPC Firewall Rules（全球套用）</span></div>
+            <div class="pv-row"><span class="pv-k">負載均衡</span><span class="pv-v">Cloud LB（Anycast，全球單一 VIP）</span></div>
+            <div class="pv-row"><span class="pv-k">CDN</span><span class="pv-v">Cloud CDN / Media CDN</span></div>
+            <div class="pv-row"><span class="pv-k">專線</span><span class="pv-v">Cloud Interconnect</span></div>
+            <div class="pv-row"><span class="pv-k">多VPC</span><span class="pv-v">Shared VPC / VPC Peering</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>VPC：虛擬私有雲</h2>
+        <p><strong>VPC（Virtual Private Cloud）</strong>是雲端網路的基本隔離單位，讓你在雲端擁有一個邏輯上獨立的網路環境，完全隔離於其他客戶的 VPC。</p>
+        <div class="diagram">
+          <div class="diagram-title">典型三層 VPC 架構（Web / App / DB 分層，跨兩個 AZ）</div>
+          <pre>
+  VPC：10.0.0.0/16（65,536 個 IP）
+  ┌─────────────────────────────────────────────────────────────┐
+  │  公有子網路（含 IGW 路由）                                    │
+  │  10.0.1.0/24（AZ-A）          10.0.2.0/24（AZ-B）            │
+  │  ALB / Bastion / NAT GW       Internet Gateway              │
+  ├─────────────────────────────────────────────────────────────┤
+  │  私有子網路—應用層                                            │
+  │  10.0.11.0/24（AZ-A）         10.0.12.0/24（AZ-B）           │
+  │  EC2 App Server / ECS Pod     EC2 App Server / ECS Pod      │
+  ├─────────────────────────────────────────────────────────────┤
+  │  私有子網路—資料層（隔離，無出站預設路由）                    │
+  │  10.0.21.0/24（AZ-A）         10.0.22.0/24（AZ-B）           │
+  │  RDS Primary / ElastiCache    RDS Standby / Cache Replica   │
+  └─────────────────────────────────────────────────────────────┘</pre>
+        </div>
+        <p><strong>GCP VPC 的特殊性</strong>：AWS / Azure 的 VPC 是 Regional（每個 Region 獨立），而 GCP 的 VPC 是 <strong>Global</strong>——一個 VPC 跨越所有 Region，子網路是區域性的，但防火牆規則和路由全球統一管理，多 Region 架構更簡單但爆炸半徑更大。</p>
+        <div class="highlight-box">
+          <p class="box-label">IP 位址規劃的重要性</p>
+          <p>VPC 的 CIDR 一旦建立<strong>無法修改主要 CIDR</strong>。不同環境應使用不重疊 CIDR（Prod: <code>10.1.0.0/16</code>、Staging: <code>10.2.0.0/16</code>），否則日後無法建立 VPC Peering。</p>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>子網路、路由表與閘道</h2>
+        <table class="def-table">
+          <thead><tr><th>子網路類型</th><th>路由表特徵</th><th>典型用途</th></tr></thead>
+          <tbody>
+            <tr><td>公有子網路</td><td><code>0.0.0.0/0 → igw-xxxxx</code>，實例分配公有 IP</td><td>ALB、Bastion Host、NAT Gateway</td></tr>
+            <tr><td>私有子網路</td><td><code>0.0.0.0/0 → nat-xxxxx</code>（出站透過 NAT）</td><td>App Server、微服務、快取</td></tr>
+            <tr><td>隔離子網路</td><td>無 <code>0.0.0.0/0</code>，完全無法存取網際網路</td><td>高敏感資料庫、HSM</td></tr>
+          </tbody>
+        </table>
+        <div class="diagram">
+          <div class="diagram-title">VPC 閘道元件與流量路徑</div>
+          <pre>
+  ① 外部 → VPC（公開服務）：
+     Internet → Internet Gateway → ALB（公有）→ EC2（私有）
+
+  ② VPC → 外部（私有子網路出站）：
+     EC2（私有）→ NAT Gateway（公有）→ IGW → Internet
+     （來源 IP 被 NAT 為 NAT GW 的 EIP）
+
+  ③ VPC → AWS 服務（不出公網）：
+     EC2 → VPC Endpoint（Gateway/Interface）→ S3 / DynamoDB
+     （走 AWS 骨幹，不計流量費，安全）
+
+  ④ VPC → 企業內網（混合雲）：
+     EC2 → Virtual Private Gateway → Direct Connect / VPN → 企業
+
+  閘道說明：
+  Internet Gateway    VPC 出入公網，無費用，高可用
+  NAT Gateway         私有子網路出站 NAT，按時 + 流量計費
+  VPC Endpoint        私有存取 AWS 服務（S3/DynamoDB 免費）
+  Transit Gateway     Hub-and-Spoke，連接多 VPC 和混合雲</pre>
+        </div>
+        <div class="info-box">
+          <p class="box-label">NAT Gateway 費用陷阱</p>
+          <p>NAT GW 約 $0.045/小時（~$32/月）+ $0.045/GB 處理費。私有子網路大量存取 S3 費用快速累積。解決：為 S3 / DynamoDB 建立 VPC Gateway Endpoint（<strong>免費</strong>），每月可節省數百美元。</p>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>安全群組與網路 ACL</h2>
+        <div class="svc-strip">
+          <div class="svc-row">
+            <div class="svc-label" style="background:var(--code-bg);font-size:.72rem;color:var(--mid);">特性</div>
+            <div class="svc-cell head">安全群組（Security Group）</div>
+            <div class="svc-cell head">網路 ACL（NACL）</div>
+          </div>
+          <div class="svc-row">
+            <div class="svc-label">套用層級</div>
+            <div class="svc-cell">EC2 實例（ENI 層級）</div>
+            <div class="svc-cell">子網路層級</div>
+          </div>
+          <div class="svc-row">
+            <div class="svc-label">狀態</div>
+            <div class="svc-cell"><strong>有狀態（Stateful）</strong>：允許入站後，對應回應自動允許</div>
+            <div class="svc-cell"><strong>無狀態（Stateless）</strong>：入站和出站規則各自獨立設定</div>
+          </div>
+          <div class="svc-row">
+            <div class="svc-label">預設行為</div>
+            <div class="svc-cell">預設拒絕所有（Default Deny）</div>
+            <div class="svc-cell">預設 VPC NACL 允許全部；自訂 NACL 預設拒絕</div>
+          </div>
+          <div class="svc-row">
+            <div class="svc-label">規則評估</div>
+            <div class="svc-cell">所有規則評估，取最寬允許（無順序）</div>
+            <div class="svc-cell">按規則編號由小到大，首個匹配生效（有序）</div>
+          </div>
+          <div class="svc-row">
+            <div class="svc-label">來源指定</div>
+            <div class="svc-cell">可用另一個 SG ID 作來源（SG 引用）</div>
+            <div class="svc-cell">只能用 IP CIDR</div>
+          </div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-title">Security Group 最佳實踐：SG 引用取代硬編碼 IP</div>
+          <pre>
+  ✅ 推薦：SG 引用（動態可維護）
+  ALB-SG  → App-SG:8080（只有 ALB 可存取 App）
+  App-SG  → DB-SG:5432 （只有 App 可存取 DB）
+
+  優點：App Server IP 改變 → 不需改 DB-SG 規則
+        新增 App Server 套用 App-SG 即自動獲得 DB 存取
+
+  ❌ 避免：硬編碼 IP CIDR
+  DB-SG 入站：允許 10.0.11.0/24:5432（維護困難）</pre>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>雲端負載均衡</h2>
+        <table class="def-table">
+          <thead><tr><th>類型</th><th>工作層</th><th>核心能力</th><th>適用場景</th></tr></thead>
+          <tbody>
+            <tr><td>ALB（Application LB）</td><td>L7（HTTP/HTTPS/gRPC）</td><td>路徑/主機名稱/Header 路由；WAF 整合；Lambda 目標；WebSocket</td><td>Web 應用、微服務路由</td></tr>
+            <tr><td>NLB（Network LB）</td><td>L4（TCP/UDP/TLS）</td><td>超低延遲（&lt;1ms）；靜態 EIP；保留來源 IP；TLS Passthrough</td><td>即時遊戲、金融交易、需靜態 IP</td></tr>
+            <tr><td>GLB（Gateway LB）</td><td>L3（IP）</td><td>透明重導向第三方 NFV（GENEVE 封裝）</td><td>整合 Palo Alto / Fortinet VM</td></tr>
+          </tbody>
+        </table>
+        <div class="diagram">
+          <div class="diagram-title">ALB 路徑路由：單一 LB 服務多個微服務</div>
+          <pre>
+  api.example.com → ALB
+  ├── /api/users/*  → User-Service Target Group（EC2 x3）
+  ├── /api/orders/* → Order-Service Target Group（ECS x4）
+  ├── /api/pay/*    → Payment-Service Target Group
+  └── 預設規則      → Frontend Target Group
+
+  特性：
+  • 各目標群組獨立健康檢查，不健康實例自動移除
+  • Auto Scaling Group 依流量自動增減實例
+  • 可整合 WAF 規則在 LB 層攔截惡意請求</pre>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>CDN 與邊緣網路</h2>
+        <p><strong>CDN（Content Delivery Network）</strong>將內容快取在全球分佈的<strong>邊緣節點（PoP）</strong>，讓使用者從地理位置最近的節點取得內容，大幅降低延遲並卸載原始伺服器流量。</p>
+        <div class="diagram">
+          <div class="diagram-title">CDN 請求流程：快取命中 vs 快取未命中</div>
+          <pre>
+  快取命中（Cache Hit）：
+  台灣用戶 → DNS 解析到台灣 PoP → PoP 有快取 → 直接回應 ~5ms
+
+  快取未命中（Cache Miss）：
+  台灣用戶 → 台灣 PoP → 無快取 → 回源美國 Origin（~150ms）
+  → PoP 快取內容（依 Cache-Control TTL）→ 回應用戶
+  → 後續請求 ~5ms（快取命中）
+
+  快取設定最佳實踐：
+  靜態資源（含 hash）：Cache-Control: max-age=31536000, immutable
+  HTML / API 動態：    Cache-Control: no-cache
+  Vary: Accept-Encoding（gzip 與原始版本分開快取）</pre>
+        </div>
+        <table class="def-table">
+          <thead><tr><th>CloudFront 功能</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>Lambda@Edge</td><td>在邊緣節點執行程式碼，修改請求/回應、A/B Testing、地理阻擋、認證驗證</td></tr>
+            <tr><td>Origin Shield</td><td>在 PoP 與 Origin 之間增加中間快取層，減少回源請求，保護 Origin</td></tr>
+            <tr><td>Signed URL/Cookie</td><td>為私有內容生成帶時效性的簽名存取 URL（付費影片、授權下載）</td></tr>
+            <tr><td>WAF 整合</td><td>在邊緣節點執行 WAF 規則，攔截惡意流量在抵達 Origin 之前</td></tr>
+          </tbody>
+        </table>
+        <div class="info-box">
+          <p class="box-label">Anycast vs GeoDNS</p>
+          <p><strong>GeoDNS</strong>（AWS CloudFront）：依 DNS 查詢者 IP 位置回傳最近 PoP IP，簡單但精度受 DNS 快取影響。<strong>Anycast</strong>（Cloudflare / GCP）：所有 PoP 宣告相同 IP，BGP 自動路由到最近 PoP，精度更高且 DDoS 流量可分散到全球 PoP。</p>
+        </div>
+      </section>
+
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>混合雲連線：VPN 與 Direct Connect</h2>
+        <div class="diagram">
+          <div class="diagram-title">AWS 混合雲連線方式對比</div>
+          <pre>
+  企業資料中心
+       │
+       ├── ① Site-to-Site VPN（IPsec 加密隧道）
+       │       頻寬：最高 ~1.25 Gbps
+       │       延遲：受公網抖動影響
+       │       建立時間：分鐘級
+       │       費用：低（VPN 小時費 + 流量費）
+       │       加密：IPsec 內建
+       │
+       └── ② Direct Connect（實體專線，非公網）
+               頻寬：1 / 10 / 100 Gbps
+               延遲：確定性，低抖動
+               建立時間：數週到數月
+               費用：高（電路月租 + 連接費）
+               加密：需自行加密（MACsec 可選）
+
+  最佳實踐：Direct Connect 主路徑 + Site-to-Site VPN 備援</pre>
+        </div>
+        <p><strong>Transit Gateway（TGW）</strong>是 AWS 的中央 Hub，採用 Hub-and-Spoke 模式：所有 VPC 和 VPN/Direct Connect 都連到 TGW，流量統一路由。100 個 VPC 只需 100 條連線（vs Peering 全網狀需要 4,950 條）。TGW 支援跨 Region Peering 和多帳號共用（RAM）。</p>
+      </section>
+
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>多雲與 VPC Peering</h2>
+        <div class="diagram">
+          <div class="diagram-title">VPC Peering 不可傳遞性 vs Transit Gateway 可傳遞性</div>
+          <pre>
+  VPC Peering（不可傳遞）：
+  VPC-A ←─Peering─→ VPC-B ←─Peering─→ VPC-C
+  問題：VPC-A 無法透過 VPC-B 存取 VPC-C
+  解決：A 和 C 之間另建第三條 Peering
+
+  Transit Gateway（可傳遞）：
+            ┌──────────────────┐
+            │  Transit Gateway │
+            └─┬──────┬──────┬──┘
+           VPC-A  VPC-B  VPC-C
+  A 可透過 TGW 存取 C，路由由 TGW 路由表控制</pre>
+        </div>
+        <table class="def-table">
+          <thead><tr><th>多雲互連方案</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>公網 IPsec VPN</td><td>AWS VGW ↔ Azure VPN GW 建立 IPsec 隧道。成本低，延遲高，頻寬有限</td></tr>
+            <tr><td>IXP 互連</td><td>在中立共置 DC（如台灣 TWIX）同時接入多家雲端的 Direct Connect / ExpressRoute，低延遲</td></tr>
+            <tr><td>雲端網路平台</td><td>Aviatrix、Megaport、Equinix Fabric 提供統一多雲控制平面</td></tr>
+            <tr><td>應用層 Overlay</td><td>Tailscale / WireGuard / Cloudflare Tunnel 建立跨雲 Overlay，不依賴雲端 VPN</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>雲端網路成本與優化</h2>
+        <table class="def-table">
+          <thead><tr><th>費用項目</th><th>計費方式</th><th>優化策略</th></tr></thead>
+          <tbody>
+            <tr><td>資料傳出（Egress）</td><td>網際網路出站 ~$0.09/GB（前 10TB）；跨 Region ~$0.02/GB；跨 AZ ~$0.01/GB</td><td>CloudFront 快取降低回源；VPC Endpoint 存取 S3 避免 NAT</td></tr>
+            <tr><td>NAT Gateway</td><td>~$0.045/小時 + $0.045/GB</td><td>S3 / DynamoDB 改用 VPC Gateway Endpoint（免費）；同 AZ 部署</td></tr>
+            <tr><td>ALB / NLB</td><td>ALB $0.008/LCU/小時；NLB $0.006/NLCU/小時</td><td>多服務共用一個 ALB（路徑路由）；移除閒置 LB</td></tr>
+            <tr><td>Direct Connect</td><td>連接埠費 + 資料傳輸費</td><td>選合適速率；搭配 S3 直接存取節省回源費</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box">
+          <p class="box-label">跨 AZ 流量費用是容易被忽略的成本</p>
+          <p>跨 AZ 傳輸雙向各 $0.01/GB，大型應用的資料庫讀寫和快取同步每月可累積數 TB。優化：同 AZ 部署相互依賴的服務（App Server + Cache 在同一 AZ）；使用本地快取減少跨 AZ 查詢。</p>
+        </div>
+        <p><strong>AWS PrivateLink</strong> 讓你透過私有 IP 存取 AWS 服務，流量完全留在 AWS 骨幹。<strong>Gateway Endpoint</strong>（免費）支援 S3 和 DynamoDB；<strong>Interface Endpoint</strong>（PrivateLink，按小時計費）支援其他 AWS 服務，在子網路中建立 ENI 以私有 IP 呈現。</p>
+      </section>
+
+      <hr class="divider" />
+
+      <section class="lesson-section" id="s10">
+        <div class="summary-box">
+          <div class="summary-label">Day 14 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>Region → AZ → 資料中心三層架構；高可用設計至少跨兩個 AZ（電力/冷卻/網路各自獨立）</li>
+            <li>VPC CIDR 一旦設定無法修改；不同環境使用不重疊 CIDR 以利未來 Peering</li>
+            <li>GCP VPC 是全球性（Global）；AWS / Azure VPC 是區域性（Regional）</li>
+            <li>公有子網路 = 路由表有 IGW；私有子網路 = 路由表有 NAT GW；隔離子網路 = 無預設路由</li>
+            <li>S3 / DynamoDB 應建立 VPC Gateway Endpoint（免費）取代 NAT Gateway，節省費用</li>
+            <li>Security Group 有狀態（Stateful），套用於實例；NACL 無狀態（Stateless），套用於子網路</li>
+            <li>Security Group 推薦使用 SG 引用取代硬編碼 IP CIDR，動態且可維護</li>
+            <li>ALB（L7 路徑路由）、NLB（L4 靜態 IP 超低延遲）、GLB（NFV 流量重導）各有適用場景</li>
+            <li>CDN Cache Hit ~5ms；靜態資源設 max-age=31536000 + immutable；Anycast（Cloudflare/GCP）vs GeoDNS（AWS）</li>
+            <li>Direct Connect（確定性延遲，數月建立）vs VPN（公網，分鐘建立）；建議雙路備援</li>
+            <li>VPC Peering 不可傳遞；Transit Gateway 提供可傳遞 Hub-and-Spoke，100 VPC 只需 100 條連線</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">14 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>Region / AZ / 資料中心</li>
+          <li><span>#</span>VPC / CIDR 規劃</li>
+          <li><span>#</span>公有 / 私有 / 隔離子網路</li>
+          <li><span>#</span>Internet Gateway</li>
+          <li><span>#</span>NAT Gateway</li>
+          <li><span>#</span>VPC Endpoint / PrivateLink</li>
+          <li><span>#</span>Security Group（有狀態）</li>
+          <li><span>#</span>NACL（無狀態）</li>
+          <li><span>#</span>ALB / NLB / GLB</li>
+          <li><span>#</span>CDN / PoP / Cache Hit</li>
+          <li><span>#</span>Anycast vs GeoDNS</li>
+          <li><span>#</span>Lambda@Edge</li>
+          <li><span>#</span>Direct Connect</li>
+          <li><span>#</span>Site-to-Site VPN</li>
+          <li><span>#</span>Transit Gateway（TGW）</li>
+          <li><span>#</span>VPC Peering（不可傳遞）</li>
+          <li><span>#</span>跨 AZ 流量費用</li>
+          <li><span>#</span>Egress 費用優化</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day13.html"><span>&larr; Day 13: SDN 與網路虛擬化</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day15.html"><span>Day 15: 無線網路與行動通訊</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 14 / 16</p>
+    <p>下一課：<a href="day15.html" style="color:var(--accent);text-decoration:none;">無線網路與行動通訊 &rarr;</a></p>
+  </footer>
+</body>
+</html>

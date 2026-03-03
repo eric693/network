@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 11 — 網路安全基礎 | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a1a1a; --paper: #f5f0e8; --accent: #c0392b;
+      --mid: #7a6a5a; --line: rgba(26,26,26,0.12); --code-bg: rgba(26,26,26,0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background-color: var(--paper); color: var(--ink); font-family: 'Noto Sans TC', sans-serif; font-weight: 300; line-height: 1.9; min-height: 100vh; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+
+    .topnav { position: relative; z-index: 10; padding: 20px 8vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
+    .topnav a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--mid); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+    .topnav a:hover { color: var(--accent); }
+    .topnav .breadcrumb { display: flex; align-items: center; gap: 8px; }
+    .topnav .sep { color: var(--line); font-size: 14px; }
+    .topnav .nav-group { display: flex; gap: 24px; }
+
+    .hero { position: relative; z-index: 1; padding: 64px 8vw 56px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: end; }
+    .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.22em; color: var(--accent); text-transform: uppercase; margin-bottom: 18px; }
+    .hero h1 { font-family: 'Noto Serif TC', serif; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
+    .hero-desc { margin-top: 20px; font-size: 1rem; color: var(--mid); max-width: 560px; }
+    .hero-meta .day-num { font-family: 'IBM Plex Mono', monospace; font-size: 6rem; font-weight: 500; line-height: 1; color: var(--ink); opacity: 0.08; display: block; }
+
+    .toc-bar { position: relative; z-index: 1; padding: 24px 8vw; border-bottom: 1px solid var(--line); background: rgba(26,26,26,0.03); }
+    .toc-bar h2 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 14px; }
+    .toc-list { display: flex; flex-wrap: wrap; gap: 8px 24px; list-style: none; }
+    .toc-list li a { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--mid); text-decoration: none; transition: color 0.2s; }
+    .toc-list li a:hover { color: var(--accent); }
+    .toc-list li::before { content: attr(data-n) ". "; color: var(--accent); font-size: 10px; }
+
+    .main-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 260px; align-items: start; }
+    article { padding: 64px 6vw 80px 8vw; border-right: 1px solid var(--line); }
+
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+    .section-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 10px; }
+    .lesson-section h2 { font-family: 'Noto Serif TC', serif; font-size: 1.75rem; font-weight: 600; line-height: 1.3; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .lesson-section h3 { font-family: 'Noto Serif TC', serif; font-size: 1.15rem; font-weight: 600; margin: 36px 0 12px; }
+    .lesson-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--mid); margin: 24px 0 10px; letter-spacing: 0.05em; }
+    .lesson-section p { margin-bottom: 16px; font-size: 0.97rem; }
+    .lesson-section p:last-child { margin-bottom: 0; }
+    strong { font-weight: 500; color: var(--ink); }
+    code { font-family: 'IBM Plex Mono', monospace; font-size: 0.85em; background: var(--code-bg); padding: 2px 6px; color: var(--ink); }
+
+    .highlight-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--accent); background: rgba(192,57,43,0.05); }
+    .highlight-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+    .info-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--mid); background: var(--code-bg); }
+    .info-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 8px; }
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    .def-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.9rem; }
+    .def-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); text-align: left; padding: 10px 16px; background: var(--code-bg); border-bottom: 1px solid var(--line); }
+    .def-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+    .def-table tr:last-child td { border-bottom: none; }
+    .def-table td:first-child { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+    .diagram { margin: 28px 0; background: var(--code-bg); border: 1px solid var(--line); padding: 28px 24px; }
+    .diagram-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px; }
+    .diagram pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* threat cards */
+    .threat-block { margin: 28px 0; border: 1px solid rgba(192,57,43,0.3); overflow: hidden; }
+    .threat-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper); background: var(--accent); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .threat-header .severity { font-size: 0.7rem; background: rgba(255,255,255,0.2); padding: 2px 8px; }
+    .threat-body { padding: 20px 24px; background: rgba(192,57,43,0.04); }
+    .threat-body p { font-size: 0.9rem; margin-bottom: 12px; }
+    .threat-body p:last-child { margin-bottom: 0; }
+
+    /* firewall zone diagram */
+    .zone-diagram { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .zone-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .zone-body { padding: 24px; }
+    .zone-body pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.8; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* CIA triad */
+    .cia-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; border: 1px solid var(--line); margin: 28px 0; }
+    .cia-card { padding: 24px 20px; border-right: 1px solid var(--line); }
+    .cia-card:last-child { border-right: none; }
+    .cia-letter { font-family: 'IBM Plex Mono', monospace; font-size: 2.2rem; font-weight: 500; color: var(--accent); line-height: 1; margin-bottom: 6px; }
+    .cia-name { font-family: 'Noto Serif TC', serif; font-size: 0.95rem; font-weight: 600; color: var(--ink); margin-bottom: 10px; }
+    .cia-desc { font-size: 0.82rem; color: var(--mid); line-height: 1.65; }
+    .cia-example { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--accent); margin-top: 8px; }
+
+    /* attack kill chain */
+    .killchain { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .kc-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .kc-row { display: grid; grid-template-columns: 36px 150px 1fr; border-bottom: 1px solid var(--line); }
+    .kc-row:last-child { border-bottom: none; }
+    .kc-row:hover { background: rgba(26,26,26,0.03); }
+    .kc-n { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; font-weight: 500; color: var(--paper); background: var(--accent); display: flex; align-items: center; justify-content: center; }
+    .kc-phase { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; color: var(--ink); padding: 11px 14px; border-right: 1px solid var(--line); display: flex; align-items: center; }
+    .kc-desc { padding: 11px 14px; font-size: 0.84rem; color: var(--mid); line-height: 1.6; }
+
+    /* crypto comparison */
+    .crypto-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); margin: 28px 0; overflow: hidden; }
+    .cc-card { padding: 22px 20px; border-right: 1px solid var(--line); }
+    .cc-card:last-child { border-right: none; }
+    .cc-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; font-weight: 500; color: var(--paper); background: var(--ink); margin: -22px -20px 16px; padding: 12px 20px; }
+    .cc-row { display: flex; gap: 10px; margin-bottom: 9px; align-items: baseline; }
+    .cc-k { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--mid); flex-shrink: 0; width: 64px; text-transform: uppercase; }
+    .cc-v { font-size: 0.85rem; color: var(--ink); }
+
+    .divider { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
+    .summary-box { margin-top: 48px; padding: 28px 32px; background: var(--ink); color: var(--paper); }
+    .summary-box .summary-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.25em; color: rgba(245,240,232,0.5); text-transform: uppercase; margin-bottom: 16px; }
+    .summary-box h3 { font-family: 'Noto Serif TC', serif; font-size: 1.1rem; font-weight: 600; color: var(--paper); margin-bottom: 16px; }
+    .summary-box ul { list-style: none; padding: 0; }
+    .summary-box ul li { font-size: 0.9rem; color: rgba(245,240,232,0.8); padding: 6px 0 6px 16px; border-bottom: 1px solid rgba(245,240,232,0.08); position: relative; }
+    .summary-box ul li::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-size: 0.8rem; }
+
+    aside { padding: 48px 28px; position: sticky; top: 0; }
+    .aside-section { margin-bottom: 40px; }
+    .aside-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .keyword-list { list-style: none; padding: 0; }
+    .keyword-list li { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid); padding: 5px 0; border-bottom: 1px solid var(--line); transition: color 0.2s; }
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+    .progress-bar { height: 3px; background: var(--line); margin: 12px 0 20px; position: relative; }
+    .progress-bar::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 68.75%; background: var(--accent); }
+    .progress-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mid); letter-spacing: 0.1em; }
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+    .nav-links a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); transition: border-color 0.2s, color 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+    footer { position: relative; z-index: 1; padding: 32px 8vw; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    footer p { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); letter-spacing: 0.1em; }
+
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+      aside { position: static; border-top: 1px solid var(--line); padding: 40px 8vw; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+      .cia-grid { grid-template-columns: 1fr; }
+      .cia-card { border-right: none; border-bottom: 1px solid var(--line); }
+      .cia-card:last-child { border-bottom: none; }
+      .crypto-compare { grid-template-columns: 1fr; }
+      .cc-card { border-right: none; border-bottom: 1px solid var(--line); }
+      .kc-row { grid-template-columns: 32px 130px 1fr; }
+    }
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .kc-row { grid-template-columns: 28px 1fr; }
+      .kc-phase { display: none; }
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar { animation-delay: 0.10s; } article { animation-delay: 0.15s; } aside { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 11</a>
+    </div>
+    <div class="nav-group">
+      <a href="day10.html">&larr; Day 10</a>
+      <a href="day12.html">Day 12 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 03 &mdash; 應用層協定 &mdash; Day 11 / 16</p>
+      <h1>網路安全基礎<br>攻擊者的視角與防禦者的思維</h1>
+      <p class="hero-desc">
+        網路安全不是一張清單，而是一種思維方式。
+        本課從 CIA 三元組出發，剖析密碼學的核心機制，
+        解構防火牆的演進與 VPN 的工作原理，
+        並跟隨攻擊殺傷鏈理解威脅者的每一步行動——
+        唯有看懂攻擊，才能設計出真正有效的防禦。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">11</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">CIA 三元組</a></li>
+      <li data-n="2"><a href="#s2">密碼學基礎</a></li>
+      <li data-n="3"><a href="#s3">對稱與非對稱加密</a></li>
+      <li data-n="4"><a href="#s4">雜湊函數與 MAC</a></li>
+      <li data-n="5"><a href="#s5">防火牆的演進</a></li>
+      <li data-n="6"><a href="#s6">入侵偵測與防禦（IDS/IPS）</a></li>
+      <li data-n="7"><a href="#s7">VPN 原理與協定</a></li>
+      <li data-n="8"><a href="#s8">網路攻擊殺傷鏈</a></li>
+      <li data-n="9"><a href="#s9">常見網路層攻擊手法</a></li>
+      <li data-n="10"><a href="#s10">縱深防禦與零信任</a></li>
+      <li data-n="11"><a href="#s11">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <!-- S1 -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>CIA 三元組</h2>
+        <p>
+          資訊安全的一切目標都可以歸納為三個核心屬性，
+          業界稱為 <strong>CIA 三元組（CIA Triad）</strong>。
+          任何安全決策——從協定選擇到存取控制設計——
+          都在思考如何同時維護這三項屬性，或在它們之間做出合理的取捨。
+        </p>
+
+        <div class="cia-grid">
+          <div class="cia-card">
+            <div class="cia-letter">C</div>
+            <div class="cia-name">機密性（Confidentiality）</div>
+            <div class="cia-desc">確保資訊只有授權的人能存取。防止未授權的讀取、攔截或揭露。</div>
+            <div class="cia-example">← 對應：加密、存取控制、VPN、TLS</div>
+          </div>
+          <div class="cia-card">
+            <div class="cia-letter">I</div>
+            <div class="cia-name">完整性（Integrity）</div>
+            <div class="cia-desc">確保資訊在儲存與傳輸過程中未被未授權修改。任何竄改都能被偵測。</div>
+            <div class="cia-example">← 對應：雜湊、數位簽章、MAC、HTTPS</div>
+          </div>
+          <div class="cia-card">
+            <div class="cia-letter">A</div>
+            <div class="cia-name">可用性（Availability）</div>
+            <div class="cia-desc">確保授權用戶在需要時能存取資訊與服務。防止拒絕服務攻擊與系統中斷。</div>
+            <div class="cia-example">← 對應：DDoS 防護、冗餘、負載均衡、備份</div>
+          </div>
+        </div>
+
+        <p>
+          真實的安全設計往往需要在三者之間做取捨。
+          例如，強加密增強了機密性，但若金鑰遺失則危及可用性；
+          多重備份提高了可用性，但增加了機密性洩漏的攻擊面。
+          安全架構師的工作就是在業務需求的框架下找到最佳平衡點。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">延伸：AAA 框架</p>
+          <p>
+            CIA 描述的是「保護什麼」，而 <strong>AAA 框架</strong>描述的是「如何管控存取」：
+            <strong>Authentication（認證）</strong>——你是誰？
+            <strong>Authorization（授權）</strong>——你能做什麼？
+            <strong>Accounting（稽核）</strong>——你做了什麼？
+            RADIUS、TACACS+ 等協定正是實作 AAA 的標準工具。
+          </p>
+        </div>
+      </section>
+
+      <!-- S2 -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>密碼學基礎</h2>
+        <p>
+          密碼學是網路安全的數學基石。
+          理解核心概念有助於正確評估與選擇安全機制，
+          而不只是盲目套用「只要加密就安全」的錯誤觀念。
+        </p>
+
+        <h3>加密的基本概念</h3>
+        <table class="def-table">
+          <thead><tr><th>術語</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>明文（Plaintext）</td><td>原始、未加密的資料</td></tr>
+            <tr><td>密文（Ciphertext）</td><td>加密後的資料，對攻擊者無法直接讀取</td></tr>
+            <tr><td>加密（Encryption）</td><td>用金鑰將明文轉換為密文的過程</td></tr>
+            <tr><td>解密（Decryption）</td><td>用金鑰將密文還原為明文的過程</td></tr>
+            <tr><td>金鑰（Key）</td><td>控制加解密過程的秘密參數。演算法公開，安全性依賴金鑰的保密性（Kerckhoffs 原則）</td></tr>
+            <tr><td>密碼套件（Cipher Suite）</td><td>一組演算法的組合，如 TLS 1.3 的 <code>TLS_AES_256_GCM_SHA384</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>Kerckhoffs 原則</h3>
+        <p>
+          現代密碼學的核心原則：<strong>系統的安全性不應依賴演算法的保密，
+          而應依賴金鑰的保密</strong>。演算法應該是公開可審計的。
+          以「我的演算法是秘密的，所以是安全的」為基礎的「保密即安全
+          （Security through Obscurity）」是一種危險的謬誤——
+          一旦演算法洩漏，整個系統就毫無防護。
+          RSA、AES、ChaCha20 都是完全公開的演算法，其安全性依賴金鑰長度的計算複雜度。
+        </p>
+
+        <h3>隨機性的重要性</h3>
+        <p>
+          密碼學安全的隨機數生成（CSPRNG，Cryptographically Secure
+          Pseudo-Random Number Generator）是所有密碼系統的命脈。
+          若隨機數生成器可預測，攻擊者可以猜出金鑰、IV（初始向量）或 nonce。
+          歷史上最著名的案例是 2008 年 Debian OpenSSL 漏洞：
+          一個「優化」補丁意外移除了隨機性的主要熵來源，
+          導致所有生成的 RSA/DSA 金鑰實際上只有 32,767 種可能值，
+          整個受影響的 Debian 系統的 SSH 金鑰幾乎在數小時內就能被暴力破解。
+        </p>
+      </section>
+
+      <!-- S3 -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>對稱與非對稱加密</h2>
+
+        <div class="crypto-compare">
+          <div class="cc-card">
+            <div class="cc-title">對稱加密（Symmetric Encryption）</div>
+            <div class="cc-row"><span class="cc-k">金鑰</span><span class="cc-v">加解密使用同一把金鑰</span></div>
+            <div class="cc-row"><span class="cc-k">速度</span><span class="cc-v">極快，適合大量資料加密</span></div>
+            <div class="cc-row"><span class="cc-k">問題</span><span class="cc-v">金鑰分發難題：如何安全地把金鑰給對方？</span></div>
+            <div class="cc-row"><span class="cc-k">演算法</span><span class="cc-v">AES-128/256、ChaCha20、3DES（已棄用）</span></div>
+            <div class="cc-row"><span class="cc-k">模式</span><span class="cc-v">AES-GCM（認證加密）、AES-CBC（需搭配 MAC）</span></div>
+            <div class="cc-row"><span class="cc-k">用途</span><span class="cc-v">TLS 傳輸資料、磁碟加密、VPN 資料通道</span></div>
+          </div>
+          <div class="cc-card">
+            <div class="cc-title">非對稱加密（Asymmetric Encryption）</div>
+            <div class="cc-row"><span class="cc-k">金鑰</span><span class="cc-v">公鑰（Public Key）加密，私鑰（Private Key）解密</span></div>
+            <div class="cc-row"><span class="cc-k">速度</span><span class="cc-v">慢（比對稱加密慢 100–1000 倍）</span></div>
+            <div class="cc-row"><span class="cc-k">優點</span><span class="cc-v">解決金鑰分發：公鑰可公開，私鑰自己保管</span></div>
+            <div class="cc-row"><span class="cc-k">演算法</span><span class="cc-v">RSA（金鑰交換、簽名）、ECDSA（簽名）、ECDH/X25519（金鑰協商）</span></div>
+            <div class="cc-row"><span class="cc-k">安全基礎</span><span class="cc-v">RSA：大數分解難題；ECC：橢圓曲線離散對數難題</span></div>
+            <div class="cc-row"><span class="cc-k">用途</span><span class="cc-v">TLS 握手金鑰交換、數位簽章、SSH 認證</span></div>
+          </div>
+        </div>
+
+        <h3>混合加密：兩者的最佳組合</h3>
+        <p>
+          現實中幾乎所有安全協定都使用<strong>混合加密（Hybrid Encryption）</strong>：
+          用非對稱加密解決金鑰分發問題，用對稱加密處理實際的大量資料加密。
+        </p>
+        <div class="diagram">
+          <div class="diagram-title">混合加密流程（TLS 握手的本質）</div>
+          <pre>
+  1. 金鑰協商（非對稱，ECDH）：
+     客戶端 & 伺服器各自生成臨時 ECDH 金鑰對
+     交換公鑰 → 雙方各自計算出相同的共享密鑰（Shared Secret）
+     （攻擊者攔截公鑰但無法計算共享密鑰——ECDH 的數學特性保證）
+
+  2. 金鑰衍生（KDF）：
+     Shared Secret + 隨機數 → 用 HKDF 衍生出對稱金鑰（Session Key）
+
+  3. 對稱加密傳輸：
+     所有後續資料都用 Session Key 的 AES-GCM 加密
+     速度快、計算開銷低
+
+  結果：非對稱的安全 + 對稱的效能</pre>
+        </div>
+
+        <h3>前向保密（Perfect Forward Secrecy, PFS）</h3>
+        <p>
+          傳統 RSA 金鑰交換中，若伺服器的私鑰未來被洩漏，
+          攻擊者可以解密所有過去攔截的流量。
+          <strong>前向保密</strong>（使用 ECDHE 而非靜態 RSA）確保每次連線都生成新的臨時金鑰，
+          即使私鑰未來被洩漏，過去的通訊仍然安全。
+          TLS 1.3 強制要求使用具備 PFS 的金鑰交換演算法（ECDHE 或 DHE），
+          移除了所有不支援 PFS 的密碼套件。
+        </p>
+      </section>
+
+      <!-- S4 -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>雜湊函數與 MAC</h2>
+
+        <h3>密碼學雜湊函數</h3>
+        <p>
+          <strong>雜湊函數（Cryptographic Hash Function）</strong>將任意長度的輸入
+          映射到固定長度的輸出（摘要／Digest），具備三個關鍵特性：
+        </p>
+        <table class="def-table">
+          <thead><tr><th>特性</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>單向性（One-Way）</td><td>從摘要無法反推原始輸入（計算不可逆）</td></tr>
+            <tr><td>碰撞抵抗（Collision Resistance）</td><td>找不到兩個不同的輸入產生相同的輸出（難以偽造）</td></tr>
+            <tr><td>雪崩效應（Avalanche Effect）</td><td>輸入改變一個位元，輸出的約 50% 位元會改變（無規律）</td></tr>
+          </tbody>
+        </table>
+
+        <table class="def-table">
+          <thead><tr><th>演算法</th><th>輸出長度</th><th>狀態</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>MD5</td><td>128 bits</td><td>已破解（碰撞已知）</td><td>僅用於非安全場景（如校驗和），不可用於安全用途</td></tr>
+            <tr><td>SHA-1</td><td>160 bits</td><td>已棄用（2017 年 SHAttered 攻擊成功）</td><td>舊系統遺留，新系統禁止使用</td></tr>
+            <tr><td>SHA-256</td><td>256 bits</td><td>安全，廣泛使用</td><td>TLS 憑證、Git commit hash、HTTPS 完整性驗證</td></tr>
+            <tr><td>SHA-3（Keccak）</td><td>224/256/384/512 bits</td><td>安全，後備選擇</td><td>設計完全不同於 SHA-2，防止 SHA-2 被攻破時的替代</td></tr>
+            <tr><td>BLAKE3</td><td>256 bits（可調）</td><td>現代、極快</td><td>高效能場景的雜湊，比 SHA-256 快 5–10 倍</td></tr>
+          </tbody>
+        </table>
+
+        <h3>密碼儲存：為什麼不能只用雜湊？</h3>
+        <p>
+          若資料庫儲存 <code>SHA-256("password123")</code>，
+          攻擊者可以預先計算所有常見密碼的雜湊值（<strong>彩虹表攻擊，Rainbow Table</strong>）。
+          正確的密碼儲存需要：
+        </p>
+        <p>
+          <strong>加鹽（Salting）</strong>：為每個密碼附加隨機的唯一鹽值再雜湊，
+          讓彩虹表完全失效（每個密碼的雜湊都不同）。
+          <strong>慢速雜湊（Slow Hash）</strong>：使用專為密碼設計的演算法
+          bcrypt、scrypt、Argon2（2015 年密碼雜湊競賽冠軍），
+          這些演算法刻意設計成計算成本高，使暴力破解需要耗費大量時間與記憶體。
+          <strong>永遠不要用 SHA-256 直接儲存密碼</strong>，即使加鹽也不夠——它太快了。
+        </p>
+
+        <h3>MAC：帶金鑰的完整性驗證</h3>
+        <p>
+          純雜湊只能驗證完整性，但任何人都能重新計算雜湊值並偽造訊息。
+          <strong>MAC（Message Authentication Code）</strong>用共享的密鑰計算，
+          只有擁有金鑰的人才能驗證——同時提供完整性和來源認證。
+        </p>
+        <p>
+          最常用的是 <strong>HMAC（Hash-based MAC）</strong>：
+          <code>HMAC(key, message) = H((key ⊕ opad) ∥ H((key ⊕ ipad) ∥ message))</code>。
+          更現代的是 <strong>AEAD（Authenticated Encryption with Associated Data）</strong>，
+          如 AES-GCM 和 ChaCha20-Poly1305，在加密的同時自動生成認證標籤（Auth Tag），
+          一步完成加密和完整性驗證。
+        </p>
+      </section>
+
+      <!-- S5 -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>防火牆的演進</h2>
+        <p>
+          防火牆是網路安全的第一道邊界防線，
+          但「防火牆」這個詞涵蓋了從最簡單的封包過濾到應用層深度檢測的多個世代技術。
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>世代</th><th>技術</th><th>運作層</th><th>特點與侷限</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>第一代（1988）</td>
+              <td>封包過濾（Packet Filtering）</td>
+              <td>L3/L4</td>
+              <td>依 IP、Port、Protocol 的 ACL 規則過濾。無狀態，無法辨識應用語意。容易被偽造 IP 或分割封包繞過</td>
+            </tr>
+            <tr>
+              <td>第二代（1990）</td>
+              <td>狀態檢測（Stateful Inspection）</td>
+              <td>L3/L4</td>
+              <td>追蹤 TCP 連線狀態（SYN/ESTABLISHED），自動允許已建立連線的回應封包，大幅降低規則複雜度。仍無法理解應用層內容</td>
+            </tr>
+            <tr>
+              <td>第三代（1994）</td>
+              <td>應用層代理（Application Proxy）</td>
+              <td>L7</td>
+              <td>針對特定協定（HTTP、FTP、DNS）做深度解析。安全性高，但效能低、延遲高、每個協定需獨立代理</td>
+            </tr>
+            <tr>
+              <td>第四代（2000s）</td>
+              <td>下一代防火牆（NGFW）</td>
+              <td>L3–L7</td>
+              <td>整合 IPS、SSL 解密、應用識別、使用者識別、URL 過濾於一體。Palo Alto、Fortinet 代表產品</td>
+            </tr>
+            <tr>
+              <td>現代</td>
+              <td>雲端 WAF / SASE</td>
+              <td>L7+</td>
+              <td>Web Application Firewall 防護 OWASP Top 10；SASE 將安全功能移至雲端邊緣，適應零信任架構</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="zone-diagram">
+          <div class="zone-title">三區架構（DMZ）：企業網路的標準分區設計</div>
+          <div class="zone-body">
+            <pre>
+  網際網路
+      │
+  ┌───┴───────────────────────────────────────────┐
+  │  外部防火牆（External Firewall）                │
+  │  規則：只允許 TCP 80/443 入站到 DMZ             │
+  └───┬───────────────────────────────────────────┘
+      │
+  ┌───┴──────────────────────────────────────────────────┐
+  │  非軍事區（DMZ, Demilitarized Zone）                  │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+  │  │ Web Server│  │Mail Server│  │DNS Server │          │
+  │  │（對外服務）│  │（對外服務）│  │（對外遞迴）│          │
+  │  └──────────┘  └──────────┘  └──────────┘           │
+  │  原則：DMZ 伺服器可對外服務，但不得直接存取內部網路       │
+  └───┬──────────────────────────────────────────────────┘
+      │
+  ┌───┴───────────────────────────────────────────┐
+  │  內部防火牆（Internal Firewall）                │
+  │  規則：只允許 Web Server 存取 DB Port，嚴格限制 │
+  └───┬───────────────────────────────────────────┘
+      │
+  ┌───┴──────────────────────────────────────────────────┐
+  │  內部網路（Internal / Trusted Zone）                  │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+  │  │ Database  │  │  ERP/HR  │  │  員工 PC  │           │
+  │  └──────────┘  └──────────┘  └──────────┘           │
+  └──────────────────────────────────────────────────────┘
+
+  設計邏輯：即使 DMZ 中的 Web Server 被攻陷，
+  攻擊者仍被內部防火牆阻擋，無法直接存取核心資料庫</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- S6 -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>入侵偵測與防禦（IDS/IPS）</h2>
+        <p>
+          防火牆基於規則允許或拒絕流量，但無法辨識已通過規則的惡意行為。
+          <strong>IDS/IPS</strong> 則持續監控流量模式，尋找已知攻擊特徵或異常行為。
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>系統</th><th>全名</th><th>功能</th><th>部署模式</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>IDS</td>
+              <td>Intrusion Detection System</td>
+              <td>偵測並<strong>告警</strong>，不主動阻擋。被動監控，適合不能影響流量的場景</td>
+              <td>旁路（Out-of-Band），接收流量副本（SPAN Port）</td>
+            </tr>
+            <tr>
+              <td>IPS</td>
+              <td>Intrusion Prevention System</td>
+              <td>偵測並<strong>主動阻擋</strong>惡意流量。可以丟棄封包、重置連線</td>
+              <td>串聯（Inline），流量必須經過它</td>
+            </tr>
+            <tr>
+              <td>NIDS</td>
+              <td>Network-based IDS</td>
+              <td>監控網路流量，偵測網路層攻擊</td>
+              <td>核心交換器的 SPAN/TAP 介面</td>
+            </tr>
+            <tr>
+              <td>HIDS</td>
+              <td>Host-based IDS</td>
+              <td>監控單一主機的系統呼叫、日誌、檔案變更，偵測主機層攻擊</td>
+              <td>代理程式安裝在每台主機上（如 OSSEC、Wazuh）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>偵測方法</h3>
+        <table class="def-table">
+          <thead><tr><th>方法</th><th>原理</th><th>優缺點</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>特徵比對（Signature-based）</td>
+              <td>比對已知攻擊的特徵碼（如 Snort Rules），類似防毒軟體的病毒碼</td>
+              <td>精準度高、誤報少；無法偵測未知（Zero-day）攻擊；特徵庫需持續更新</td>
+            </tr>
+            <tr>
+              <td>異常偵測（Anomaly-based）</td>
+              <td>建立正常行為基準線（Baseline），偵測偏離基準的異常行為</td>
+              <td>可偵測未知攻擊；誤報率高（新業務部署常被誤判）；需較長的學習期</td>
+            </tr>
+            <tr>
+              <td>行為分析（Behavioral）</td>
+              <td>使用機器學習分析流量模式、用戶行為（UEBA），識別可疑行為序列</td>
+              <td>現代 SIEM/EDR 的核心；可偵測 APT；計算資源需求高</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S7 -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>VPN 原理與協定</h2>
+        <p>
+          <strong>VPN（Virtual Private Network）</strong>在公共網路上建立<strong>加密隧道</strong>，
+          讓遠端設備彷彿在私有網路內部一樣通訊。
+          VPN 同時提供機密性（加密）、完整性（MAC）和認證（憑證或預共享金鑰）。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">VPN 隧道封裝示意</div>
+          <pre>
+原始封包（內部網路）：
+  ┌─────────────────────────────────────┐
+  │ IP Header │ TCP Header │  HTTP Data  │
+  │ 10.0.0.5  │  Port 80   │  明文內容   │
+  └─────────────────────────────────────┘
+
+經過 VPN 隧道封裝後（在公共網際網路傳輸）：
+  ┌──────────────────────────────────────────────────────────┐
+  │ 外部 IP Header │ VPN Header │       加密 Payload          │
+  │ 公網 IP 位址   │ (ESP/TLS)  │ ┌────────────────────────┐ │
+  │                │            │ │ 原始 IP │TCP│HTTP(加密)  │ │
+  │                │            │ └────────────────────────┘ │
+  └──────────────────────────────────────────────────────────┘
+
+中間人只能看到：「從公網 IP A 到公網 IP B 的加密資料」
+無法得知：內部 IP、連接埠、應用層內容</pre>
+        </div>
+
+        <h3>主要 VPN 協定比較</h3>
+        <table class="def-table">
+          <thead><tr><th>協定</th><th>傳輸</th><th>特點</th><th>適用場景</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>IPsec（IKEv2）</td>
+              <td>IP Protocol 50/51（ESP/AH），UDP 500/4500</td>
+              <td>作業系統原生支援；兩種模式：傳輸模式（加密 Payload）和隧道模式（加密整個封包）；行動設備切換網路時連線穩定（MOBIKE）</td>
+              <td>企業 Site-to-Site VPN、行動設備 Remote Access</td>
+            </tr>
+            <tr>
+              <td>OpenVPN</td>
+              <td>UDP（預設）或 TCP，Port 可自訂（常用 1194/443）</td>
+              <td>基於 TLS，開源，跨平台；設定靈活但複雜；用 TCP 443 可穿越嚴格防火牆</td>
+              <td>遠端存取、隱私保護</td>
+            </tr>
+            <tr>
+              <td>WireGuard</td>
+              <td>UDP，Port 51820（預設）</td>
+              <td>程式碼僅 4,000 行（OpenVPN 約 100,000 行），審計容易；效能卓越；ChaCha20-Poly1305 加密；已納入 Linux 核心 5.6+</td>
+              <td>現代首選，個人 VPN、雲端連線</td>
+            </tr>
+            <tr>
+              <td>SSL/TLS VPN</td>
+              <td>HTTPS（TCP 443）</td>
+              <td>透過瀏覽器或輕量用戶端存取；只需 443 port，幾乎不被防火牆封鎖；不需安裝 VPN 客戶端（無客戶端模式）</td>
+              <td>零信任網路存取（ZTNA）、企業 Remote Access</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">Split Tunneling（分割隧道）</p>
+          <p>
+            VPN 預設把<strong>所有流量</strong>導入加密隧道（Full Tunnel），
+            包含存取 YouTube 等公共服務，增加 VPN 伺服器負擔。
+            <strong>Split Tunneling</strong> 只把需要的流量（如存取公司內網）
+            路由進 VPN，其餘流量直接走本地網路，
+            在效能與安全性之間取得平衡。
+            反制方案：企業可強制 Full Tunnel，防止資料從本地連線洩漏。
+          </p>
+        </div>
+      </section>
+
+      <!-- S8 -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>網路攻擊殺傷鏈</h2>
+        <p>
+          <strong>Cyber Kill Chain</strong>（網路攻擊殺傷鏈）由 Lockheed Martin 於 2011 年提出，
+          描述了進階持續性威脅（APT）的典型攻擊階段。
+          理解攻擊鏈有助於在每個階段設計有效的偵測與阻斷機制——
+          攻擊者必須完成所有階段才能成功，防禦者只需在任一階段阻斷就能瓦解攻擊。
+        </p>
+
+        <div class="killchain">
+          <div class="kc-header">Cyber Kill Chain — 七個攻擊階段</div>
+          <div class="kc-row">
+            <div class="kc-n">1</div>
+            <div class="kc-phase">偵查（Reconnaissance）</div>
+            <div class="kc-desc">蒐集目標資訊：WHOIS 查詢、DNS 枚舉、LinkedIn 職員資訊、Shodan 掃描、釣魚目標蒐集。防禦：限制公開資訊、AXFR 限制</div>
+          </div>
+          <div class="kc-row">
+            <div class="kc-n">2</div>
+            <div class="kc-phase">武器化（Weaponization）</div>
+            <div class="kc-desc">製作武器：將漏洞利用程式（Exploit）打包進可傳遞的載體（如惡意 PDF、Office 文件、含後門的安裝包）。防禦：難以直接阻止，依賴後續偵測</div>
+          </div>
+          <div class="kc-row">
+            <div class="kc-n">3</div>
+            <div class="kc-phase">傳遞（Delivery）</div>
+            <div class="kc-desc">將武器送達目標：魚叉式釣魚郵件（Spear Phishing）、惡意連結、供應鏈攻擊、USB 植入。防禦：郵件過濾、沙箱分析、員工安全意識培訓</div>
+          </div>
+          <div class="kc-row">
+            <div class="kc-n">4</div>
+            <div class="kc-phase">觸發（Exploitation）</div>
+            <div class="kc-desc">漏洞被觸發執行：使用者開啟惡意文件、瀏覽器漏洞利用（Drive-by Download）、零日漏洞。防禦：及時修補（Patching）、最小化攻擊面、應用白名單</div>
+          </div>
+          <div class="kc-row">
+            <div class="kc-n">5</div>
+            <div class="kc-phase">安裝（Installation）</div>
+            <div class="kc-desc">植入持久化機制：安裝 RAT（遠端存取木馬）、後門、修改開機設定、建立排程任務或服務。防禦：EDR、檔案完整性監控、特權存取管理</div>
+          </div>
+          <div class="kc-row">
+            <div class="kc-n">6</div>
+            <div class="kc-phase">命令控制（C2）</div>
+            <div class="kc-desc">建立與攻擊者的通訊通道：DNS 隧道、HTTPS C2（混入正常流量）、社交媒體隱蔽通道。防禦：DNS 過濾、異常流量分析、出站流量白名單</div>
+          </div>
+          <div class="kc-row">
+            <div class="kc-n">7</div>
+            <div class="kc-phase">目標行動（Actions）</div>
+            <div class="kc-desc">達成最終目標：資料外洩（Exfiltration）、勒索軟體加密、破壞系統、橫向移動（Lateral Movement）。防禦：資料外洩防護（DLP）、最小權限、網路分段</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S9 -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>常見網路層攻擊手法</h2>
+
+        <div class="threat-block">
+          <div class="threat-header">DDoS 分散式阻斷服務攻擊<span class="severity">可用性威脅</span></div>
+          <div class="threat-body">
+            <p><strong>容積型（Volumetric）</strong>：以大量流量淹沒頻寬（UDP Flood、ICMP Flood、DNS/NTP 放大）。2024 年最大記錄達 5.6 Tbps（Cloudflare 緩解）。</p>
+            <p><strong>協定型（Protocol）</strong>：利用協定狀態機耗盡伺服器資源（SYN Flood 耗盡半開連線佇列）。防禦：SYN Cookie——伺服器不分配資源，僅在收到最後 ACK 時才建立連線狀態。</p>
+            <p><strong>應用層型（Application Layer / L7）</strong>：以少量看似合法的請求耗盡應用程式資源（Slowloris 保持 HTTP 連線但不完成、HTTP GET Flood 查詢耗費 CPU 的 API）。防禦：WAF、速率限制、CAPTCHA。</p>
+          </div>
+        </div>
+
+        <div class="threat-block">
+          <div class="threat-header">中間人攻擊（MitM）<span class="severity">機密性 / 完整性威脅</span></div>
+          <div class="threat-body">
+            <p>攻擊者將自己插入通訊雙方之間，可攔截、讀取或修改所有通訊內容。常見手法：</p>
+            <p><strong>ARP Spoofing</strong>（已在 Day 6 詳述）：毒化 ARP Cache 攔截 LAN 流量。</p>
+            <p><strong>HTTPS Downgrade / SSL Stripping</strong>：攔截 HTTP→HTTPS 重導，讓客戶端以為在用 HTTP，中間人讀取明文。防禦：HSTS + Preload。</p>
+            <p><strong>BGP Hijacking</strong>（已在 Day 5 詳述）：劫持路由使流量繞道攻擊者。防禦：RPKI。</p>
+            <p><strong>Evil Twin Wi-Fi</strong>：架設與合法 AP 同名的假熱點，讓設備自動連入。防禦：強制 VPN、憑證驗證、802.1X 認證。</p>
+          </div>
+        </div>
+
+        <div class="threat-block">
+          <div class="threat-header">Port Scan 與服務枚舉<span class="severity">偵查工具</span></div>
+          <div class="threat-body">
+            <p><strong>TCP Connect Scan</strong>：完成完整三向交握後關閉連線（慢、留有日誌）。<strong>SYN Scan（半開掃描）</strong>：只送 SYN，收到 SYN-ACK 即發 RST，不完成握手（快、不易被應用層偵測，nmap 預設模式）。<strong>UDP Scan</strong>：發送 UDP 封包，接收 ICMP Port Unreachable 判斷埠是否關閉。</p>
+            <p>防禦：防火牆預設拒絕原則（Default-Deny）、Port Knocking、入侵偵測系統偵測掃描行為。</p>
+          </div>
+        </div>
+
+        <div class="threat-block">
+          <div class="threat-header">橫向移動（Lateral Movement）<span class="severity">攻擊鏈延伸</span></div>
+          <div class="threat-body">
+            <p>攻擊者在成功入侵一台主機後，利用該主機的憑證、信任關係或共同服務，在內部網路中擴散到更多高價值目標。常見技術：Pass-the-Hash（重用 NTLM 雜湊）、Pass-the-Ticket（Kerberos 票據重用）、SMB 利用、SSH 金鑰轉發。</p>
+            <p>防禦：網路微分割（Micro-Segmentation）、最小權限（Least Privilege）、特權存取工作站（PAW）、定期輪換憑證。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- S10 -->
+      <section class="lesson-section" id="s10">
+        <span class="section-num">Section 10</span>
+        <h2>縱深防禦與零信任</h2>
+
+        <h3>縱深防禦（Defense in Depth）</h3>
+        <p>
+          <strong>縱深防禦</strong>的核心思想是：任何單一安全控制措施都可能失效，
+          因此應在多個層面建立獨立的防禦機制，
+          讓攻擊者必須突破多道防線才能達成目標。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">縱深防禦的多層架構</div>
+          <pre>
+          外層（Perimeter）
+    ┌─────────────────────────────────┐
+    │  防火牆 / DDoS 防護 / IPS       │
+    │  ─────────────────────────────  │
+    │    網路層（Network）              │
+    │  ┌───────────────────────────┐  │
+    │  │  VLAN 分割 / 存取控制 /    │  │
+    │  │  VPN / WAF                 │  │
+    │  │  ─────────────────────── │  │
+    │  │    主機層（Host）           │  │
+    │  │  ┌──────────────────────┐ │  │
+    │  │  │  EDR / 修補管理 /     │ │  │
+    │  │  │  磁碟加密 / 主機防火牆  │ │  │
+    │  │  │  ────────────────── │ │  │
+    │  │  │   應用層（Application）│ │  │
+    │  │  │  ┌─────────────────┐ │ │  │
+    │  │  │  │  輸入驗證 /       │ │ │  │
+    │  │  │  │  認證 / 授權 /    │ │ │  │
+    │  │  │  │  日誌與監控       │ │ │  │
+    │  │  │  └─────────────────┘ │ │  │
+    │  │  └──────────────────────┘ │  │
+    │  └───────────────────────────┘  │
+    └─────────────────────────────────┘
+              核心資料（Data）
+         加密 + DLP + 備份 + 存取審計</pre>
+        </div>
+
+        <h3>零信任架構（Zero Trust Architecture）</h3>
+        <p>
+          傳統安全模型假設「內網是安全的」（城堡加護城河），
+          一旦通過邊界就信任所有流量。
+          <strong>零信任（Zero Trust）</strong>的核心原則是：
+          <strong>「永不信任，始終驗證（Never Trust, Always Verify）」</strong>。
+          無論請求來自內網還是外網，都必須通過嚴格的認證和授權。
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>原則</th><th>傳統邊界安全</th><th>零信任架構</th></tr></thead>
+          <tbody>
+            <tr><td>信任基礎</td><td>位置（在內網 = 信任）</td><td>身份（每次請求都必須驗證）</td></tr>
+            <tr><td>網路邊界</td><td>明確的內外網邊界</td><td>無邊界，每個資源都是獨立保護的</td></tr>
+            <tr><td>存取控制</td><td>進入內網後較少限制</td><td>最小權限，只授予完成任務所需的最少存取</td></tr>
+            <tr><td>通訊加密</td><td>內網流量通常不加密</td><td>所有流量加密，包含東西向（East-West）流量</td></tr>
+            <tr><td>假設</td><td>入侵只來自外部</td><td>假設已被入侵（Assume Breach），最小化爆炸半徑</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          零信任的實踐工具包括：<strong>身份提供者（IdP）+ 多因素認證（MFA）</strong>、
+          <strong>微分割（Micro-Segmentation）</strong>限制東西向流量、
+          <strong>設備合規性檢查（Device Posture）</strong>確認裝置未被感染、
+          以及<strong>持續的存取行為分析</strong>偵測異常。
+          Google 的 BeyondCorp 和 NIST SP 800-207 是零信任的主要參考框架。
+        </p>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Summary -->
+      <section class="lesson-section" id="s11">
+        <div class="summary-box">
+          <div class="summary-label">Day 11 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>CIA 三元組：機密性（加密）、完整性（雜湊/MAC）、可用性（冗餘/DDoS 防護）</li>
+            <li>Kerckhoffs 原則：安全性靠金鑰，不靠演算法保密；Security through Obscurity 是謬誤</li>
+            <li>對稱加密（AES-GCM）速度快；非對稱加密（RSA/ECDH）解決金鑰分發；實際用混合加密</li>
+            <li>前向保密（PFS）：ECDHE 每次生成臨時金鑰，私鑰洩漏不影響過去通訊</li>
+            <li>SHA-256 安全可用；MD5/SHA-1 已破解；密碼儲存須用 bcrypt/Argon2（加鹽 + 慢速）</li>
+            <li>AEAD（AES-GCM / ChaCha20-Poly1305）同時完成加密和認證</li>
+            <li>防火牆從封包過濾進化到 NGFW；DMZ 三區架構提供縱深防禦</li>
+            <li>IDS 偵測告警；IPS 主動阻擋；特徵比對 vs 異常偵測各有適用場景</li>
+            <li>WireGuard 是現代 VPN 首選（4,000 行程式碼）；IPsec 企業標準；Split Tunneling 分流</li>
+            <li>Kill Chain 7 階段：偵查→武器化→傳遞→觸發→安裝→C2→目標行動，每段可介入阻斷</li>
+            <li>零信任：「永不信任，始終驗證」取代「內網預設安全」的舊模型</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">11 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>CIA 三元組</li>
+          <li><span>#</span>AAA 框架</li>
+          <li><span>#</span>Kerckhoffs 原則</li>
+          <li><span>#</span>對稱 vs 非對稱加密</li>
+          <li><span>#</span>AES-GCM / ChaCha20</li>
+          <li><span>#</span>RSA / ECDH / ECDSA</li>
+          <li><span>#</span>前向保密（PFS）</li>
+          <li><span>#</span>SHA-256 / bcrypt / Argon2</li>
+          <li><span>#</span>AEAD / HMAC</li>
+          <li><span>#</span>彩虹表 / 加鹽</li>
+          <li><span>#</span>NGFW / DMZ</li>
+          <li><span>#</span>IDS / IPS</li>
+          <li><span>#</span>IPsec / WireGuard / OpenVPN</li>
+          <li><span>#</span>Split Tunneling</li>
+          <li><span>#</span>Cyber Kill Chain</li>
+          <li><span>#</span>SYN Cookie</li>
+          <li><span>#</span>縱深防禦</li>
+          <li><span>#</span>零信任（Zero Trust）</li>
+          <li><span>#</span>BeyondCorp / NIST SP 800-207</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day10.html"><span>&larr; Day 10: HTTP 與 HTTPS</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day12.html"><span>Day 12: 網路診斷與監控</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 11 / 16</p>
+    <p>下一課：<a href="day12.html" style="color:var(--accent);text-decoration:none;">網路診斷與監控 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

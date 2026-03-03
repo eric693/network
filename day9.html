@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 9 — DNS 網域名稱系統 | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a1a1a; --paper: #f5f0e8; --accent: #c0392b;
+      --mid: #7a6a5a; --line: rgba(26,26,26,0.12); --code-bg: rgba(26,26,26,0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--paper); color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif; font-weight: 300;
+      line-height: 1.9; min-height: 100vh;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── nav ── */
+    .topnav {
+      position: relative; z-index: 10; padding: 20px 8vw;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .topnav a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--mid); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+    .topnav a:hover { color: var(--accent); }
+    .topnav .breadcrumb { display: flex; align-items: center; gap: 8px; }
+    .topnav .sep { color: var(--line); font-size: 14px; }
+    .topnav .nav-group { display: flex; gap: 24px; }
+
+    /* ── hero ── */
+    .hero {
+      position: relative; z-index: 1; padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: end;
+    }
+    .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.22em; color: var(--accent); text-transform: uppercase; margin-bottom: 18px; }
+    .hero h1 { font-family: 'Noto Serif TC', serif; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
+    .hero-desc { margin-top: 20px; font-size: 1rem; color: var(--mid); max-width: 560px; }
+    .hero-meta .day-num { font-family: 'IBM Plex Mono', monospace; font-size: 6rem; font-weight: 500; line-height: 1; color: var(--ink); opacity: 0.08; display: block; }
+
+    /* ── toc ── */
+    .toc-bar { position: relative; z-index: 1; padding: 24px 8vw; border-bottom: 1px solid var(--line); background: rgba(26,26,26,0.03); }
+    .toc-bar h2 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 14px; }
+    .toc-list { display: flex; flex-wrap: wrap; gap: 8px 24px; list-style: none; }
+    .toc-list li a { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--mid); text-decoration: none; transition: color 0.2s; }
+    .toc-list li a:hover { color: var(--accent); }
+    .toc-list li::before { content: attr(data-n) ". "; color: var(--accent); font-size: 10px; }
+
+    /* ── layout ── */
+    .main-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 260px; align-items: start; }
+    article { padding: 64px 6vw 80px 8vw; border-right: 1px solid var(--line); }
+
+    /* ── section ── */
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+    .section-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 10px; }
+    .lesson-section h2 { font-family: 'Noto Serif TC', serif; font-size: 1.75rem; font-weight: 600; line-height: 1.3; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .lesson-section h3 { font-family: 'Noto Serif TC', serif; font-size: 1.15rem; font-weight: 600; margin: 36px 0 12px; }
+    .lesson-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--mid); margin: 24px 0 10px; letter-spacing: 0.05em; }
+    .lesson-section p { margin-bottom: 16px; font-size: 0.97rem; }
+    .lesson-section p:last-child { margin-bottom: 0; }
+    strong { font-weight: 500; color: var(--ink); }
+    code { font-family: 'IBM Plex Mono', monospace; font-size: 0.85em; background: var(--code-bg); padding: 2px 6px; color: var(--ink); }
+
+    /* ── boxes ── */
+    .highlight-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--accent); background: rgba(192,57,43,0.05); }
+    .highlight-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+    .info-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--mid); background: var(--code-bg); }
+    .info-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 8px; }
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    /* ── table ── */
+    .def-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.9rem; }
+    .def-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); text-align: left; padding: 10px 16px; background: var(--code-bg); border-bottom: 1px solid var(--line); }
+    .def-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+    .def-table tr:last-child td { border-bottom: none; }
+    .def-table td:first-child { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+    /* ── diagram ── */
+    .diagram { margin: 28px 0; background: var(--code-bg); border: 1px solid var(--line); padding: 28px 24px; }
+    .diagram-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px; }
+    .diagram pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* ── DNS hierarchy tree ── */
+    .dns-tree { margin: 28px 0; border: 1px solid var(--line); background: var(--code-bg); padding: 28px 24px; }
+    .dns-tree-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px; }
+    .dns-tree pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.9; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* ── RR cards ── */
+    .rr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap: 0; border: 1px solid var(--line); margin: 24px 0; }
+    .rr-card { padding: 18px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background 0.15s; }
+    .rr-card:hover { background: rgba(26,26,26,0.03); }
+    .rr-type { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 500; color: var(--accent); margin-bottom: 3px; }
+    .rr-full { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--mid); margin-bottom: 8px; }
+    .rr-desc { font-size: 0.82rem; color: var(--ink); line-height: 1.6; }
+    .rr-example { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--mid); margin-top: 6px; }
+
+    /* ── DNS message format ── */
+    .dns-msg { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .dns-msg-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .dns-msg-row { display: grid; border-bottom: 1px solid var(--line); }
+    .dns-msg-row:last-child { border-bottom: none; }
+    .dns-field { padding: 12px 16px; border-right: 1px solid var(--line); font-family: 'IBM Plex Mono', monospace; }
+    .dns-field:last-child { border-right: none; }
+    .dns-field .df-name { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 3px; }
+    .dns-field .df-val { font-size: 0.82rem; color: var(--ink); }
+    .dns-field .df-bits { font-size: 0.62rem; color: var(--mid); display: block; margin-top: 2px; }
+
+    /* ── security attack blocks ── */
+    .attack-block { margin: 28px 0; border: 1px solid rgba(192,57,43,0.3); overflow: hidden; }
+    .attack-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper); background: var(--accent); padding: 10px 16px; }
+    .attack-body { padding: 20px 24px; background: rgba(192,57,43,0.04); }
+    .attack-body p { font-size: 0.9rem; margin-bottom: 12px; }
+    .attack-body p:last-child { margin-bottom: 0; }
+
+    /* ── resolver flow steps ── */
+    .flow-steps { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .flow-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .flow-step { display: grid; grid-template-columns: 32px 1fr; border-bottom: 1px solid var(--line); }
+    .flow-step:last-child { border-bottom: none; }
+    .flow-step:hover { background: rgba(26,26,26,0.03); }
+    .flow-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; color: var(--paper); background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .flow-content { padding: 12px 16px; font-size: 0.88rem; line-height: 1.6; }
+    .flow-content .fc-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; color: var(--ink); margin-bottom: 3px; }
+    .flow-content .fc-desc { color: var(--mid); font-size: 0.83rem; }
+
+    /* ── divider / summary / sidebar / footer ── */
+    .divider { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
+    .summary-box { margin-top: 48px; padding: 28px 32px; background: var(--ink); color: var(--paper); }
+    .summary-box .summary-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.25em; color: rgba(245,240,232,0.5); text-transform: uppercase; margin-bottom: 16px; }
+    .summary-box h3 { font-family: 'Noto Serif TC', serif; font-size: 1.1rem; font-weight: 600; color: var(--paper); margin-bottom: 16px; }
+    .summary-box ul { list-style: none; padding: 0; }
+    .summary-box ul li { font-size: 0.9rem; color: rgba(245,240,232,0.8); padding: 6px 0 6px 16px; border-bottom: 1px solid rgba(245,240,232,0.08); position: relative; }
+    .summary-box ul li::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-size: 0.8rem; }
+    aside { padding: 48px 28px; position: sticky; top: 0; }
+    .aside-section { margin-bottom: 40px; }
+    .aside-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .keyword-list { list-style: none; padding: 0; }
+    .keyword-list li { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid); padding: 5px 0; border-bottom: 1px solid var(--line); transition: color 0.2s; }
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+    .progress-bar { height: 3px; background: var(--line); margin: 12px 0 20px; position: relative; }
+    .progress-bar::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 56.25%; background: var(--accent); }
+    .progress-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mid); letter-spacing: 0.1em; }
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+    .nav-links a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); transition: border-color 0.2s, color 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+    footer { position: relative; z-index: 1; padding: 32px 8vw; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    footer p { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); letter-spacing: 0.1em; }
+
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+      aside { position: static; border-top: 1px solid var(--line); padding: 40px 8vw; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+      .rr-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .rr-grid { grid-template-columns: 1fr; }
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar { animation-delay: 0.10s; }
+    article { animation-delay: 0.15s; }
+    aside { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 9</a>
+    </div>
+    <div class="nav-group">
+      <a href="day8.html">&larr; Day 8</a>
+      <a href="day10.html">Day 10 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 03 &mdash; 應用層協定 &mdash; Day 09 / 16</p>
+      <h1>DNS 網域名稱系統<br>網際網路的電話簿</h1>
+      <p class="hero-desc">
+        每當你在瀏覽器輸入 <code>www.google.com</code>，DNS 在幕後幾毫秒內完成了
+        一趟橫跨多個伺服器的查詢旅程。理解 DNS 的階層架構、解析流程、
+        資源記錄格式與安全機制，是掌握網際網路運作的關鍵一步。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">09</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">DNS 的誕生與設計目標</a></li>
+      <li data-n="2"><a href="#s2">DNS 階層架構</a></li>
+      <li data-n="3"><a href="#s3">DNS 解析完整流程</a></li>
+      <li data-n="4"><a href="#s4">DNS 訊息格式</a></li>
+      <li data-n="5"><a href="#s5">資源記錄（RR）類型</a></li>
+      <li data-n="6"><a href="#s6">DNS 快取與 TTL</a></li>
+      <li data-n="7"><a href="#s7">DNS 區域與權威伺服器</a></li>
+      <li data-n="8"><a href="#s8">進階 DNS：反查、委派、萬用字元</a></li>
+      <li data-n="9"><a href="#s9">DNS 安全威脅</a></li>
+      <li data-n="10"><a href="#s10">DNSSEC 與加密 DNS</a></li>
+      <li data-n="11"><a href="#s11">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <!-- S1 -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>DNS 的誕生與設計目標</h2>
+        <p>
+          1983 年以前，整個網際網路（當時稱 ARPANET）的主機名稱解析靠一個叫做
+          <code>HOSTS.TXT</code> 的純文字檔案——Stanford Research Institute（SRI）
+          維護這份清單，所有主機定期下載更新。這個方式在只有幾百台主機時運作良好，
+          但當主機數量急速增長，問題接踵而來：更新頻率跟不上、
+          名稱衝突越來越多、單點故障風險極高。
+        </p>
+        <p>
+          Paul Mockapetris 在 1983 年提出 DNS（Domain Name System），
+          定義於 RFC 1034 和 RFC 1035，設計目標有三：
+          <strong>分散式（Distributed）</strong>——沒有單一中央資料庫；
+          <strong>階層式（Hierarchical）</strong>——以樹狀結構組織命名空間；
+          <strong>快取（Cached）</strong>——避免重複查詢，提升效能。
+        </p>
+        <div class="highlight-box">
+          <p class="box-label">DNS 的規模</p>
+          <p>
+            今日 DNS 是世界上最大的分散式資料庫之一，
+            每天處理超過<strong>數兆次查詢</strong>。
+            根伺服器系統（Root Server System）由全球 13 個邏輯根伺服器（A 到 M）
+            組成，實際上透過任播（Anycast）技術在全球部署超過 1,700 個節點，
+            任何一個根伺服器的「毀滅」都不會讓 DNS 停擺。
+          </p>
+        </div>
+      </section>
+
+      <!-- S2 -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>DNS 階層架構</h2>
+        <p>
+          DNS 命名空間是一棵倒置的樹，頂端是<strong>根（Root，以「.」表示）</strong>，
+          向下依次是<strong>頂級域（TLD）</strong>、
+          <strong>二級域（Second-Level Domain）</strong>、
+          <strong>子域（Subdomain）</strong>，最終到達主機名稱。
+          完整的域名從右讀到左，最右端是根，最左端是最具體的主機。
+        </p>
+
+        <div class="dns-tree">
+          <div class="dns-tree-title">DNS 命名空間樹狀結構</div>
+          <pre>
+                            .（根，Root）
+                           /     |      \
+             ┌────────────┐  ┌───┐  ┌───────────────┐
+             com           org    net      tw（國碼 TLD）
+            / | \           |               /     \
+         google apple amazon wikipedia    com.tw  edu.tw
+           |                                |        |
+          www                           example   ntu.edu.tw
+                                           |           |
+                                        mail.example  www
+
+  完整域名（FQDN）：
+    www.google.com.         ← 注意尾部的「.」代表根，通常省略
+    mail.example.com.tw.
+    www.ntu.edu.tw.
+
+  TLD 類型：
+    通用 TLD（gTLD）：.com  .org  .net  .edu  .gov  .mil
+    國碼 TLD（ccTLD）：.tw  .jp  .uk  .de  .cn  .us
+    新 TLD（New gTLD）：.app  .dev  .io  .ai  .shop（2012 年後開放）</pre>
+        </div>
+
+        <h3>DNS 伺服器的四種角色</h3>
+        <table class="def-table">
+          <thead><tr><th>角色</th><th>說明</th><th>例子</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>根伺服器（Root Server）</td>
+              <td>知道所有 TLD 的權威伺服器位址，是查詢的起點。全球 13 個邏輯根（A–M），Anycast 擴展至 1,700+ 節點</td>
+              <td>a.root-servers.net (198.41.0.4)</td>
+            </tr>
+            <tr>
+              <td>TLD 伺服器（TLD Server）</td>
+              <td>管理特定 TLD（如 .com）下所有域名的委派資訊，知道哪個 NS 是 example.com 的權威伺服器</td>
+              <td>a.gtld-servers.net（管理 .com）</td>
+            </tr>
+            <tr>
+              <td>權威伺服器（Authoritative Server）</td>
+              <td>儲存特定區域（Zone）的實際 DNS 記錄，是最終答案的來源。回應帶有 AA（Authoritative Answer）旗標</td>
+              <td>ns1.google.com（管理 google.com）</td>
+            </tr>
+            <tr>
+              <td>遞迴解析器（Recursive Resolver）</td>
+              <td>替客戶端執行完整的遞迴查詢流程，快取結果。通常由 ISP 或公共 DNS 服務提供</td>
+              <td>8.8.8.8（Google）、1.1.1.1（Cloudflare）、168.95.1.1（HiNet）</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S3 -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>DNS 解析完整流程</h2>
+        <p>
+          以查詢 <code>www.example.com</code> 的 IP 為例，
+          假設本地 DNS Cache 與解析器 Cache 都沒有記錄，
+          完整的遞迴解析流程如下：
+        </p>
+
+        <div class="flow-steps">
+          <div class="flow-header">www.example.com 解析流程（完整 8 步）</div>
+          <div class="flow-step">
+            <div class="flow-num">1</div>
+            <div class="flow-content">
+              <div class="fc-title">瀏覽器 / 作業系統快取查詢</div>
+              <div class="fc-desc">先查瀏覽器自身的 DNS Cache；若無，查作業系統的 DNS Cache（Windows 可用 <code>ipconfig /displaydns</code> 查看）。若命中則直接返回，流程結束。</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">2</div>
+            <div class="flow-content">
+              <div class="fc-title">查詢遞迴解析器（Recursive Resolver）</div>
+              <div class="fc-desc">Cache 未命中，作業系統向設定的 DNS 伺服器（如 8.8.8.8）發出 UDP 查詢。解析器若有快取則直接回應；若無則開始遞迴查詢。</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">3</div>
+            <div class="flow-content">
+              <div class="fc-title">解析器 → 根伺服器</div>
+              <div class="fc-desc">解析器向根伺服器詢問「誰管 .com？」根伺服器回傳 .com TLD 伺服器的 NS 記錄（<strong>非遞迴答案</strong>，僅告知下一步去哪問）。</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">4</div>
+            <div class="flow-content">
+              <div class="fc-title">解析器 → .com TLD 伺服器</div>
+              <div class="fc-desc">解析器再詢問 .com TLD 伺服器「誰管 example.com？」TLD 伺服器回傳 example.com 的 NS 記錄（如 ns1.example.com）。</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">5</div>
+            <div class="flow-content">
+              <div class="fc-title">解析器 → example.com 權威伺服器</div>
+              <div class="fc-desc">解析器向 ns1.example.com 詢問「www.example.com 的 A 記錄是什麼？」權威伺服器回傳最終答案（IP 位址）。回應帶 AA 旗標。</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">6</div>
+            <div class="flow-content">
+              <div class="fc-title">解析器快取結果</div>
+              <div class="fc-desc">解析器將答案依 TTL 快取，下次相同查詢直接回應，不再遞迴。</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">7</div>
+            <div class="flow-content">
+              <div class="fc-title">解析器回傳給客戶端</div>
+              <div class="fc-desc">解析器將 IP 位址回傳給作業系統；作業系統快取後交給瀏覽器。</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">8</div>
+            <div class="flow-content">
+              <div class="fc-title">瀏覽器建立 TCP 連線</div>
+              <div class="fc-desc">拿到 IP 後，瀏覽器才開始建立 TCP/TLS 連線，發出 HTTP 請求。DNS 解析本身對使用者是透明的，通常在 10–50ms 內完成。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">遞迴查詢 vs 迭代查詢</div>
+          <pre>
+遞迴查詢（Recursive Query）：客戶端要求解析器完整解決
+  客戶端 ──────────────────> 遞迴解析器（「幫我查完」）
+  客戶端 &lt;────────────────── 解析器（「答案是 X.X.X.X」）
+
+迭代查詢（Iterative Query）：解析器每步都只得到「下一步去哪問」
+  解析器 ──> 根伺服器      → 「去問 a.gtld-servers.net」
+  解析器 ──> TLD 伺服器    → 「去問 ns1.example.com」
+  解析器 ──> 權威伺服器    → 「答案是 93.184.216.34」
+
+實際運作：
+  客戶端 ←──遞迴──→ 解析器（客戶端的角度：一問一答）
+  解析器 ←──迭代──→ 各層伺服器（解析器的角度：逐步詢問）</pre>
+        </div>
+      </section>
+
+      <!-- S4 -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>DNS 訊息格式</h2>
+        <p>
+          DNS 查詢與回應使用相同的訊息格式，
+          分為 <strong>Header</strong>、<strong>Question</strong>、
+          <strong>Answer</strong>、<strong>Authority</strong>、
+          <strong>Additional</strong> 五個區段。
+          每個訊息大小通常在 512 bytes 以內（UDP 傳輸），
+          超過則改用 TCP 或啟用 EDNS0（最大 4096 bytes）。
+        </p>
+
+        <div class="dns-msg">
+          <div class="dns-msg-title">DNS 訊息 Header（12 bytes）</div>
+          <div class="dns-msg-row" style="grid-template-columns:1fr 1fr;">
+            <div class="dns-field">
+              <span class="df-name">Transaction ID</span>
+              <span class="df-val">查詢識別碼，回應必須與查詢相同（用於匹配問答對）</span>
+              <span class="df-bits">16 bits</span>
+            </div>
+            <div class="dns-field">
+              <span class="df-name">Flags（旗標）</span>
+              <span class="df-val">QR（查詢/回應）、Opcode、AA、TC、RD、RA、RCODE 等</span>
+              <span class="df-bits">16 bits</span>
+            </div>
+          </div>
+          <div class="dns-msg-row" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+            <div class="dns-field">
+              <span class="df-name">QDCOUNT</span>
+              <span class="df-val">Question 區段的問題數量（通常為 1）</span>
+              <span class="df-bits">16 bits</span>
+            </div>
+            <div class="dns-field">
+              <span class="df-name">ANCOUNT</span>
+              <span class="df-val">Answer 區段的 RR 數量</span>
+              <span class="df-bits">16 bits</span>
+            </div>
+            <div class="dns-field">
+              <span class="df-name">NSCOUNT</span>
+              <span class="df-val">Authority 區段的 NS RR 數量</span>
+              <span class="df-bits">16 bits</span>
+            </div>
+            <div class="dns-field">
+              <span class="df-name">ARCOUNT</span>
+              <span class="df-val">Additional 區段的 RR 數量</span>
+              <span class="df-bits">16 bits</span>
+            </div>
+          </div>
+        </div>
+
+        <h4>重要 Flags 位元說明</h4>
+        <table class="def-table">
+          <thead><tr><th>旗標</th><th>全名</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>QR</td><td>Query/Response</td><td>0 = 查詢，1 = 回應</td></tr>
+            <tr><td>AA</td><td>Authoritative Answer</td><td>1 = 此回應來自權威伺服器（非快取）</td></tr>
+            <tr><td>TC</td><td>Truncated</td><td>1 = 回應超過 512 bytes 被截斷，客戶端應改用 TCP 重試</td></tr>
+            <tr><td>RD</td><td>Recursion Desired</td><td>1 = 客戶端希望解析器執行遞迴查詢</td></tr>
+            <tr><td>RA</td><td>Recursion Available</td><td>1 = 伺服器支援遞迴查詢</td></tr>
+            <tr><td>RCODE</td><td>Response Code</td><td>0=NOERROR、1=FORMERR、2=SERVFAIL、3=NXDOMAIN（域名不存在）、5=REFUSED</td></tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">NXDOMAIN（RCODE 3）的意義</p>
+          <p>
+            當查詢的域名根本不存在時，權威伺服器回傳 NXDOMAIN（Non-Existent Domain）。
+            這與「域名存在但沒有該類型記錄（NOERROR with empty answer）」是不同的情況。
+            部分 ISP 的 DNS 會把 NXDOMAIN 劫持為指向廣告頁面，
+            這是公共 DNS（8.8.8.8、1.1.1.1）受歡迎的原因之一。
+          </p>
+        </div>
+      </section>
+
+      <!-- S5 -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>資源記錄（Resource Record）類型</h2>
+        <p>
+          DNS 儲存的資料以<strong>資源記錄（RR, Resource Record）</strong>為單位，
+          每筆記錄包含：名稱（Name）、類型（Type）、類別（Class，幾乎都是 IN = Internet）、
+          TTL（存活時間）、資料長度（RDLENGTH）和實際資料（RDATA）。
+        </p>
+
+        <div class="rr-grid">
+          <div class="rr-card">
+            <div class="rr-type">A</div>
+            <div class="rr-full">Address Record（IPv4）</div>
+            <div class="rr-desc">將域名對應到 IPv4 位址。最基本、最常用的記錄類型。</div>
+            <div class="rr-example">www.example.com. 300 IN A 93.184.216.34</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">AAAA</div>
+            <div class="rr-full">Address Record（IPv6）</div>
+            <div class="rr-desc">將域名對應到 IPv6 位址。名稱「四個 A」因為 IPv6 是 IPv4 的四倍長。</div>
+            <div class="rr-example">www.example.com. 300 IN AAAA 2606:2800:220:1:248:1893:25c8:1946</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">CNAME</div>
+            <div class="rr-full">Canonical Name（別名）</div>
+            <div class="rr-desc">將一個域名指向另一個域名（別名）。解析器會繼續查詢 CNAME 指向的域名直到找到 A/AAAA 記錄。</div>
+            <div class="rr-example">www.example.com. 3600 IN CNAME lb.example.com.</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">MX</div>
+            <div class="rr-full">Mail Exchange（郵件交換）</div>
+            <div class="rr-desc">指定負責接收某域名電子郵件的伺服器。含優先權值（數字越小優先）。</div>
+            <div class="rr-example">example.com. 3600 IN MX 10 mail.example.com.</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">NS</div>
+            <div class="rr-full">Name Server（名稱伺服器）</div>
+            <div class="rr-desc">指定某區域的權威 DNS 伺服器。至少需要兩筆（主、備）以確保高可用性。</div>
+            <div class="rr-example">example.com. 86400 IN NS ns1.example.com.</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">SOA</div>
+            <div class="rr-full">Start of Authority（授權起始）</div>
+            <div class="rr-desc">每個區域必有一筆，記錄主要名稱伺服器、管理員信箱、序號、刷新時間等區域參數。</div>
+            <div class="rr-example">example.com. IN SOA ns1 admin 2024010101 3600 900 604800 300</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">TXT</div>
+            <div class="rr-full">Text Record（文字記錄）</div>
+            <div class="rr-desc">任意文字資料。廣泛用於 SPF（防郵件偽造）、DKIM（郵件簽名）、DMARC、網站驗證等。</div>
+            <div class="rr-example">example.com. IN TXT "v=spf1 include:_spf.google.com ~all"</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">PTR</div>
+            <div class="rr-full">Pointer Record（反查記錄）</div>
+            <div class="rr-desc">IP 位址反查域名（Reverse DNS）。存在特殊的 in-addr.arpa 區域中。</div>
+            <div class="rr-example">34.216.184.93.in-addr.arpa. IN PTR www.example.com.</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">SRV</div>
+            <div class="rr-full">Service Record（服務記錄）</div>
+            <div class="rr-desc">指定特定服務的主機、連接埠與優先權。用於 SIP、XMPP、Kubernetes 等服務發現。</div>
+            <div class="rr-example">_sip._tcp.example.com. IN SRV 10 60 5060 sipserver.example.com.</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">CAA</div>
+            <div class="rr-full">Certification Authority Authorization</div>
+            <div class="rr-desc">指定哪些 CA 可以為此域名簽發 SSL/TLS 憑證，防止錯誤簽發。</div>
+            <div class="rr-example">example.com. IN CAA 0 issue "letsencrypt.org"</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">DNSKEY</div>
+            <div class="rr-full">DNS Public Key</div>
+            <div class="rr-desc">DNSSEC 使用，儲存區域的公鑰，用於驗證 RRSIG 數位簽章。</div>
+            <div class="rr-example">example.com. IN DNSKEY 257 3 8 AwEAAb...</div>
+          </div>
+          <div class="rr-card">
+            <div class="rr-type">HTTPS</div>
+            <div class="rr-full">HTTPS Service Binding</div>
+            <div class="rr-desc">較新的記錄類型（RFC 9460），提供 HTTPS 連線的相關參數（如 ALPN、ECH 公鑰）。</div>
+            <div class="rr-example">example.com. IN HTTPS 1 . alpn="h3,h2"</div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <p class="box-label">CNAME 的限制</p>
+          <p>
+            CNAME 不能與其他記錄共存於同一個名稱上。
+            最典型的問題是：根域名（Apex Domain，如 <code>example.com</code>，不帶 www）
+            必須有 SOA 和 NS 記錄，因此不能設定 CNAME。
+            CloudFlare 等 DNS 服務提供商用「CNAME Flattening」（偽裝成 A 記錄回應）解決此限制。
+          </p>
+        </div>
+      </section>
+
+      <!-- S6 -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>DNS 快取與 TTL</h2>
+        <p>
+          每筆 DNS 記錄都有一個 <strong>TTL（Time To Live）</strong>值，
+          單位是秒，表示這筆記錄可以被快取的最長時間。
+          在 TTL 到期之前，解析器不需要再向權威伺服器查詢，
+          直接從快取回應，大幅減少 DNS 查詢流量。
+        </p>
+
+        <table class="def-table">
+          <thead><tr><th>TTL 範圍</th><th>典型用途</th><th>優缺點</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>0–60 秒</td>
+              <td>負載均衡、主動健康檢查（如 Route 53 Health Check）</td>
+              <td>IP 變更即時生效；但每次都要查詢，延遲較高</td>
+            </tr>
+            <tr>
+              <td>300 秒（5 分鐘）</td>
+              <td>需要快速切換的服務（如 DDoS 緩解、CDN 切換）</td>
+              <td>準備遷移前臨時降低 TTL 的常用值</td>
+            </tr>
+            <tr>
+              <td>3600 秒（1 小時）</td>
+              <td>一般 Web 服務的常用預設值</td>
+              <td>平衡快取效能與變更靈活性</td>
+            </tr>
+            <tr>
+              <td>86400 秒（1 天）</td>
+              <td>穩定不常變動的記錄（如 NS、MX）</td>
+              <td>快取命中率高；IP 變更後舊快取存活長達 24 小時</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>DNS 傳播延遲（Propagation Delay）</h3>
+        <p>
+          當你修改 DNS 記錄時，並非所有使用者立刻看到新值。
+          全球各地的遞迴解析器可能快取了舊的 TTL 值，
+          必須等舊記錄過期後才會重新查詢。
+          這個過渡期稱為 <strong>DNS 傳播延遲</strong>，
+          長度等於舊記錄的 TTL 值。
+          這就是為什麼在計畫重大 IP 變更前，應提前幾天將 TTL 降低到 300 秒以下，
+          以縮短傳播延遲。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">TTL 快取流程示意</div>
+          <pre>
+  t=0：第一次查詢 www.example.com（TTL=3600）
+       解析器 ──遞迴──> 根 → TLD → 權威 → 得到 IP：93.184.216.34
+       解析器快取：93.184.216.34，過期時間 = t + 3600
+
+  t=100：第二次查詢
+       解析器直接從快取回應，TTL 剩餘值 = 3600 - 100 = 3500
+       （客戶端收到的 TTL 是剩餘值，不是原始值）
+
+  t=3600：TTL 到期
+       快取失效，下次查詢重新遞迴
+
+  修改 IP 前的最佳實踐：
+    Day -3：將 TTL 從 86400 降到 300
+    Day  0：修改 A 記錄 IP 位址
+    Day +1：確認生效後，視需要調回較高 TTL</pre>
+        </div>
+      </section>
+
+      <!-- S7 -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>DNS 區域與權威伺服器</h2>
+        <p>
+          <strong>區域（Zone）</strong>是 DNS 命名空間的管理單位，
+          是一個組織或個人可以控制的域名範圍。
+          區域的所有記錄儲存在<strong>區域檔案（Zone File）</strong>中，
+          由<strong>主要名稱伺服器（Primary NS）</strong>維護，
+          並定期同步給<strong>次要名稱伺服器（Secondary NS）</strong>以確保高可用性。
+        </p>
+
+        <h3>區域傳輸（Zone Transfer）</h3>
+        <p>
+          當主要 NS 的記錄更新時，次要 NS 透過<strong>區域傳輸</strong>同步最新資料：
+        </p>
+        <table class="def-table">
+          <thead><tr><th>類型</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>AXFR（全量傳輸）</td>
+              <td>次要 NS 向主要 NS 請求整個區域的所有記錄。透過 TCP Port 53 傳輸（資料量大）</td>
+            </tr>
+            <tr>
+              <td>IXFR（增量傳輸）</td>
+              <td>只傳輸自上次同步後變更的記錄，效率更高。比對 SOA 記錄的序號（Serial）判斷是否有更新</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">區域傳輸的安全風險</p>
+          <p>
+            若 DNS 伺服器對任何人開放 AXFR 查詢（而非只允許次要 NS），
+            攻擊者可以下載整個區域的所有記錄，
+            獲取組織內部所有主機名稱與 IP 位址，
+            這是信息蒐集（Reconnaissance）階段的強力工具。
+            應在防火牆與 DNS 設定中限制 AXFR 只允許授權的次要 NS IP 存取。
+          </p>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">典型區域檔案結構（BIND 格式）</div>
+          <pre>
+$ORIGIN example.com.
+$TTL 3600
+; SOA 記錄（每個區域必須有且只有一筆）
+@    IN    SOA    ns1.example.com. admin.example.com. (
+                  2024010101  ; Serial（YYYYMMDDNN，每次修改遞增）
+                  3600        ; Refresh（次要 NS 多久查詢一次更新）
+                  900         ; Retry（Refresh 失敗後重試間隔）
+                  604800      ; Expire（多久後次要 NS 停止回應）
+                  300 )       ; Minimum TTL（負快取 TTL）
+
+; NS 記錄（至少兩筆）
+@    IN    NS     ns1.example.com.
+@    IN    NS     ns2.example.com.
+
+; A 記錄
+@    IN    A      93.184.216.34    ; example.com 本身
+www  IN    A      93.184.216.34
+mail IN    A      93.184.216.35
+
+; MX 記錄
+@    IN    MX     10 mail.example.com.
+@    IN    MX     20 mail2.example.com.   ; 備援
+
+; CNAME 記錄
+ftp  IN    CNAME  www.example.com.
+
+; TXT 記錄（SPF）
+@    IN    TXT    "v=spf1 mx -all"</pre>
+        </div>
+      </section>
+
+      <!-- S8 -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>進階 DNS：反查、委派、萬用字元</h2>
+
+        <h3>反向 DNS 查詢（Reverse DNS / rDNS）</h3>
+        <p>
+          正向查詢是「域名 → IP」；反向查詢是「IP → 域名」，使用特殊的
+          <strong><code>in-addr.arpa</code></strong> 域（IPv4）
+          或 <strong><code>ip6.arpa</code></strong> 域（IPv6）。
+          IPv4 位址反轉後加上 <code>.in-addr.arpa</code>：
+          <code>93.184.216.34</code> 的反查域名是
+          <code>34.216.184.93.in-addr.arpa</code>，
+          對應的 PTR 記錄指向 <code>www.example.com</code>。
+          反向 DNS 常用於郵件伺服器驗證（防止垃圾郵件）和網路日誌的主機識別。
+        </p>
+
+        <h3>委派（Delegation）</h3>
+        <p>
+          DNS 的分散式管理透過<strong>委派</strong>實現：
+          父區域透過 NS 記錄將某個子域的管理權移交給另一組名稱伺服器。
+          例如 <code>.com</code> TLD 伺服器委派 <code>example.com</code> 給
+          <code>ns1.example.com</code>，
+          example.com 又可以委派 <code>sub.example.com</code> 給另一組伺服器，
+          形成完整的分散管理體系。
+        </p>
+        <p>
+          伴隨 NS 委派，父區域通常也提供<strong>黏合記錄（Glue Record）</strong>：
+          當委派的 NS 主機本身就在被委派的區域內時（如 ns1.example.com 管理 example.com），
+          若沒有黏合記錄，解析器會陷入「要問 ns1.example.com 在哪，
+          但 ns1.example.com 的 IP 要問 ns1.example.com」的循環。
+          黏合記錄直接在父區域提供這些 NS 的 A 記錄，打破循環。
+        </p>
+
+        <h3>萬用字元記錄（Wildcard Record）</h3>
+        <p>
+          使用 <code>*</code> 作為最左側標籤，
+          可以匹配任何未明確定義的子域名：
+        </p>
+        <div class="diagram">
+          <div class="diagram-title">萬用字元記錄的應用</div>
+          <pre>
+*.example.com.  IN  A  203.0.113.1
+
+效果：
+  abc.example.com    → 203.0.113.1  ✓
+  xyz.example.com    → 203.0.113.1  ✓
+  www.example.com    → 優先使用明確的 A 記錄（若存在），萬用字元不覆蓋明確記錄
+
+常見用途：
+  - 泛域名 SSL 憑證（*.example.com）搭配萬用字元 A/CNAME
+  - SaaS 服務讓客戶使用自訂子域名（*.app.saas.com → 統一 IP）
+  - 捕獲拼字錯誤的子域名到特定頁面</pre>
+        </div>
+      </section>
+
+      <!-- S9 -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>DNS 安全威脅</h2>
+
+        <div class="attack-block">
+          <div class="attack-header">DNS 快取中毒（DNS Cache Poisoning / Spoofing）</div>
+          <div class="attack-body">
+            <p>
+              攻擊者在解析器向權威伺服器查詢時，<strong>偽造回應</strong>搶先抵達，
+              將惡意的 IP 植入解析器的快取中。
+              之後所有查詢該域名的使用者都會被導向攻擊者的伺服器，
+              直到 TTL 到期。
+            </p>
+            <p>
+              2008 年，研究員 Dan Kaminsky 發現了一個嚴重的快取中毒漏洞：
+              攻擊者可以在很短時間內以高速猜測 Transaction ID（16 bits，只有 65,536 種可能），
+              成功率遠高於預期。此事件促使全球 DNS 解析器緊急實施<strong>來源連接埠隨機化（Source Port Randomization）</strong>，
+              將猜測空間從 65,536 擴大到 65,536 × 65,536 ≈ 40 億種組合。
+            </p>
+          </div>
+        </div>
+
+        <div class="attack-block">
+          <div class="attack-header">DNS 劫持（DNS Hijacking）</div>
+          <div class="attack-body">
+            <p>
+              攻擊者直接篡改使用者設備上的 DNS 設定（如透過惡意軟體修改 <code>/etc/resolv.conf</code>
+              或 Windows 登錄）、入侵路由器修改 DHCP 推送的 DNS 伺服器，
+              或入侵域名登記商帳號修改 NS 記錄，
+              讓所有查詢都由攻擊者控制的 DNS 伺服器回應。
+            </p>
+          </div>
+        </div>
+
+        <div class="attack-block">
+          <div class="attack-header">DNS 放大攻擊（DNS Amplification DDoS）</div>
+          <div class="attack-body">
+            <p>
+              已在 Day 8（UDP 安全）詳細介紹。攻擊者偽造受害者 IP，
+              向 open resolver 發出 ANY 查詢，回應放大 28–54 倍打向受害者。
+              防禦：關閉 open resolver、啟用 Response Rate Limiting（RRL）。
+            </p>
+          </div>
+        </div>
+
+        <div class="attack-block">
+          <div class="attack-header">DNS 隧道（DNS Tunneling）</div>
+          <div class="attack-body">
+            <p>
+              將任意資料（C2 指令、資料外洩內容）編碼進 DNS 查詢的子域名
+              （如 <code>aGVsbG8=.attacker.com</code>）和 TXT 回應中，
+              繞過只允許 DNS 流量的防火牆，建立隱蔽的命令與控制通道。
+              即使在嚴格管控的網路環境，DNS 通常也被允許通過。
+              偵測方式：監控異常長的域名、高頻率查詢、大量 TXT 查詢等異常行為。
+            </p>
+          </div>
+        </div>
+
+        <div class="attack-block">
+          <div class="attack-header">子域名接管（Subdomain Takeover）</div>
+          <div class="attack-body">
+            <p>
+              組織的 CNAME 記錄指向第三方服務（如 GitHub Pages、Heroku、S3），
+              但若該第三方服務的帳號被刪除或取消，
+              CNAME 目標不再存在。
+              攻擊者可以在第三方服務上建立同名資源，
+              接管這個子域名，在上面建立釣魚頁面或竊取 Cookie。
+              防護：定期審計所有 CNAME 記錄，移除不再使用的指向。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- S10 -->
+      <section class="lesson-section" id="s10">
+        <span class="section-num">Section 10</span>
+        <h2>DNSSEC 與加密 DNS</h2>
+
+        <h3>DNSSEC：DNS 安全擴展</h3>
+        <p>
+          <strong>DNSSEC（DNS Security Extensions，RFC 4033–4035）</strong>
+          透過<strong>數位簽章</strong>解決 DNS 快取中毒問題。
+          每個區域的記錄都由私鑰簽名，解析器可以用公鑰驗證回應是否被篡改。
+          DNSSEC 建立了從根到葉的<strong>信任鏈（Chain of Trust）</strong>：
+        </p>
+        <div class="diagram">
+          <div class="diagram-title">DNSSEC 信任鏈</div>
+          <pre>
+  根區域 (.) 的 DNSKEY（硬編碼在解析器中的信任錨）
+      │
+      │ 簽名 .com 的 DS 記錄（委派簽名者記錄）
+      ↓
+  .com 區域的 DNSKEY
+      │
+      │ 簽名 example.com 的 DS 記錄
+      ↓
+  example.com 區域的 DNSKEY
+      │
+      │ RRSIG（Resource Record Signature，每筆記錄的簽名）
+      ↓
+  www.example.com 的 A 記錄 ← 解析器驗證簽章，確認未被篡改
+
+  新增記錄：DS（委派簽名者）、DNSKEY（區域公鑰）、RRSIG（簽章）、NSEC/NSEC3（證明域名不存在）</pre>
+        </div>
+        <p>
+          DNSSEC 的<strong>缺點</strong>：部署複雜、Zone Enumeration 問題（NSEC 記錄暴露所有子域名，NSEC3 部分緩解）、
+          簽名增加回應體積（可能超過 UDP 限制，觸發 TCP fallback）。
+          全球 DNSSEC 部署率仍然偏低，但 .gov、.se、.br 等 TLD 已強制要求。
+        </p>
+
+        <h3>加密 DNS：DoT 與 DoH</h3>
+        <p>
+          傳統 DNS 使用明文 UDP/TCP Port 53，ISP 和中間人可以監看所有查詢，
+          實施 DNS 劫持或監控使用者的瀏覽行為。
+          加密 DNS 解決了這個隱私問題：
+        </p>
+        <table class="def-table">
+          <thead><tr><th>協定</th><th>傳輸</th><th>連接埠</th><th>特點</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>DNS over TLS（DoT）</td>
+              <td>TCP + TLS</td>
+              <td>853</td>
+              <td>明確區分加密 DNS 流量（可被網路管理員識別並管控），適合企業環境</td>
+            </tr>
+            <tr>
+              <td>DNS over HTTPS（DoH）</td>
+              <td>HTTPS（TCP/QUIC）</td>
+              <td>443</td>
+              <td>DNS 查詢混入一般 HTTPS 流量，難以被封鎖或識別。Firefox、Chrome 預設啟用</td>
+            </tr>
+            <tr>
+              <td>DNS over QUIC（DoQ）</td>
+              <td>QUIC（UDP）</td>
+              <td>853</td>
+              <td>最新標準（RFC 9250），結合 DoT 的隔離性與 QUIC 的低延遲，逐漸普及中</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">DoH 的爭議</p>
+          <p>
+            DoH 雖然保護使用者隱私，但它把 DNS 控制權從 ISP 和企業 IT 轉移給 DoH 提供者（如 Google、Cloudflare）。
+            在企業環境中，DoH 會繞過企業的 DNS 過濾（Content Filtering），造成安全管理困難。
+            部分企業使用 HTTPS 檢查（SSL Inspection）或 MDM 策略強制指定企業 DoH 伺服器。
+          </p>
+        </div>
+
+        <h3>常用公共 DNS 服務</h3>
+        <table class="def-table">
+          <thead><tr><th>服務</th><th>IPv4</th><th>IPv6</th><th>支援加密</th></tr></thead>
+          <tbody>
+            <tr><td>Google Public DNS</td><td>8.8.8.8 / 8.8.4.4</td><td>2001:4860:4860::8888</td><td>DoT、DoH</td></tr>
+            <tr><td>Cloudflare 1.1.1.1</td><td>1.1.1.1 / 1.0.0.1</td><td>2606:4700:4700::1111</td><td>DoT、DoH、DoQ</td></tr>
+            <tr><td>Quad9</td><td>9.9.9.9 / 149.112.112.112</td><td>2620:fe::fe</td><td>DoT、DoH（惡意域名過濾）</td></tr>
+            <tr><td>HiNet（中華電信）</td><td>168.95.1.1 / 168.95.192.1</td><td>2001:b000:168::1</td><td>僅傳統 DNS</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Summary -->
+      <section class="lesson-section" id="s11">
+        <div class="summary-box">
+          <div class="summary-label">Day 9 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>DNS 取代 HOSTS.TXT，設計原則：分散式、階層式、快取</li>
+            <li>DNS 階層：根（.）→ TLD（.com/.tw）→ 二級域（example.com）→ 主機名稱</li>
+            <li>四種角色：根伺服器、TLD 伺服器、權威伺服器、遞迴解析器</li>
+            <li>解析流程：瀏覽器快取 → OS 快取 → 解析器 → 遞迴查詢根/TLD/權威</li>
+            <li>客戶端對解析器遞迴；解析器對各層伺服器迭代</li>
+            <li>RR 類型：A（IPv4）、AAAA（IPv6）、CNAME（別名）、MX（郵件）、NS、SOA、TXT、PTR（反查）</li>
+            <li>TTL 決定快取時間；修改 IP 前應提前降低 TTL 縮短傳播延遲</li>
+            <li>AXFR/IXFR 區域傳輸需限制 IP，否則洩漏所有記錄</li>
+            <li>DNS 威脅：快取中毒（Dan Kaminsky 漏洞）、劫持、放大攻擊、隧道、子域名接管</li>
+            <li>DNSSEC 透過數位簽章建立信任鏈；DoT/DoH/DoQ 為 DNS 查詢加密保護隱私</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">9 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>DNS（RFC 1034/1035）</li>
+          <li><span>#</span>Root / TLD / Authoritative</li>
+          <li><span>#</span>Recursive Resolver</li>
+          <li><span>#</span>遞迴 vs 迭代查詢</li>
+          <li><span>#</span>A / AAAA / CNAME / MX</li>
+          <li><span>#</span>NS / SOA / TXT / PTR</li>
+          <li><span>#</span>TTL / 傳播延遲</li>
+          <li><span>#</span>Zone / Zone Transfer（AXFR）</li>
+          <li><span>#</span>Glue Record</li>
+          <li><span>#</span>Wildcard Record</li>
+          <li><span>#</span>in-addr.arpa（反查）</li>
+          <li><span>#</span>NXDOMAIN / RCODE</li>
+          <li><span>#</span>DNS Cache Poisoning</li>
+          <li><span>#</span>Dan Kaminsky 漏洞</li>
+          <li><span>#</span>DNS Tunneling</li>
+          <li><span>#</span>Subdomain Takeover</li>
+          <li><span>#</span>DNSSEC / Chain of Trust</li>
+          <li><span>#</span>DoT / DoH / DoQ</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day8.html"><span>&larr; Day 8: UDP 與多播技術</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day10.html"><span>Day 10: HTTP 與 HTTPS</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 09 / 16</p>
+    <p>下一課：<a href="day10.html" style="color:var(--accent);text-decoration:none;">HTTP 與 HTTPS &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

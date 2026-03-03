@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 13 — SDN 與網路虛擬化 | 網路通訊課程</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a1a1a; --paper: #f5f0e8; --accent: #c0392b;
+      --mid: #7a6a5a; --line: rgba(26,26,26,0.12); --code-bg: rgba(26,26,26,0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background-color: var(--paper); color: var(--ink); font-family: 'Noto Sans TC', sans-serif; font-weight: 300; line-height: 1.9; min-height: 100vh; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+
+    .topnav { position: relative; z-index: 10; padding: 20px 8vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
+    .topnav a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--mid); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+    .topnav a:hover { color: var(--accent); }
+    .topnav .breadcrumb { display: flex; align-items: center; gap: 8px; }
+    .topnav .sep { color: var(--line); font-size: 14px; }
+    .topnav .nav-group { display: flex; gap: 24px; }
+
+    .hero { position: relative; z-index: 1; padding: 64px 8vw 56px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 48px; align-items: end; }
+    .hero-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.22em; color: var(--accent); text-transform: uppercase; margin-bottom: 18px; }
+    .hero h1 { font-family: 'Noto Serif TC', serif; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
+    .hero-desc { margin-top: 20px; font-size: 1rem; color: var(--mid); max-width: 560px; }
+    .hero-meta .day-num { font-family: 'IBM Plex Mono', monospace; font-size: 6rem; font-weight: 500; line-height: 1; color: var(--ink); opacity: 0.08; display: block; }
+
+    .toc-bar { position: relative; z-index: 1; padding: 24px 8vw; border-bottom: 1px solid var(--line); background: rgba(26,26,26,0.03); }
+    .toc-bar h2 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid); margin-bottom: 14px; }
+    .toc-list { display: flex; flex-wrap: wrap; gap: 8px 24px; list-style: none; }
+    .toc-list li a { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--mid); text-decoration: none; transition: color 0.2s; }
+    .toc-list li a:hover { color: var(--accent); }
+    .toc-list li::before { content: attr(data-n) ". "; color: var(--accent); font-size: 10px; }
+
+    .main-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 260px; align-items: start; }
+    article { padding: 64px 6vw 80px 8vw; border-right: 1px solid var(--line); }
+
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+    .section-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 10px; }
+    .lesson-section h2 { font-family: 'Noto Serif TC', serif; font-size: 1.75rem; font-weight: 600; line-height: 1.3; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .lesson-section h3 { font-family: 'Noto Serif TC', serif; font-size: 1.15rem; font-weight: 600; margin: 36px 0 12px; }
+    .lesson-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--mid); margin: 24px 0 10px; letter-spacing: 0.05em; }
+    .lesson-section p { margin-bottom: 16px; font-size: 0.97rem; }
+    .lesson-section p:last-child { margin-bottom: 0; }
+    strong { font-weight: 500; color: var(--ink); }
+    code { font-family: 'IBM Plex Mono', monospace; font-size: 0.85em; background: var(--code-bg); padding: 2px 6px; color: var(--ink); }
+
+    .highlight-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--accent); background: rgba(192,57,43,0.05); }
+    .highlight-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+    .info-box { margin: 28px 0; padding: 20px 24px; border-left: 3px solid var(--mid); background: var(--code-bg); }
+    .info-box .box-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 8px; }
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    .def-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.9rem; }
+    .def-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); text-align: left; padding: 10px 16px; background: var(--code-bg); border-bottom: 1px solid var(--line); }
+    .def-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+    .def-table tr:last-child td { border-bottom: none; }
+    .def-table td:first-child { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent); white-space: nowrap; }
+
+    .diagram { margin: 28px 0; background: var(--code-bg); border: 1px solid var(--line); padding: 28px 24px; }
+    .diagram-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px; }
+    .diagram pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre; }
+
+    /* SDN plane cards */
+    .plane-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; border: 1px solid var(--line); margin: 28px 0; overflow: hidden; }
+    .plane-card { padding: 24px 20px; border-right: 1px solid var(--line); }
+    .plane-card:last-child { border-right: none; }
+    .plane-icon { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 500; color: var(--accent); line-height: 1; margin-bottom: 8px; }
+    .plane-name { font-family: 'Noto Serif TC', serif; font-size: 0.95rem; font-weight: 600; color: var(--ink); margin-bottom: 10px; }
+    .plane-desc { font-size: 0.82rem; color: var(--mid); line-height: 1.65; }
+    .plane-example { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--accent); margin-top: 8px; }
+
+    /* tech comparison */
+    .tech-timeline { margin: 28px 0; border: 1px solid var(--line); overflow: hidden; }
+    .tt-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 10px 16px; }
+    .tt-row { display: grid; grid-template-columns: 110px 1fr; border-bottom: 1px solid var(--line); }
+    .tt-row:last-child { border-bottom: none; }
+    .tt-row:not(:first-child):hover { background: rgba(26,26,26,0.03); }
+    .tt-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--accent); padding: 14px 16px; border-right: 1px solid var(--line); display: flex; align-items: flex-start; }
+    .tt-body { padding: 14px 16px; }
+    .tt-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+    .tt-desc { font-size: 0.84rem; color: var(--mid); line-height: 1.6; }
+
+    /* overlay compare */
+    .overlay-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; border: 1px solid var(--line); margin: 24px 0; overflow: hidden; }
+    .ov-card { padding: 18px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .ov-card:nth-child(3n) { border-right: none; }
+    .ov-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; font-weight: 500; color: var(--accent); margin-bottom: 4px; }
+    .ov-sub { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--mid); margin-bottom: 8px; }
+    .ov-desc { font-size: 0.82rem; color: var(--ink); line-height: 1.6; }
+
+    /* code block */
+    .cmd-block { margin: 24px 0; border: 1px solid var(--line); overflow: hidden; }
+    .cmd-header { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: var(--paper); text-transform: uppercase; background: var(--ink); padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .cmd-header .cmd-tag { font-size: 0.68rem; opacity: 0.6; }
+    .cmd-body { padding: 20px 22px; background: rgba(26,26,26,0.04); }
+    .cmd-body pre { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--ink); overflow-x: auto; white-space: pre; }
+    .cmd-body .prompt { color: var(--accent); }
+    .cmd-body .comment { color: var(--mid); }
+
+    .divider { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
+    .summary-box { margin-top: 48px; padding: 28px 32px; background: var(--ink); color: var(--paper); }
+    .summary-box .summary-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.25em; color: rgba(245,240,232,0.5); text-transform: uppercase; margin-bottom: 16px; }
+    .summary-box h3 { font-family: 'Noto Serif TC', serif; font-size: 1.1rem; font-weight: 600; color: var(--paper); margin-bottom: 16px; }
+    .summary-box ul { list-style: none; padding: 0; }
+    .summary-box ul li { font-size: 0.9rem; color: rgba(245,240,232,0.8); padding: 6px 0 6px 16px; border-bottom: 1px solid rgba(245,240,232,0.08); position: relative; }
+    .summary-box ul li::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-size: 0.8rem; }
+
+    aside { padding: 48px 28px; position: sticky; top: 0; }
+    .aside-section { margin-bottom: 40px; }
+    .aside-section h4 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--mid); text-transform: uppercase; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .keyword-list { list-style: none; padding: 0; }
+    .keyword-list li { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--mid); padding: 5px 0; border-bottom: 1px solid var(--line); transition: color 0.2s; }
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+    .progress-bar { height: 3px; background: var(--line); margin: 12px 0 20px; position: relative; }
+    .progress-bar::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 81.25%; background: var(--accent); }
+    .progress-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--mid); letter-spacing: 0.1em; }
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+    .nav-links a { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); transition: border-color 0.2s, color 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+    footer { position: relative; z-index: 1; padding: 32px 8vw; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    footer p { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--mid); letter-spacing: 0.1em; }
+
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+      aside { position: static; border-top: 1px solid var(--line); padding: 40px 8vw; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+      article { padding: 48px 8vw 64px; border-right: none; }
+      .hero { grid-template-columns: 1fr; } .hero-meta { display: none; }
+      .plane-grid { grid-template-columns: 1fr; }
+      .plane-card { border-right: none; border-bottom: 1px solid var(--line); }
+      .plane-card:last-child { border-bottom: none; }
+      .overlay-grid { grid-template-columns: 1fr 1fr; }
+      .ov-card:nth-child(3n) { border-right: 1px solid var(--line); }
+      .ov-card:nth-child(2n) { border-right: none; }
+    }
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+      .overlay-grid { grid-template-columns: 1fr; }
+      .ov-card { border-right: none !important; }
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .hero, .toc-bar, article, aside { animation: fadeUp 0.5s ease both; }
+    .toc-bar { animation-delay: 0.10s; } article { animation-delay: 0.15s; } aside { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 13</a>
+    </div>
+    <div class="nav-group">
+      <a href="day12.html">&larr; Day 12</a>
+      <a href="day14.html">Day 14 &rarr;</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 04 &mdash; 實務與工具 &mdash; Day 13 / 16</p>
+      <h1>SDN 與網路虛擬化<br>用軟體重新定義網路</h1>
+      <p class="hero-desc">
+        傳統網路設備的轉發邏輯與管理介面焊死在同一塊晶片上，
+        每次網路變更都需要逐台登入設備執行指令。
+        SDN 把控制平面從硬體中解放出來，
+        讓網路像程式一樣可程式化、可自動化。
+        NFV、Overlay 網路與容器網路進一步把整個基礎設施虛擬化。
+      </p>
+    </div>
+    <div class="hero-meta"><span class="day-num">13</span></div>
+  </div>
+
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">傳統網路架構的挑戰</a></li>
+      <li data-n="2"><a href="#s2">SDN 三層架構</a></li>
+      <li data-n="3"><a href="#s3">OpenFlow 協定</a></li>
+      <li data-n="4"><a href="#s4">NFV：網路功能虛擬化</a></li>
+      <li data-n="5"><a href="#s5">Overlay 網路技術</a></li>
+      <li data-n="6"><a href="#s6">VXLAN 深度解析</a></li>
+      <li data-n="7"><a href="#s7">容器網路（CNI）</a></li>
+      <li data-n="8"><a href="#s8">服務網格（Service Mesh）</a></li>
+      <li data-n="9"><a href="#s9">SD-WAN：廣域網路的 SDN</a></li>
+      <li data-n="10"><a href="#s10">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <div class="main-wrap">
+    <article>
+
+      <!-- S1 -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>傳統網路架構的挑戰</h2>
+        <p>
+          在傳統網路架構中，每台路由器和交換器都是一個自治的封閉系統——
+          硬體、作業系統、轉發邏輯和管理介面全部整合在一起，
+          由各家廠商（Cisco、Juniper、Arista）各自實作、各自封閉。
+          這帶來了幾個根本性的挑戰：
+        </p>
+        <table class="def-table">
+          <thead><tr><th>挑戰</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>垂直整合，廠商鎖定</td><td>硬體與軟體由同一廠商捆綁銷售，切換廠商成本極高，創新受制於廠商的產品週期</td></tr>
+            <tr><td>分散式管理，難以協調</td><td>每台設備獨立執行路由協定（OSPF/BGP），網路策略需逐台設備手動配置，人工操作容易出錯</td></tr>
+            <tr><td>靜態配置，無法快速響應</td><td>流量工程（Traffic Engineering）需要提前規劃，無法根據即時流量動態調整轉發路徑</td></tr>
+            <tr><td>難以程式化</td><td>CLI 或 SNMP 是主要管理介面，缺乏標準的程式化 API，自動化部署困難</td></tr>
+            <tr><td>資料中心擴展瓶頸</td><td>雲端資料中心需要數萬個租戶的網路隔離，傳統 VLAN 只有 4,094 個 ID，完全不夠用</td></tr>
+          </tbody>
+        </table>
+        <p>
+          2008 年，Stanford 大學的 Nick McKeown 和 Scott Shenker
+          在論文《OpenFlow: Enabling Innovation in Campus Networks》中
+          提出了「將控制平面與資料平面分離」的思想，
+          奠定了 SDN 的理論基礎，掀起了網路架構的革命。
+        </p>
+      </section>
+
+      <!-- S2 -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>SDN 三層架構</h2>
+        <p>
+          <strong>SDN（Software-Defined Networking，軟體定義網路）</strong>
+          的核心思想是<strong>將控制平面（Control Plane）從資料平面（Data Plane）中分離出來</strong>，
+          由集中式的軟體控制器統一管理所有設備的轉發決策。
+        </p>
+
+        <div class="plane-grid">
+          <div class="plane-card">
+            <div class="plane-icon">▲</div>
+            <div class="plane-name">應用層（Application Plane）</div>
+            <div class="plane-desc">網路應用程式透過北向 API（Northbound API）告訴控制器需要什麼網路行為。應用程式只需描述意圖，不需知道底層如何實現。</div>
+            <div class="plane-example">負載均衡器、防火牆策略、流量工程應用、網路監控應用</div>
+          </div>
+          <div class="plane-card">
+            <div class="plane-icon">●</div>
+            <div class="plane-name">控制層（Control Plane）</div>
+            <div class="plane-desc">SDN 控制器（Controller）是整個網路的「大腦」。維護全域網路拓撲視圖，計算最優轉發路徑，將規則下發到各交換器。透過南向 API（如 OpenFlow）控制硬體。</div>
+            <div class="plane-example">OpenDaylight、ONOS、NOX、Floodlight、Ryu</div>
+          </div>
+          <div class="plane-card">
+            <div class="plane-icon">▼</div>
+            <div class="plane-name">資料層（Data Plane）</div>
+            <div class="plane-desc">實體或虛擬的交換器只需按照控制器下發的流表（Flow Table）轉發封包，不做任何路由決策。設備可以是白牌交換器（White-box Switch），大幅降低成本。</div>
+            <div class="plane-example">OpenFlow 交換器、Open vSwitch（OVS）、P4 可程式化 ASIC</div>
+          </div>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">傳統網路 vs SDN 架構對比</div>
+          <pre>
+傳統網路：每台設備各自決策
+  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+  │ Router A      │  │ Router B      │  │ Router C      │
+  │ ┌───────────┐ │  │ ┌───────────┐ │  │ ┌───────────┐ │
+  │ │控制平面   │ │  │ │控制平面   │ │  │ │控制平面   │ │
+  │ │(OSPF/BGP) │ │  │ │(OSPF/BGP) │ │  │ │(OSPF/BGP) │ │
+  │ ├───────────┤ │  │ ├───────────┤ │  │ ├───────────┤ │
+  │ │資料平面   │ │  │ │資料平面   │ │  │ │資料平面   │ │
+  │ │(轉發封包) │ │  │ │(轉發封包) │ │  │ │(轉發封包) │ │
+  │ └───────────┘ │  │ └───────────┘ │  │ └───────────┘ │
+  └───────────────┘  └───────────────┘  └───────────────┘
+
+SDN 架構：控制集中，轉發分散
+              ┌─────────────────────┐
+              │   SDN Controller    │  ← 全域視圖、集中決策
+              │   (控制平面集中化)   │
+              └───────┬─────────────┘
+          OpenFlow ↓  ↓  ↓  南向 API
+  ┌───────────┐ ┌───────────┐ ┌───────────┐
+  │ Switch A  │ │ Switch B  │ │ Switch C  │
+  │ 只執行    │ │ 只執行    │ │ 只執行    │
+  │ 流表轉發  │ │ 流表轉發  │ │ 流表轉發  │
+  └───────────┘ └───────────┘ └───────────┘</pre>
+        </div>
+
+        <h3>北向 API 與南向 API</h3>
+        <table class="def-table">
+          <thead><tr><th>API 方向</th><th>連接對象</th><th>代表協定/介面</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>南向 API（Southbound）</td>
+              <td>控制器 ↔ 網路設備（交換器、路由器）</td>
+              <td>OpenFlow、NETCONF/YANG、gRPC/gNMI、OVSDB、P4Runtime</td>
+            </tr>
+            <tr>
+              <td>北向 API（Northbound）</td>
+              <td>控制器 ↔ 應用程式</td>
+              <td>REST API、Python SDK、Intent-based API（如 OpenDaylight MD-SAL）</td>
+            </tr>
+            <tr>
+              <td>東西向 API（East-West）</td>
+              <td>控制器 ↔ 控制器（多控制器叢集）</td>
+              <td>OpenDaylight Clustering、ONOS Cluster Consensus</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S3 -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>OpenFlow 協定</h2>
+        <p>
+          <strong>OpenFlow</strong>（目前最新版本 1.5）是 SDN 南向 API 的開創性標準，
+          定義了控制器如何向交換器下達轉發規則。
+          OpenFlow 的核心概念是<strong>流表（Flow Table）</strong>——
+          一張「如果封包符合這些條件，就執行這些動作」的規則表。
+        </p>
+
+        <h3>流表條目結構</h3>
+        <div class="diagram">
+          <div class="diagram-title">OpenFlow 流表條目（Flow Table Entry）</div>
+          <pre>
+  ┌─────────────────┬──────────────┬──────────────────────────────────────┐
+  │  Match Fields   │   Priority   │              Actions                  │
+  │  （匹配欄位）    │  （優先順序）  │             （執行動作）               │
+  ├─────────────────┼──────────────┼──────────────────────────────────────┤
+  │ 可匹配的欄位：  │              │ 可執行的動作：                         │
+  │ • 入埠號        │  數字越大     │ • OUTPUT(port)  → 從指定埠轉發         │
+  │ • 來源 MAC      │  優先級越高   │ • DROP          → 丟棄封包             │
+  │ • 目的 MAC      │              │ • FLOOD         → 洪泛到所有埠         │
+  │ • VLAN ID       │  範圍：      │ • PUSH/POP VLAN → 新增/移除 VLAN 標籤  │
+  │ • EtherType     │  0–65535     │ • SET_FIELD      → 修改封包欄位         │
+  │ • 來源/目的 IP  │              │ • GOTO_TABLE     → 跳到另一張流表       │
+  │ • Protocol      │              │ • METER          → 速率限制             │
+  │ • TCP/UDP Port  │              │ 若無匹配：送往控制器（Packet-In）        │
+  └─────────────────┴──────────────┴──────────────────────────────────────┘
+
+  範例：將所有 HTTP 流量轉發到特定的 IDS 監控埠
+  Match: tcp.dst_port == 80  → Action: OUTPUT(monitor_port), OUTPUT(dst_port)</pre>
+        </div>
+
+        <h3>Open vSwitch（OVS）</h3>
+        <p>
+          <strong>Open vSwitch（OVS）</strong>是最廣泛使用的開源虛擬交換器，
+          實作了 OpenFlow 協定，運行在 Linux 核心中，
+          是 OpenStack、KVM、VMware NSX 等雲端平台的核心網路元件。
+          在單一實體主機上，OVS 可以連接數百個虛擬機的虛擬網路介面（vNIC），
+          提供 VLAN 分隔、隧道（VXLAN/GRE）、QoS、流量鏡像等功能。
+        </p>
+
+        <div class="cmd-block">
+          <div class="cmd-header">OVS 常用指令<span class="cmd-tag">Open vSwitch</span></div>
+          <div class="cmd-body">
+            <pre><span class="comment"># 查看 OVS 交換器和埠</span>
+<span class="prompt">$</span> ovs-vsctl show
+
+<span class="comment"># 新增交換器和埠</span>
+<span class="prompt">$</span> ovs-vsctl add-br br0
+<span class="prompt">$</span> ovs-vsctl add-port br0 eth0
+
+<span class="comment"># 查看流表</span>
+<span class="prompt">$</span> ovs-ofctl dump-flows br0
+
+<span class="comment"># 手動添加流表規則</span>
+<span class="prompt">$</span> ovs-ofctl add-flow br0 "priority=100,tcp,tp_dst=80,actions=output:2"
+
+<span class="comment"># 新增 VXLAN 隧道埠（連接另一台主機）</span>
+<span class="prompt">$</span> ovs-vsctl add-port br0 vxlan0 -- set interface vxlan0 \
+    type=vxlan options:remote_ip=10.0.0.2 options:key=100</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- S4 -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>NFV：網路功能虛擬化</h2>
+        <p>
+          <strong>NFV（Network Functions Virtualization，網路功能虛擬化）</strong>
+          與 SDN 是互補但不同的概念：
+          SDN 分離控制平面與資料平面；
+          NFV 則是將傳統需要專有硬體的網路功能（防火牆、負載均衡器、WAN 加速器）
+          以<strong>軟體形式（VNF，Virtual Network Function）</strong>運行在通用伺服器上。
+        </p>
+
+        <div class="tech-timeline">
+          <div class="tt-header">傳統硬體設備 vs NFV 虛擬化</div>
+          <div class="tt-row">
+            <div class="tt-label">傳統方式</div>
+            <div class="tt-body">
+              <div class="tt-title">專有硬體 + 封閉軟體</div>
+              <div class="tt-desc">購買 Cisco ASA（防火牆）、F5 BIG-IP（負載均衡）、Riverbed（WAN 加速）等專用硬體設備，各自需要獨立部署、維護、升級。採購週期長（數週到數月），擴展需要購買新設備。</div>
+            </div>
+          </div>
+          <div class="tt-row">
+            <div class="tt-label">NFV 方式</div>
+            <div class="tt-body">
+              <div class="tt-title">軟體 VNF 運行在通用 x86 伺服器</div>
+              <div class="tt-desc">同樣的功能以虛擬機或容器形式運行：Palo Alto VM-Series（虛擬防火牆）、HAProxy/Nginx（軟體負載均衡）、Viptela vEdge（虛擬路由器）。分鐘級部署，彈性擴縮容，降低 CAPEX。</div>
+            </div>
+          </div>
+        </div>
+
+        <table class="def-table">
+          <thead><tr><th>NFV 元件</th><th>角色</th><th>代表產品</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>VNF（Virtual Network Function）</td>
+              <td>虛擬化的網路功能本身，如虛擬防火牆、虛擬路由器</td>
+              <td>Fortinet FortiGate-VM、Cisco CSR 1000v、Juniper vSRX</td>
+            </tr>
+            <tr>
+              <td>NFVI（Infrastructure）</td>
+              <td>運行 VNF 的基礎設施層，包含計算、儲存、網路資源</td>
+              <td>OpenStack、VMware vSphere、KVM + OVS</td>
+            </tr>
+            <tr>
+              <td>MANO（Management & Orchestration）</td>
+              <td>VNF 的生命週期管理：部署、擴縮容、故障恢復、計費</td>
+              <td>OpenStack Tacker、ONAP、OSM（Open Source MANO）</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="highlight-box">
+          <p class="box-label">SDN 與 NFV 的關係</p>
+          <p>
+            SDN 和 NFV 各自獨立，但常常協同部署：
+            <strong>NFV</strong> 讓網路功能成為軟體，可彈性部署；
+            <strong>SDN</strong> 讓控制這些功能的網路也可程式化。
+            兩者結合是電信商 5G 核心網（5G Core）和雲端資料中心的基礎架構。
+            不過 NFV 不一定需要 SDN（軟體防火牆可以在傳統網路中運行），
+            SDN 也不一定需要 NFV（白牌交換器就是硬體設備）。
+          </p>
+        </div>
+      </section>
+
+      <!-- S5 -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>Overlay 網路技術</h2>
+        <p>
+          <strong>Overlay 網路</strong>是在現有（Underlay）網路之上
+          建立的虛擬網路層，透過<strong>封裝（Encapsulation）</strong>技術
+          在實體網路上「疊加」一層邏輯網路。
+          虛擬機或容器可以橫跨多台實體主機，
+          彷彿在同一個二層網路中，而實體網路只需支援 IP 路由即可。
+        </p>
+
+        <div class="overlay-grid">
+          <div class="ov-card">
+            <div class="ov-name">VXLAN</div>
+            <div class="ov-sub">Virtual eXtensible LAN — RFC 7348</div>
+            <div class="ov-desc">將 L2 訊框封裝在 UDP 中傳輸，支援 16M（2²⁴）個虛擬網路 ID（VNI）。雲端資料中心標準，Kubernetes、OpenStack、VMware NSX 廣泛使用</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-name">GENEVE</div>
+            <div class="ov-sub">Generic Network Virtualization Encapsulation</div>
+            <div class="ov-desc">VXLAN 的後繼者（RFC 8926），支援可擴展的 Option 欄位，允許攜帶額外 Metadata。OVN（Open Virtual Network）、AWS 內部使用</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-name">GRE</div>
+            <div class="ov-sub">Generic Routing Encapsulation — RFC 2784</div>
+            <div class="ov-desc">最通用的封裝協定，可封裝任何 L3 協定。Protocol 47，無 UDP 開銷。傳統企業 VPN 和點對點隧道的標準選擇</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-name">STT</div>
+            <div class="ov-sub">Stateless Transport Tunneling</div>
+            <div class="ov-desc">VMware Nicira 提出，利用 TCP 標頭格式讓 NIC 的 TSO（TCP Segmentation Offload）硬體加速隧道封包分割，提高效能。已被 GENEVE 取代趨勢</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-name">WireGuard</div>
+            <div class="ov-sub">現代 VPN / Overlay</div>
+            <div class="ov-desc">雖主要是 VPN 協定，也廣泛用於構建安全的點對點 Overlay 網路，尤其在 Kubernetes（Flannel WireGuard 模式）和邊緣計算中</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-name">MPLS</div>
+            <div class="ov-sub">Multi-Protocol Label Switching</div>
+            <div class="ov-desc">電信骨幹網的標準 Overlay，以標籤（Label）代替 IP 路由決策，實現確定性轉發、QoS 和流量工程。MPLS VPN 是企業廣域網的主流</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S6 -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>VXLAN 深度解析</h2>
+        <p>
+          <strong>VXLAN（Virtual eXtensible LAN）</strong>是當前雲端資料中心最重要的 Overlay 技術。
+          傳統 VLAN 只有 12 bits（4,094 個網段），
+          遠不夠大型多租戶雲端平台使用；
+          VXLAN 用 24 bits 的 <strong>VNI（VXLAN Network Identifier）</strong>
+          支援超過 1,600 萬個虛擬網段，徹底解決了擴展瓶頸。
+        </p>
+
+        <h3>VXLAN 封裝格式</h3>
+        <div class="diagram">
+          <div class="diagram-title">VXLAN 封包結構（共新增 50 bytes 額外開銷）</div>
+          <pre>
+  原始 VM 封包（L2 訊框）：
+  ┌──────────┬──────────┬──────────────────────────┐
+  │ Dst MAC  │ Src MAC  │  IP + TCP + Application  │
+  └──────────┴──────────┴──────────────────────────┘
+
+  VXLAN 封裝後在實體網路傳輸：
+  ┌────────────┬───────────────────────────────────────────────────────────┐
+  │外部 IP Hdr │ 外部 UDP Hdr │ VXLAN Header  │    原始 L2 訊框（加密封裝）  │
+  │Src: VTEP_A │ Dst Port:   │ ┌───────────┐ │ ┌──────┬──────┬──────────┐ │
+  │Dst: VTEP_B │ 4789（UDP） │ │  VNI(24b) │ │ │DstMAC│SrcMAC│IP+TCP+Data│ │
+  │(實體 IP)   │             │ │  Flags(8b)│ │ └──────┴──────┴──────────┘ │
+  │            │             │ └───────────┘ │                             │
+  └────────────┴─────────────┴───────────────┴─────────────────────────────┘
+  ← 外部 IP Header（20b）→← UDP（8b）→← VXLAN（8b）→← 原始 L2 訊框 →
+
+  VTEP（VXLAN Tunnel End Point）：負責封裝和解封裝的端點，可以是主機的軟體（OVS）或支援 VXLAN 的硬體交換器</pre>
+        </div>
+
+        <h3>VTEP 學習機制</h3>
+        <p>
+          VXLAN 需要知道「哪個 VM 的 MAC 位址在哪個 VTEP 後面」，
+          類似傳統交換器的 MAC 學習，但跨越了實體網路邊界。
+          有兩種主要學習方式：
+        </p>
+        <table class="def-table">
+          <thead><tr><th>方式</th><th>說明</th><th>適用場景</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Data Plane Learning（洪泛+學習）</td>
+              <td>未知目的 MAC 的訊框透過 Multicast 群組洪泛到所有 VTEP，VTEP 透過回應封包學習 MAC-to-VTEP 映射。類似傳統交換器學習，不需要集中控制</td>
+              <td>小型部署、不想引入控制平面複雜性的場景</td>
+            </tr>
+            <tr>
+              <td>Control Plane Learning（集中分發）</td>
+              <td>VM 的 MAC/IP 資訊由集中式系統（如 Kubernetes CNI、OpenStack Neutron、VMware NSX Controller）透過 BGP EVPN 或自訂協定分發給所有 VTEP。消除洪泛</td>
+              <td>大型雲端平台，Kubernetes、OpenStack 標準做法</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- S7 -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>容器網路（CNI）</h2>
+        <p>
+          容器的快速啟停和大量部署對網路帶來了獨特的挑戰：
+          每個 Pod（Kubernetes 的基本調度單位）都需要一個 IP，
+          Pod 之間需要互通，同時需要服務發現與負載均衡。
+          <strong>CNI（Container Network Interface）</strong>是
+          Kubernetes 定義的容器網路插件標準，允許選用不同的網路實作。
+        </p>
+
+        <h3>Kubernetes 網路模型四原則</h3>
+        <table class="def-table">
+          <thead><tr><th>原則</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>Pod 間不用 NAT 通訊</td><td>每個 Pod 有唯一的 IP，Pod 之間直接用 IP 通訊，不需要網路地址轉換</td></tr>
+            <tr><td>Node 到 Pod 不用 NAT</td><td>Node 可以直接用 Pod IP 存取任何 Pod，反之亦然</td></tr>
+            <tr><td>Pod 看到的 IP = 外部看到的 IP</td><td>Pod 的 IP 不因 NAT 而改變，簡化應用程式的網路邏輯</td></tr>
+            <tr><td>Service 提供穩定端點</td><td>Pod IP 會隨重啟改變，Service 提供穩定的虛擬 IP（ClusterIP）和 DNS 名稱</td></tr>
+          </tbody>
+        </table>
+
+        <h3>主要 CNI 插件比較</h3>
+        <div class="diagram">
+          <div class="diagram-title">常見 CNI 插件技術特性</div>
+          <pre>
+  ┌──────────────┬─────────────────────────────────────────────────────────┐
+  │ CNI 插件     │ 技術特性                                                 │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ Flannel      │ 最簡單，VXLAN Overlay（預設）或 UDP 模式。適合開發環境    │
+  │              │ 不支援 NetworkPolicy，功能單一                           │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ Calico       │ 最廣泛使用的生產級 CNI。BGP 路由（L3，無 Overlay 開銷）  │
+  │              │ 或 VXLAN 模式；強大的 NetworkPolicy；支援 WireGuard 加密 │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ Cilium       │ 基於 eBPF（核心可程式化技術），效能極高，無 iptables 開銷 │
+  │              │ 支援 L7 NetworkPolicy（可過濾 HTTP 路徑）、觀測能力強大  │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ Weave Net    │ 簡單易用，自動建立 VXLAN Mesh；支援 NetworkPolicy        │
+  │              │ 效能略低於 Calico/Cilium                                │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ AWS VPC CNI  │ AWS EKS 原生插件，直接使用 VPC 的 ENI 和真實 VPC IP     │
+  │              │ Pod IP 與 EC2 同一網段，無 Overlay 開銷，但受 ENI 限制   │
+  └──────────────┴─────────────────────────────────────────────────────────┘</pre>
+        </div>
+
+        <h3>eBPF：下一代網路加速技術</h3>
+        <p>
+          <strong>eBPF（extended Berkeley Packet Filter）</strong>
+          允許在 Linux 核心中安全地執行自訂程式，無需修改核心程式碼或載入核心模組。
+          在網路領域，eBPF 可以在封包進入 / 離開網路介面時攔截並處理，
+          完全繞過傳統的 iptables 和 netfilter 路徑。
+        </p>
+        <p>
+          Cilium 和 Pixie 等工具使用 eBPF 實現：
+          傳統 iptables 需要 O(n) 線性掃描規則，
+          而 eBPF 的 Map 結構是 O(1) 雜湊查找——
+          在有數萬條規則的大型叢集中，eBPF 的效能優勢可達到 10 倍以上。
+          eBPF 也是現代可觀測性（如 Hubble）和安全策略執行的基礎。
+        </p>
+      </section>
+
+      <!-- S8 -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>服務網格（Service Mesh）</h2>
+        <p>
+          微服務架構中，服務間通訊變得複雜：
+          服務發現、負載均衡、熔斷（Circuit Breaking）、
+          重試、逾時、mTLS 加密、分散式追蹤——
+          每個服務都需要實作這些能力，造成大量重複程式碼。
+          <strong>服務網格（Service Mesh）</strong>將這些網路關注點
+          從應用程式中抽離，下沉到基礎設施層。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">服務網格 Sidecar 代理模式</div>
+          <pre>
+  傳統微服務：每個服務自己處理網路邏輯
+  ┌────────────────┐         ┌────────────────┐
+  │  Service A     │ ──────> │  Service B     │
+  │  (含 LB/重試/  │         │  (含 LB/重試/  │
+  │   mTLS/追蹤)   │         │   mTLS/追蹤)   │
+  └────────────────┘         └────────────────┘
+
+  Service Mesh：Sidecar 代理接管所有網路流量
+  ┌────────────────────────────────────────────────────────────┐
+  │  Pod A                         Pod B                       │
+  │  ┌──────────────┐             ┌──────────────┐             │
+  │  │  Service A   │             │  Service B   │             │
+  │  │  (只寫業務)  │             │  (只寫業務)  │             │
+  │  └──────┬───────┘             └──────┬───────┘             │
+  │         │ localhost                  │ localhost            │
+  │  ┌──────┴───────┐  mTLS/HTTP2 ┌─────┴────────┐            │
+  │  │ Envoy Proxy  │ ──────────> │ Envoy Proxy  │            │
+  │  │  (Sidecar)   │             │  (Sidecar)   │            │
+  │  └──────────────┘             └──────────────┘            │
+  └────────────────────────────────────────────────────────────┘
+              ↑                          ↑
+         所有流量由 Sidecar 代理，應用程式感知不到
+
+  Control Plane（如 Istio istiod）：
+    • 分發服務發現資訊（Pilot）
+    • 分發 mTLS 憑證（Citadel）
+    • 收集遙測數據（Telemetry）</pre>
+        </div>
+
+        <table class="def-table">
+          <thead><tr><th>Service Mesh 功能</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td>mTLS（雙向 TLS）</td><td>所有服務間通訊自動加密並相互認證，實現零信任網路，無需改應用程式程式碼</td></tr>
+            <tr><td>流量管理</td><td>精細的流量路由（Canary Release、A/B Testing）、重試、逾時、熔斷器、故障注入</td></tr>
+            <tr><td>可觀測性</td><td>自動收集所有服務間流量的 Metrics、Logs、Traces，無需應用程式埋點</td></tr>
+            <tr><td>服務發現</td><td>自動發現叢集中的服務端點，維護健康的端點列表，做客戶端負載均衡</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          主流 Service Mesh：<strong>Istio</strong>（最完整，以 Envoy 為 Sidecar，Google/IBM/Lyft 開發）、
+          <strong>Linkerd</strong>（輕量，Rust 實作的 Sidecar，效能開銷低）、
+          <strong>Consul Connect</strong>（HashiCorp，整合服務發現與 KV Store）、
+          <strong>Cilium Service Mesh</strong>（eBPF 實作，無需 Sidecar，效能最佳）。
+        </p>
+      </section>
+
+      <!-- S9 -->
+      <section class="lesson-section" id="s9">
+        <span class="section-num">Section 09</span>
+        <h2>SD-WAN：廣域網路的 SDN</h2>
+        <p>
+          傳統企業廣域網路（WAN）依賴 MPLS 電路——
+          費用高昂、部署週期長（數週到數月）、缺乏彈性。
+          <strong>SD-WAN（Software-Defined WAN）</strong>將 SDN 的理念應用到廣域網路，
+          透過集中化的控制平面，在低成本的寬頻網路（Internet VPN）上
+          實現智慧流量路由和動態路徑選擇，同時保留 MPLS 的品質保障。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">SD-WAN 架構：多路徑智慧選路</div>
+          <pre>
+  總部                                           分公司 / 雲端
+  ┌─────────────────────────────────────────────────────────────┐
+  │                 SD-WAN Controller（集中控制）                │
+  │                 • 下發路由策略                               │
+  │                 • 監控所有路徑品質（延遲/丟包/抖動）         │
+  │                 • 動態選擇最佳路徑                           │
+  └──────────────────────────┬──────────────────────────────────┘
+                             │
+            策略下發（TLS 加密通道）
+                             │
+  ┌──────────────────────────┴──────────────────────────────────┐
+  │             SD-WAN Edge Device（CPE）                        │
+  │                                                             │
+  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+  │  │  MPLS 電路  │  │  寬頻網路   │  │   4G/5G 備援        │ │
+  │  │ （高品質）  │  │ （低成本）  │  │ （最終備援）        │ │
+  │  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘ │
+  │         └────────────────┴─────────────────────┘           │
+  │                     智慧選路引擎                            │
+  │         語音/視訊 → MPLS（低延遲）                         │
+  │         一般瀏覽 → 寬頻（低成本）                          │
+  │         MPLS 故障 → 自動切換到寬頻（秒級）                 │
+  └─────────────────────────────────────────────────────────────┘</pre>
+        </div>
+
+        <table class="def-table">
+          <thead><tr><th>面向</th><th>傳統 MPLS WAN</th><th>SD-WAN</th></tr></thead>
+          <tbody>
+            <tr><td>成本</td><td>高（MPLS 電路費用是寬頻的 10–100 倍）</td><td>低（主要使用寬頻 + Internet VPN）</td></tr>
+            <tr><td>部署時間</td><td>數週到數月（需電信商施工）</td><td>數小時（Zero-touch Provisioning）</td></tr>
+            <tr><td>路徑靈活性</td><td>靜態，需人工重新配置</td><td>動態選路，根據即時品質自動切換</td></tr>
+            <tr><td>雲端整合</td><td>需要額外配置 Cloud Connect</td><td>原生整合 AWS Direct Connect、Azure ExpressRoute</td></tr>
+            <tr><td>可見性</td><td>有限，SNMP 為主</td><td>即時應用程式層可見性，識別 SaaS 流量</td></tr>
+            <tr><td>代表廠商</td><td>Cisco MPLS、電信商私有網路</td><td>Cisco Viptela、VMware VeloCloud、Palo Alto Prisma SD-WAN</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">SD-WAN 的安全整合：SASE</p>
+          <p>
+            <strong>SASE（Secure Access Service Edge）</strong>由 Gartner 於 2019 年提出，
+            將 SD-WAN 與安全服務（CASB、ZTNA、SWG、FWaaS）整合到雲端邊緣節點，
+            讓使用者的流量在最近的雲端節點就完成安全檢查和路由決策，
+            不需要再回傳到公司總部的安全閘道。
+            Cloudflare One、Zscaler、Palo Alto Prisma Access 是主要 SASE 提供商。
+          </p>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Summary -->
+      <section class="lesson-section" id="s10">
+        <div class="summary-box">
+          <div class="summary-label">Day 13 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>傳統網路的問題：垂直整合、分散管理、靜態配置、VLAN 數量不足</li>
+            <li>SDN 三層：應用層（業務意圖）→ 控制層（集中決策）→ 資料層（轉發執行），北向/南向/東西向 API</li>
+            <li>OpenFlow 流表：Match Fields + Priority + Actions，封包無匹配時送往控制器（Packet-In）</li>
+            <li>OVS（Open vSwitch）：最廣泛的虛擬交換器，支援 OpenFlow、VXLAN、GRE，是 OpenStack/KVM 基礎</li>
+            <li>NFV 將網路功能從專有硬體解放到通用伺服器上，VNF + NFVI + MANO 三元件</li>
+            <li>VXLAN 用 24 bits VNI 支援 16M 虛擬網段，解決 4,094 VLAN 的限制；VTEP 負責封裝/解封裝</li>
+            <li>Kubernetes CNI 四原則：Pod 間不用 NAT；Calico（BGP）/ Cilium（eBPF）是生產主流</li>
+            <li>eBPF 讓核心可程式化，Cilium 用 O(1) Map 取代 iptables O(n) 線性掃描，效能提升 10×</li>
+            <li>Service Mesh（Istio/Linkerd）：Sidecar 代理接管服務間流量，提供 mTLS/流量管理/可觀測性</li>
+            <li>SD-WAN 集中控制多條 WAN 路徑（MPLS + 寬頻 + 4G），動態選路、Zero-touch 部署</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <aside>
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">13 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>SDN 控制/資料平面分離</li>
+          <li><span>#</span>北向 / 南向 API</li>
+          <li><span>#</span>OpenFlow / 流表（Flow Table）</li>
+          <li><span>#</span>Open vSwitch（OVS）</li>
+          <li><span>#</span>NFV / VNF / MANO</li>
+          <li><span>#</span>Overlay / Underlay</li>
+          <li><span>#</span>VXLAN / VNI / VTEP</li>
+          <li><span>#</span>GENEVE / GRE</li>
+          <li><span>#</span>BGP EVPN</li>
+          <li><span>#</span>CNI / Kubernetes 網路</li>
+          <li><span>#</span>Calico / Cilium / Flannel</li>
+          <li><span>#</span>eBPF</li>
+          <li><span>#</span>Service Mesh / Sidecar</li>
+          <li><span>#</span>Istio / Envoy / Linkerd</li>
+          <li><span>#</span>mTLS（服務間加密）</li>
+          <li><span>#</span>SD-WAN / CPE</li>
+          <li><span>#</span>SASE</li>
+          <li><span>#</span>Zero-touch Provisioning</li>
+        </ul>
+      </div>
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day12.html"><span>&larr; Day 12: 網路診斷與監控</span></a>
+          <a href="index.html"><span>課程首頁</span><span>&uarr;</span></a>
+          <a href="day14.html"><span>Day 14: 雲端網路架構</span><span>&rarr;</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 13 / 16</p>
+    <p>下一課：<a href="day14.html" style="color:var(--accent);text-decoration:none;">雲端網路架構 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>

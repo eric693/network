@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 2 — OSI 七層模型 | 網路通訊課程</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --ink:     #1a1a1a;
+      --paper:   #f5f0e8;
+      --accent:  #c0392b;
+      --mid:     #7a6a5a;
+      --line:    rgba(26,26,26,0.12);
+      --code-bg: rgba(26,26,26,0.06);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--paper);
+      color: var(--ink);
+      font-family: 'Noto Sans TC', sans-serif;
+      font-weight: 300;
+      line-height: 1.9;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: relative;
+      z-index: 10;
+      padding: 20px 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topnav a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .topnav a:hover { color: var(--accent); }
+
+    .topnav .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topnav .sep { color: var(--line); font-size: 14px; }
+
+    .topnav .nav-group {
+      display: flex;
+      gap: 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 64px 8vw 56px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 48px;
+      align-items: end;
+    }
+
+    .hero-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      margin-top: 20px;
+      font-size: 1rem;
+      color: var(--mid);
+      max-width: 560px;
+    }
+
+    .hero-meta .day-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 6rem;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--ink);
+      opacity: 0.08;
+      display: block;
+    }
+
+    /* ── TOC ── */
+    .toc-bar {
+      position: relative;
+      z-index: 1;
+      padding: 24px 8vw;
+      border-bottom: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .toc-bar h2 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 14px;
+    }
+
+    .toc-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      list-style: none;
+    }
+
+    .toc-list li a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--mid);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc-list li a:hover { color: var(--accent); }
+
+    .toc-list li::before {
+      content: attr(data-n) ". ";
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 0;
+      align-items: start;
+    }
+
+    /* ── Article ── */
+    article {
+      padding: 64px 6vw 80px 8vw;
+      border-right: 1px solid var(--line);
+    }
+
+    /* ── Section ── */
+    .lesson-section { margin-bottom: 72px; }
+    .lesson-section:last-child { margin-bottom: 0; }
+
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .lesson-section h2 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lesson-section h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 36px 0 12px;
+      color: var(--ink);
+    }
+
+    .lesson-section p { margin-bottom: 16px; font-size: 0.97rem; }
+    .lesson-section p:last-child { margin-bottom: 0; }
+
+    strong { font-weight: 500; color: var(--ink); }
+
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      color: var(--ink);
+    }
+
+    /* ── Highlight / Info box ── */
+    .highlight-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--accent);
+      background: rgba(192,57,43,0.05);
+    }
+
+    .highlight-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .highlight-box p { margin: 0; font-size: 0.92rem; }
+
+    .info-box {
+      margin: 28px 0;
+      padding: 20px 24px;
+      border-left: 3px solid var(--mid);
+      background: var(--code-bg);
+    }
+
+    .info-box .box-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .info-box p { margin: 0; font-size: 0.92rem; color: var(--mid); }
+
+    /* ── Tables ── */
+    .def-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    .def-table th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--mid);
+      text-align: left;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .def-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    .def-table tr:last-child td { border-bottom: none; }
+
+    .def-table td:first-child {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Diagram ── */
+    .diagram {
+      margin: 28px 0;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+    }
+
+    .diagram-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .diagram pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--ink);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── OSI layer stack ── */
+    .osi-stack {
+      margin: 28px 0;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .osi-layer {
+      display: grid;
+      grid-template-columns: 48px 56px 1fr 1fr;
+      align-items: stretch;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.2s;
+    }
+
+    .osi-layer:last-child { border-bottom: none; }
+    .osi-layer:hover { background: rgba(26,26,26,0.04); }
+
+    .osi-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--paper);
+      padding: 18px 0;
+    }
+
+    .osi-layer[data-group="application"] .osi-num { background: var(--accent); }
+    .osi-layer[data-group="transport"]   .osi-num { background: #8b4513; }
+    .osi-layer[data-group="network"]     .osi-num { background: var(--mid); }
+    .osi-layer[data-group="data"]        .osi-num { background: #5a5a5a; }
+    .osi-layer[data-group="physical"]    .osi-num { background: #3a3a3a; }
+
+    .osi-name {
+      display: flex;
+      align-items: center;
+      padding: 14px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+      border-right: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .osi-role {
+      padding: 14px 16px;
+      font-size: 0.84rem;
+      border-right: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .osi-examples {
+      padding: 14px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--mid);
+    }
+
+    .osi-stack-header {
+      display: grid;
+      grid-template-columns: 48px 56px 1fr 1fr;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .osi-stack-header span {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      opacity: 0.6;
+    }
+
+    .osi-stack-header span:first-child {
+      text-align: center;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    /* ── PDU badge ── */
+    .pdu-flow {
+      margin: 28px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pdu-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pdu-layer-tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    .pdu-unit {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pdu-header {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      padding: 6px 10px;
+      background: var(--accent);
+      color: var(--paper);
+      white-space: nowrap;
+    }
+
+    .pdu-prev-header {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      padding: 6px 10px;
+      background: rgba(26,26,26,0.15);
+      color: var(--mid);
+      white-space: nowrap;
+    }
+
+    .pdu-data {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      padding: 6px 14px;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      flex: 1;
+      min-width: 80px;
+    }
+
+    .pdu-trailer {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      padding: 6px 10px;
+      background: rgba(26,26,26,0.15);
+      color: var(--mid);
+    }
+
+    .pdu-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      margin-left: 8px;
+    }
+
+    /* ── Encapsulation arrow ── */
+    .encap-arrow {
+      text-align: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      padding: 2px 0 2px 92px;
+    }
+
+    /* ── divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 48px 0;
+    }
+
+    /* ── Summary box ── */
+    .summary-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .summary-box .summary-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .summary-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--paper);
+      margin-bottom: 16px;
+    }
+
+    .summary-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .summary-box ul li {
+      font-size: 0.9rem;
+      color: rgba(245,240,232,0.8);
+      padding: 6px 0 6px 16px;
+      border-bottom: 1px solid rgba(245,240,232,0.08);
+      position: relative;
+    }
+
+    .summary-box ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      padding: 48px 28px;
+      position: sticky;
+      top: 0;
+    }
+
+    .aside-section { margin-bottom: 40px; }
+
+    .aside-section h4 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .keyword-list { list-style: none; padding: 0; }
+
+    .keyword-list li {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--mid);
+      padding: 5px 0;
+      border-bottom: 1px solid var(--line);
+      transition: color 0.2s;
+    }
+
+    .keyword-list li:hover { color: var(--accent); }
+    .keyword-list li span { color: var(--accent); margin-right: 6px; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--line);
+      margin: 12px 0 20px;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 12.5%;
+      background: var(--accent);
+    }
+
+    .progress-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-links { display: flex; flex-direction: column; gap: 8px; }
+
+    .nav-links a {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      transition: border-color 0.2s, color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Mnemonic card ── */
+    .mnemonic {
+      margin: 28px 0;
+      padding: 24px;
+      border: 1px solid var(--line);
+      background: rgba(26,26,26,0.03);
+    }
+
+    .mnemonic-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .mnemonic-row {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mnemonic-row:last-child { border-bottom: none; }
+
+    .mnemonic-letter {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--accent);
+      width: 20px;
+      flex-shrink: 0;
+    }
+
+    .mnemonic-word {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--mid);
+      width: 100px;
+      flex-shrink: 0;
+    }
+
+    .mnemonic-layer {
+      font-size: 0.85rem;
+      color: var(--ink);
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 8vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--mid);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main-wrap { grid-template-columns: 1fr; }
+
+      aside {
+        position: static;
+        border-top: 1px solid var(--line);
+        padding: 40px 8vw;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      article {
+        padding: 48px 8vw 64px;
+        border-right: none;
+      }
+
+      .hero { grid-template-columns: 1fr; }
+      .hero-meta { display: none; }
+
+      .osi-layer { grid-template-columns: 40px 52px 1fr; }
+      .osi-examples { display: none; }
+      .osi-stack-header { grid-template-columns: 40px 52px 1fr; }
+      .osi-stack-header span:last-child { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      aside { grid-template-columns: 1fr; }
+    }
+
+    /* ── Entry animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .toc-bar, article, aside {
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .toc-bar  { animation-delay: 0.10s; }
+    article   { animation-delay: 0.15s; }
+    aside     { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top nav ── -->
+  <nav class="topnav">
+    <div class="breadcrumb">
+      <a href="index.html">課程首頁</a>
+      <span class="sep">/</span>
+      <a href="#">Day 2</a>
+    </div>
+    <div class="nav-group">
+      <a href="day1.html">&larr; Day 1</a>
+      <a href="day3.html">Day 3 &rarr;</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div>
+      <p class="hero-label">Phase 01 &mdash; 網路基礎概念 &mdash; Day 02 / 16</p>
+      <h1>OSI 七層模型<br>網路通訊的通用語言</h1>
+      <p class="hero-desc">
+        OSI 模型是理解一切網路協定的根基。它將複雜的通訊過程拆解為七個可獨立討論的層次，
+        讓不同廠商的設備得以相互溝通，也讓工程師在排錯時能精準定位問題所在的層次。
+      </p>
+    </div>
+    <div class="hero-meta">
+      <span class="day-num">02</span>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc-bar">
+    <h2>本課目錄</h2>
+    <ol class="toc-list">
+      <li data-n="1"><a href="#s1">為何需要分層模型</a></li>
+      <li data-n="2"><a href="#s2">七層總覽</a></li>
+      <li data-n="3"><a href="#s3">各層深入解析</a></li>
+      <li data-n="4"><a href="#s4">封裝與解封裝</a></li>
+      <li data-n="5"><a href="#s5">PDU 資料單元</a></li>
+      <li data-n="6"><a href="#s6">層間通訊原則</a></li>
+      <li data-n="7"><a href="#s7">OSI vs. 實際應用</a></li>
+      <li data-n="8"><a href="#s8">排錯與 OSI</a></li>
+      <li data-n="9"><a href="#s9">重點回顧</a></li>
+    </ol>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main-wrap">
+    <article>
+
+      <!-- ══ Section 1 ══ -->
+      <section class="lesson-section" id="s1">
+        <span class="section-num">Section 01</span>
+        <h2>為何需要分層模型</h2>
+
+        <p>
+          想像你要製造一輛汽車：引擎工程師不需要懂車漆配色，
+          外觀設計師不需要懂燃油噴射原理。透過清晰的模組分工，
+          各領域專家能獨立作業，最後組裝成一個完整系統。
+          電腦網路也面臨同樣的複雜度挑戰。
+        </p>
+
+        <p>
+          1970 年代，各大電腦廠商（IBM、DEC、Honeywell）各自建立私有的網路協定，
+          不同廠商的設備完全無法互通。IBM 的 SNA、DEC 的 DECnet
+          就像不同語言的人試圖溝通，毫無效果。
+        </p>
+
+        <p>
+          ISO（國際標準化組織）從 1977 年開始研究標準化方案，
+          於 1984 年正式發布 <strong>OSI 參考模型（ISO 7498）</strong>。
+          這個模型的目標是：只要每一層遵循標準介面，任何廠商的實作都能互通。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">分層設計的三大優勢</p>
+          <p>
+            <strong>抽象化</strong>：每層只專注自己的任務，不需關心其他層的實作細節。
+            <strong>互操作性</strong>：符合同一層標準的產品可以相互替換。
+            <strong>可維護性</strong>：修改某一層的實作不影響其他層，降低變更風險。
+          </p>
+        </div>
+
+        <p>
+          有一個重要認知：OSI 是<strong>參考模型（Reference Model）</strong>，
+          不是實作規格。它描述「應該做什麼」，不規定「如何做」。
+          現實中網路通訊主要依賴 TCP/IP 協定族，而非嚴格遵循 OSI 的七層，
+          但 OSI 的框架依然是分析、討論、教學網路的最佳工具。
+        </p>
+      </section>
+
+      <!-- ══ Section 2 ══ -->
+      <section class="lesson-section" id="s2">
+        <span class="section-num">Section 02</span>
+        <h2>七層總覽</h2>
+
+        <p>
+          OSI 模型由下至上編號 1 到 7。記憶口訣有很多種，
+          最常見的英文口訣是「<strong>Please Do Not Throw Sausage Pizza Away</strong>」
+          （Physical、Data Link、Network、Transport、Session、Presentation、Application）。
+        </p>
+
+        <div class="osi-stack">
+          <div class="osi-stack-header">
+            <span>#</span>
+            <span>層名</span>
+            <span>主要職責</span>
+            <span>代表協定 / 設備</span>
+          </div>
+
+          <div class="osi-layer" data-group="application">
+            <div class="osi-num">7</div>
+            <div class="osi-name">應用層<br>Application</div>
+            <div class="osi-role">提供使用者介面與網路服務，處理應用程式間的通訊邏輯</div>
+            <div class="osi-examples">HTTP, HTTPS, FTP, SMTP, DNS, SSH, SNMP</div>
+          </div>
+
+          <div class="osi-layer" data-group="application">
+            <div class="osi-num">6</div>
+            <div class="osi-name">表現層<br>Presentation</div>
+            <div class="osi-role">資料格式轉換、加密解密、壓縮解壓，確保雙方「看到相同的資料」</div>
+            <div class="osi-examples">SSL/TLS, JPEG, MPEG, ASCII, UTF-8</div>
+          </div>
+
+          <div class="osi-layer" data-group="application">
+            <div class="osi-num">5</div>
+            <div class="osi-name">會話層<br>Session</div>
+            <div class="osi-role">建立、管理、終止兩端的會話，處理同步與對話控制</div>
+            <div class="osi-examples">NetBIOS, RPC, SQL sessions, NFS</div>
+          </div>
+
+          <div class="osi-layer" data-group="transport">
+            <div class="osi-num">4</div>
+            <div class="osi-name">傳輸層<br>Transport</div>
+            <div class="osi-role">端對端可靠傳輸、流量控制、錯誤恢復、連接埠定址</div>
+            <div class="osi-examples">TCP, UDP, SCTP</div>
+          </div>
+
+          <div class="osi-layer" data-group="network">
+            <div class="osi-num">3</div>
+            <div class="osi-name">網路層<br>Network</div>
+            <div class="osi-role">邏輯位址定址（IP）、跨網路路由、封包分割與重組</div>
+            <div class="osi-examples">IP, ICMP, ARP, Router</div>
+          </div>
+
+          <div class="osi-layer" data-group="data">
+            <div class="osi-num">2</div>
+            <div class="osi-name">資料鏈結層<br>Data Link</div>
+            <div class="osi-role">實體位址（MAC）定址、訊框傳輸、錯誤偵測、媒介存取控制</div>
+            <div class="osi-examples">Ethernet, Wi-Fi, PPP, Switch</div>
+          </div>
+
+          <div class="osi-layer" data-group="physical">
+            <div class="osi-num">1</div>
+            <div class="osi-name">實體層<br>Physical</div>
+            <div class="osi-role">位元流的電氣、光學或無線訊號傳輸，定義電壓、頻率、接頭規格</div>
+            <div class="osi-examples">RJ-45, 光纖, USB, Hub, 無線電波</div>
+          </div>
+        </div>
+
+        <div class="mnemonic">
+          <div class="mnemonic-title">記憶口訣（由上至下）</div>
+          <div class="mnemonic-row">
+            <span class="mnemonic-letter">A</span>
+            <span class="mnemonic-word">All</span>
+            <span class="mnemonic-layer">Layer 7 &mdash; Application（應用層）</span>
+          </div>
+          <div class="mnemonic-row">
+            <span class="mnemonic-letter">P</span>
+            <span class="mnemonic-word">People</span>
+            <span class="mnemonic-layer">Layer 6 &mdash; Presentation（表現層）</span>
+          </div>
+          <div class="mnemonic-row">
+            <span class="mnemonic-letter">S</span>
+            <span class="mnemonic-word">Seem</span>
+            <span class="mnemonic-layer">Layer 5 &mdash; Session（會話層）</span>
+          </div>
+          <div class="mnemonic-row">
+            <span class="mnemonic-letter">T</span>
+            <span class="mnemonic-word">To</span>
+            <span class="mnemonic-layer">Layer 4 &mdash; Transport（傳輸層）</span>
+          </div>
+          <div class="mnemonic-row">
+            <span class="mnemonic-letter">N</span>
+            <span class="mnemonic-word">Need</span>
+            <span class="mnemonic-layer">Layer 3 &mdash; Network（網路層）</span>
+          </div>
+          <div class="mnemonic-row">
+            <span class="mnemonic-letter">D</span>
+            <span class="mnemonic-word">Data</span>
+            <span class="mnemonic-layer">Layer 2 &mdash; Data Link（資料鏈結層）</span>
+          </div>
+          <div class="mnemonic-row">
+            <span class="mnemonic-letter">P</span>
+            <span class="mnemonic-word">Processing</span>
+            <span class="mnemonic-layer">Layer 1 &mdash; Physical（實體層）</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Section 3 ══ -->
+      <section class="lesson-section" id="s3">
+        <span class="section-num">Section 03</span>
+        <h2>各層深入解析</h2>
+
+        <h3>Layer 1 &mdash; 實體層（Physical Layer）</h3>
+
+        <p>
+          實體層關注最底層的問題：如何把 0 和 1 在物理介質上傳送出去。
+          它定義了電壓代表什麼（高電壓 = 1，低電壓 = 0），
+          每個位元持續多少時間（位元率），接頭的幾何形狀，
+          以及訊號的調變方式。實體層不理解「資料的意義」，只管「訊號的傳遞」。
+        </p>
+
+        <p>
+          常見的實體層技術包含：雙絞線（Cat5e/Cat6/Cat7）、同軸電纜、
+          光纖（多模/單模）、Wi-Fi 無線電波、藍牙、NFC。
+          Hub 和 Repeater 是運作在實體層的設備，它們只放大或複製訊號，
+          完全不解析訊號的內容。
+        </p>
+
+        <div class="info-box">
+          <p class="box-label">實體層規格範例</p>
+          <p>
+            IEEE 802.3ab（Gigabit Ethernet over Cat5e）規定：使用 4 對雙絞線、
+            125 MHz 時鐘、PAM-5 調變、最大傳輸距離 100 公尺、RJ-45 接頭。
+            這些全是實體層關注的細節。
+          </p>
+        </div>
+
+        <h3>Layer 2 &mdash; 資料鏈結層（Data Link Layer）</h3>
+
+        <p>
+          資料鏈結層負責在<strong>同一個網路區段（Segment）內</strong>的點對點傳輸。
+          它將位元流組織成<strong>訊框（Frame）</strong>，並加上來源與目的的
+          <strong>MAC 位址（Media Access Control Address）</strong>。
+          MAC 位址是 48 位元（6 個位元組）的硬體識別碼，
+          燒錄在網路卡（NIC）中，格式如 <code>AA:BB:CC:DD:EE:FF</code>。
+        </p>
+
+        <p>
+          資料鏈結層分為兩個子層：
+          <strong>LLC（Logical Link Control）</strong>提供流量控制與錯誤通知；
+          <strong>MAC（Media Access Control）</strong>控制誰有權在共享媒介上傳輸，
+          乙太網路使用 CSMA/CD（碰撞偵測）機制，Wi-Fi 使用 CSMA/CA（碰撞避免）。
+        </p>
+
+        <p>
+          Switch 是資料鏈結層的代表設備。它維護一張
+          <strong>MAC 位址表（CAM Table）</strong>，記錄每個 MAC 位址對應哪個連接埠，
+          從而實現精準轉送，避免廣播風暴。
+        </p>
+
+        <h3>Layer 3 &mdash; 網路層（Network Layer）</h3>
+
+        <p>
+          網路層解決了「如何在<strong>不同網路之間</strong>傳送封包」的問題。
+          它引入<strong>邏輯位址</strong>（IP 位址）的概念，
+          與 MAC 位址不同，IP 位址是根據網路拓樸動態分配的，
+          可以改變，也可以透過路由找到通往任何地點的路徑。
+        </p>
+
+        <p>
+          核心功能包括：<strong>路由（Routing）</strong>——決定封包走哪條路；
+          <strong>分割（Fragmentation）</strong>——當封包大於鏈路 MTU 時切割；
+          <strong>TTL（Time to Live）</strong>——防止封包在網路中無限迴圈。
+          Router 是網路層的代表設備，IP 是這層最核心的協定。
+        </p>
+
+        <h3>Layer 4 &mdash; 傳輸層（Transport Layer）</h3>
+
+        <p>
+          傳輸層是<strong>端對端（End-to-End）</strong>通訊的保障者。
+          它解決的問題是：在 IP 只保證「盡力傳送」的基礎上，
+          如何確保應用程式收到完整、有序、無重複的資料？
+        </p>
+
+        <p>
+          傳輸層引入了<strong>連接埠（Port）</strong>的概念，
+          允許同一台主機上的多個應用程式同時通訊。
+          <strong>TCP</strong> 提供可靠的連線導向服務，有流量控制與壅塞控制；
+          <strong>UDP</strong> 提供快速但不可靠的無連線服務。
+          Day 7 和 Day 8 會深入討論兩者。
+        </p>
+
+        <h3>Layer 5 &mdash; 會話層（Session Layer）</h3>
+
+        <p>
+          會話層管理兩台主機間的<strong>對話（Session）</strong>的生命週期，
+          包括建立、維護和終止。它負責同步（Synchronization）——
+          在長時間傳輸中插入檢查點（Checkpoint），讓傳輸中斷後可以從斷點恢復，
+          而非從頭重傳。
+        </p>
+
+        <p>
+          在實際的 TCP/IP 協定族中，會話層的功能被整合到應用層協定中。
+          例如 HTTP 的 Cookie 機制、TLS 的 Session ID 都承擔了會話管理的職責。
+        </p>
+
+        <h3>Layer 6 &mdash; 表現層（Presentation Layer）</h3>
+
+        <p>
+          表現層是「翻譯官」，確保不同系統間資料格式的一致性。
+          它處理三件事：<strong>資料格式轉換</strong>（例如 Big Endian vs. Little Endian、
+          EBCDIC vs. ASCII）、<strong>加密與解密</strong>、以及<strong>壓縮與解壓縮</strong>。
+        </p>
+
+        <p>
+          現代 TLS/SSL 加密通常被歸類到表現層，雖然其實作橫跨多個層次。
+          JPEG、PNG 圖片格式、MP3 音訊格式、ZIP 壓縮也都是表現層關注的範疇。
+        </p>
+
+        <h3>Layer 7 &mdash; 應用層（Application Layer）</h3>
+
+        <p>
+          應用層是最接近終端使用者的層次，提供網路應用程式直接使用的服務介面。
+          注意：應用層不是指應用程式本身（瀏覽器、郵件客戶端），
+          而是這些應用程式與網路溝通的<strong>協定介面</strong>。
+        </p>
+
+        <p>
+          HTTP（網頁）、HTTPS（安全網頁）、FTP（檔案傳輸）、
+          SMTP（電子郵件傳送）、POP3/IMAP（電子郵件接收）、
+          DNS（網域名稱解析）、SSH（安全遠端登入）、
+          SNMP（網路管理）都屬於應用層協定。
+          這些是後續課程的主要討論對象。
+        </p>
+      </section>
+
+      <!-- ══ Section 4 ══ -->
+      <section class="lesson-section" id="s4">
+        <span class="section-num">Section 04</span>
+        <h2>封裝與解封裝</h2>
+
+        <p>
+          OSI 模型最關鍵的運作機制是<strong>封裝（Encapsulation）</strong>。
+          當資料從應用層往下傳遞時，每一層都會在資料前面加上自己的
+          <strong>標頭（Header）</strong>，有些層（如資料鏈結層）還會加上
+          <strong>尾部（Trailer）</strong>用於錯誤檢測。
+        </p>
+
+        <p>
+          到了接收端，過程完全相反——從實體層往上逐層
+          <strong>解封裝（Decapsulation）</strong>，每層讀取並移除自己的標頭，
+          直到應用層收到原始資料。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">封裝流程（傳送端，由上至下）</div>
+          <pre>
+應用層    [          HTTP 資料            ]
+          ↓ 加上 TCP Header
+傳輸層    [TCP Hdr][      HTTP 資料       ]        ← Segment
+          ↓ 加上 IP Header
+網路層    [IP Hdr][TCP Hdr][  HTTP 資料  ]          ← Packet
+          ↓ 加上 Ethernet Header + Trailer
+資料鏈結層[Eth Hdr][IP Hdr][TCP Hdr][Data][CRC]     ← Frame
+          ↓ 轉換為位元流
+實體層    0101001101010110110100101010110101...      ← Bits
+          </pre>
+        </div>
+
+        <div class="diagram">
+          <div class="diagram-title">解封裝流程（接收端，由下至上）</div>
+          <pre>
+實體層    0101001101010110110100101010110101...      ← 接收位元流
+          ↓ 重組為訊框
+資料鏈結層[Eth Hdr][IP Hdr][TCP Hdr][Data][CRC]     ← 讀取並驗證 Eth Header
+          ↓ 移除 Ethernet 層
+網路層    [IP Hdr][TCP Hdr][  HTTP 資料  ]           ← 讀取 IP Header，決定路由
+          ↓ 移除 IP 層
+傳輸層    [TCP Hdr][      HTTP 資料       ]          ← 讀取 TCP Header，排序重組
+          ↓ 移除 TCP 層
+應用層    [          HTTP 資料            ]          ← 交給 HTTP 應用程式處理
+          </pre>
+        </div>
+
+        <div class="highlight-box">
+          <p class="box-label">關鍵理解</p>
+          <p>
+            封裝讓每一層可以「對話」：傳送端的 Layer 4 與接收端的 Layer 4 彷彿在直接通訊，
+            傳送端的 Layer 3 與接收端的 Layer 3 也是。這種<strong>對等層通訊（Peer-to-Peer Layer Communication）</strong>
+            的抽象，是 OSI 模型最優雅的設計思想。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 5 ══ -->
+      <section class="lesson-section" id="s5">
+        <span class="section-num">Section 05</span>
+        <h2>PDU：各層的資料單元名稱</h2>
+
+        <p>
+          每一層對「資料塊」有專屬的稱呼，稱為
+          <strong>PDU（Protocol Data Unit，協定資料單元）</strong>。
+          在討論網路問題時使用正確的術語，能避免很多混淆。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>OSI 層</th>
+              <th>PDU 名稱</th>
+              <th>說明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Layer 7–5</td>
+              <td>Message（訊息）</td>
+              <td>應用層資料，如 HTTP 請求、電子郵件內容</td>
+            </tr>
+            <tr>
+              <td>Layer 4</td>
+              <td>Segment（區段）/ Datagram</td>
+              <td>TCP 使用 Segment；UDP 使用 Datagram</td>
+            </tr>
+            <tr>
+              <td>Layer 3</td>
+              <td>Packet（封包）</td>
+              <td>含 IP 標頭的資料單元，是路由的基本單位</td>
+            </tr>
+            <tr>
+              <td>Layer 2</td>
+              <td>Frame（訊框）</td>
+              <td>含 MAC 位址標頭與 CRC 尾部的資料單元</td>
+            </tr>
+            <tr>
+              <td>Layer 1</td>
+              <td>Bit（位元）</td>
+              <td>最基本的 0/1 訊號單位</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p class="box-label">常見錯誤用法</p>
+          <p>
+            日常口語中「封包」（Packet）常被泛指所有層的資料，
+            但嚴格來說，封包特指 Layer 3（網路層）的 PDU。
+            資安工具如 Wireshark 會顯示 Frame/Packet/Segment 各層的詳細資訊，
+            理解 PDU 的分層命名對讀懂 Wireshark 輸出非常重要。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 6 ══ -->
+      <section class="lesson-section" id="s6">
+        <span class="section-num">Section 06</span>
+        <h2>層間通訊原則</h2>
+
+        <h3>服務、介面與協定</h3>
+
+        <p>
+          每一層提供<strong>服務（Service）</strong>給上層使用，
+          透過<strong>介面（Interface）</strong>（SAP，Service Access Point）進行互動，
+          並使用自己的<strong>協定（Protocol）</strong>與對等層通訊。
+          這三個概念是理解層間關係的關鍵：
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>概念</th>
+              <th>定義</th>
+              <th>範例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Service</td>
+              <td>某層為上層提供的功能承諾</td>
+              <td>Layer 3 承諾「盡力將封包送達目的 IP」</td>
+            </tr>
+            <tr>
+              <td>Interface</td>
+              <td>相鄰層之間傳遞資料的規定方式</td>
+              <td>TCP Socket API（應用程式與 Layer 4 的介面）</td>
+            </tr>
+            <tr>
+              <td>Protocol</td>
+              <td>同一層兩端之間通訊的規則</td>
+              <td>TCP 三向交握規則、HTTP 請求格式規定</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>連線導向 vs. 無連線服務</h3>
+
+        <p>
+          各層可以提供兩種基本服務類型：
+          <strong>連線導向服務（Connection-Oriented）</strong>在傳輸前先建立邏輯連線，
+          確保資料有序可靠地送達，傳輸完成後再釋放連線，TCP 是代表例子；
+          <strong>無連線服務（Connectionless）</strong>直接傳送，
+          不建立連線也不保證可靠性，UDP 和 IP 都是無連線的。
+        </p>
+
+        <h3>可靠服務 vs. 不可靠服務</h3>
+
+        <p>
+          <strong>可靠服務</strong>確保每個 PDU 都被收到，出錯時重傳。
+          這需要接收端的確認（ACK）機制，產生額外開銷。
+          <strong>不可靠服務</strong>不提供確認，效率高但資料可能遺失。
+          「不可靠」在技術上是中性詞，指的是「不保證」，
+          適用於即時串流、遊戲等對延遲敏感但可以容忍少量遺失的應用。
+        </p>
+      </section>
+
+      <!-- ══ Section 7 ══ -->
+      <section class="lesson-section" id="s7">
+        <span class="section-num">Section 07</span>
+        <h2>OSI 在現實中的角色</h2>
+
+        <p>
+          一個重要的認知是：<strong>沒有任何主流網路協定嚴格實作了完整的 OSI 七層</strong>。
+          TCP/IP 協定族（Day 3 深入探討）只有四層，
+          網際網路的實際運作靠的是 TCP/IP，而非 OSI。
+        </p>
+
+        <div class="diagram">
+          <div class="diagram-title">OSI 模型 vs. TCP/IP 協定族對照</div>
+          <pre>
+    OSI 模型（7層）              TCP/IP（4層）
+  ┌─────────────────┐         ┌─────────────────────┐
+7 │    Application  │         │                     │
+  ├─────────────────┤    →    │    Application       │ HTTP, DNS, SMTP
+6 │   Presentation  │         │                     │
+  ├─────────────────┤         └─────────────────────┘
+5 │     Session     │         ┌─────────────────────┐
+  ├─────────────────┤    →    │     Transport        │ TCP, UDP
+4 │    Transport    │         └─────────────────────┘
+  ├─────────────────┤         ┌─────────────────────┐
+3 │     Network     │    →    │     Internet         │ IP, ICMP
+  ├─────────────────┤         └─────────────────────┘
+2 │   Data Link     │         ┌─────────────────────┐
+  ├─────────────────┤    →    │   Network Access     │ Ethernet, Wi-Fi
+1 │    Physical     │         └─────────────────────┘
+  └─────────────────┘
+          </pre>
+        </div>
+
+        <p>
+          那麼 OSI 模型還有何用？它的價值在於：
+        </p>
+
+        <p>
+          <strong>共通語言</strong>：「這是 Layer 3 的問題」讓所有工程師立刻理解問題範疇，
+          不論他們使用什麼廠商的設備或協定。
+          <strong>排錯框架</strong>：系統化地由下至上（或由上至下）檢查，
+          避免漫無目的地亂猜。
+          <strong>新協定設計</strong>：設計新協定時，OSI 框架提供了清晰的定位指引。
+        </p>
+
+        <div class="highlight-box">
+          <p class="box-label">業界實際用法</p>
+          <p>
+            網路工程師日常說「這是 L2 的問題」就是指資料鏈結層，
+            「L3 設備」是路由器，「L7 負載平衡器」是能讀取 HTTP 內容並根據 URL 分流的進階設備。
+            OSI 層號已成為業界通用的縮語系統。
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ Section 8 ══ -->
+      <section class="lesson-section" id="s8">
+        <span class="section-num">Section 08</span>
+        <h2>用 OSI 模型進行網路排錯</h2>
+
+        <p>
+          OSI 模型最實用的應用場景之一是<strong>系統化排錯</strong>。
+          面對網路問題時，由下至上逐層排除是最有效率的方法，
+          這稱為「<strong>Bottom-Up Troubleshooting</strong>」。
+        </p>
+
+        <table class="def-table">
+          <thead>
+            <tr>
+              <th>排錯層</th>
+              <th>檢查項目</th>
+              <th>常用指令 / 工具</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Layer 1</td>
+              <td>線路是否插好、網路燈是否亮、無線訊號強度</td>
+              <td>實體檢查、燈號、<code>iwconfig</code></td>
+            </tr>
+            <tr>
+              <td>Layer 2</td>
+              <td>MAC 位址衝突、交換器 MAC 表、VLAN 設定</td>
+              <td><code>arp -a</code>、<code>show mac-address-table</code></td>
+            </tr>
+            <tr>
+              <td>Layer 3</td>
+              <td>IP 位址設定、子網路遮罩、預設閘道、路由表</td>
+              <td><code>ping</code>、<code>traceroute</code>、<code>ip route</code></td>
+            </tr>
+            <tr>
+              <td>Layer 4</td>
+              <td>連接埠是否開放、防火牆規則、TCP 連線狀態</td>
+              <td><code>netstat</code>、<code>ss</code>、<code>telnet &lt;ip&gt; &lt;port&gt;</code></td>
+            </tr>
+            <tr>
+              <td>Layer 7</td>
+              <td>DNS 解析、HTTP 狀態碼、憑證有效性</td>
+              <td><code>nslookup</code>、<code>curl -v</code>、瀏覽器開發者工具</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          實際例子：你的電腦無法開啟某個網站。
+          先 <code>ping 8.8.8.8</code>——如果通表示 Layer 1–3 正常，問題在更高層；
+          如果不通，用 <code>ping 192.168.1.1</code>（預設閘道）——
+          如果通表示 Layer 1–3 在本地 LAN 內正常，問題在 WAN 或路由；
+          如果連閘道都 ping 不通，很可能是 Layer 1 或 Layer 2 的問題。
+        </p>
+
+        <div class="info-box">
+          <p class="box-label">另一種方法：Top-Down</p>
+          <p>
+            從 Layer 7 往下排錯適合已知「實體層沒問題」的情況。
+            例如其他網站都能開、只有特定服務有問題，
+            這時從應用層（HTTP 錯誤碼、DNS 查詢）往下找更有效率。
+          </p>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- ══ Summary ══ -->
+      <section class="lesson-section" id="s9">
+        <div class="summary-box">
+          <div class="summary-label">Day 2 重點回顧</div>
+          <h3>今天你學到了什麼</h3>
+          <ul>
+            <li>OSI 是 1984 年 ISO 發布的參考模型，解決不同廠商設備無法互通的問題</li>
+            <li>七層由下至上：Physical、Data Link、Network、Transport、Session、Presentation、Application</li>
+            <li>實體層傳訊號、資料鏈結層處理 MAC 位址與訊框、網路層負責 IP 路由</li>
+            <li>傳輸層提供端對端可靠性（TCP）或快速傳輸（UDP）；上三層處理格式、會話與應用</li>
+            <li>封裝：傳送端每層加上標頭；解封裝：接收端每層讀取並移除標頭</li>
+            <li>各層 PDU 名稱：Bits → Frame → Packet → Segment → Message</li>
+            <li>TCP/IP 四層是實際運作的協定；OSI 七層是分析討論的框架</li>
+            <li>Bottom-Up 排錯法：從 Layer 1 實體連線開始，逐層往上檢查</li>
+          </ul>
+        </div>
+      </section>
+
+    </article>
+
+    <!-- ── Sidebar ── -->
+    <aside>
+
+      <div class="aside-section">
+        <h4>課程進度</h4>
+        <div class="progress-label">2 / 16 完成</div>
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="aside-section">
+        <h4>本課關鍵詞</h4>
+        <ul class="keyword-list">
+          <li><span>#</span>OSI Model</li>
+          <li><span>#</span>Layer 1–7</li>
+          <li><span>#</span>Encapsulation</li>
+          <li><span>#</span>PDU</li>
+          <li><span>#</span>MAC Address</li>
+          <li><span>#</span>Frame / Packet</li>
+          <li><span>#</span>Segment</li>
+          <li><span>#</span>SAP</li>
+          <li><span>#</span>LLC / MAC sublayer</li>
+          <li><span>#</span>CSMA/CD</li>
+          <li><span>#</span>Bottom-Up Troubleshooting</li>
+          <li><span>#</span>ISO 7498</li>
+        </ul>
+      </div>
+
+      <div class="aside-section">
+        <h4>課程導航</h4>
+        <div class="nav-links">
+          <a href="day1.html">
+            <span>&larr; Day 1: 網路是什麼？</span>
+          </a>
+          <a href="index.html">
+            <span>課程首頁</span>
+            <span>&uarr;</span>
+          </a>
+          <a href="day3.html">
+            <span>Day 3: TCP/IP 協定族</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>網路通訊完整課程 &mdash; Day 02 / 16</p>
+    <p>下一課：<a href="day3.html" style="color:var(--accent);text-decoration:none;">TCP/IP 協定族 &rarr;</a></p>
+  </footer>
+
+</body>
+</html>
